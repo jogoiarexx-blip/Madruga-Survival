@@ -1,9 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">MadrugaCraft Survival</title>
-  <rect width="64" height="64" rx="13" fill="#182e26"/>
-  <path d="M32 5 8 35h10L8 49h48L46 35h10Z" fill="#48af69"/>
-  <path d="M32 5 32 49h24L46 35h10Z" fill="#2f8550"/>
-  <path d="M26 48h12v13H26Z" fill="#76543a"/>
-  <path d="M32 13 20 32h6l-7 12h13Z" fill="#83d59a" opacity=".7"/>
-  <path d="M24 52h16" fill="none" stroke="#b1da81" stroke-width="3" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="13" fill="#182e26"/><path d="M32 5 8 35h10L8 49h48L46 35h10Z" fill="#48af69"/><path d="M32 5 32 49h24L46 35h10Z" fill="#2f8550"/><path d="M26 48h12v13H26Z" fill="#76543a"/></svg>

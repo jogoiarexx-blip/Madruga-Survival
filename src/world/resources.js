@@ -53,7 +53,6 @@ export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,
    return node;
  }
  function generate(seed=1234){
-   // XOR opera como int32 assinado; converta de volta para uint32 antes do PRNG.
    const random=createSeededRandom((seed^0xA4F38B)>>>0);
    const spawn=(min,max,radius=.8)=>{
      for(let tries=0;tries<100;tries++){

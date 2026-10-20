@@ -1,6 +1,6 @@
 import {ZOMBIE_TYPES,isZombieType} from '../gameplay/zombie-variants.js';
 // Construção procedural de inimigos, centralizada e testável.
-export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies}) {
+export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn=()=>{}}) {
 function spawnEnemy(type = 'normal') {
     let size = 0.9, color = 0xe74c3c, speed = 3.2, hp = 2, damage = 12;
     let skinColor = color, clothColor = color, eyeColor = 0xfff4ac, accentColor = 0x4b2227;
@@ -107,6 +107,7 @@ function spawnEnemy(type = 'normal') {
     enemies.push({ mesh, type, speed, hp, maxHp:hp, damage, size, isZombie:isZombieType(type),
         attackTimer: type === 'boss' ? 1.5 : 0.55 + Math.random() * 0.5,
         windup:0, knockback:0, enraged:false, phaseNotice:false, strafe:Math.random()<0.5?-1:1 });
+    onSpawn(enemies[enemies.length-1]);
 }
 
 return spawnEnemy;

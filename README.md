@@ -1,3 +1,9 @@
+# v1.8 — Zumbi geométrico REV4 integrado
+
+O jogo carrega o modelo original `assets/models/zumbi_geometrico_REV4.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 40 ossos, 29 animações e 2.504 triângulos. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.
+
+A cena 3D completa deve ser testada em navegador com suporte a WebGL e acesso ao jsDelivr. As rotinas de IK e desmembramento adicionais do pacote original não foram ativadas por razões de desempenho e compatibilidade.
+
 # 🌲 MadrugaCraft 3D — Sobrevivência v1.7
 
 Um jogo 3D em **Three.js** com floresta, inimigos, coleta, crafting, sobrevivência e construção modular de bases. A v1.7 conserva sobrevivência, defesa, caça, pesca, horta, culinária, mineração e oito profissões, além de zumbis variados, cemitério, aldeão guarda, prévia de construção e agora encaixe magnético entre módulos.

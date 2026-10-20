@@ -15,7 +15,8 @@ export function enemyPose(type, time, moving, windup=0, knocked=0, enraged=false
         pulse: enraged ? .15 + .10*Math.sin(time*12) : 0
     };
 }
-export function animateEnemy(enemy, elapsed, moving) {
+export function animateEnemy(enemy, elapsed, moving, dt=0.016,near=true) {
+    if(enemy.rev4Visual){enemy.rev4Visual.update(dt,moving,near);return;}
     const rig=enemy.mesh?.userData?.rig;
     if (!rig) return;
     const pose=enemyPose(enemy.type,elapsed+enemy.mesh.id*.18,moving,enemy.windup,enemy.knockback,enemy.enraged);

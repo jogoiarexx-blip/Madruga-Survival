@@ -9,6 +9,9 @@ import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
 import { initAudio, sfx } from './audio/sfx.js';
 import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
+import {createZombieModelManager} from './characters/zombie-models.js';
 import { createPlayerModel } from './characters/player-model.js';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js';
@@ -141,6 +144,7 @@ const gravity = -25;
 const jumpForce = 8.5;
 
 const enemies = [];
+const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton});
 const healthPacks = [];
 const speedBoosts = [];
 const trees = [];
@@ -296,13 +300,17 @@ function damagePlayer(amount, origin) {
 const projectileSystem = createProjectileSystem({THREE,scene,player,allColliders,isPositionFree,damagePlayer,
     removeMesh,isGameActive:()=>gameActive});
 
-function removeMesh(mesh) {
+function removeMesh(mesh,defeated=false) {
+    const deceased=enemies.find(e=>e.mesh===mesh);
+    if(defeated&&deceased&&zombieModels.defeat(deceased))return;
     scene.remove(mesh);
+    const zombie=enemies.find(e=>e.mesh===mesh);
+    if(zombie)zombieModels.dispose(zombie);
     const disposed=new Set();
     mesh.traverse(node => {
         if (!node.isMesh) return;
         // Recursos partilhados entre braços/pernas de um mesmo inimigo são descartados uma só vez.
-        if (node.geometry && !disposed.has(node.geometry)) {
+        if (node.geometry && !node.userData?.sharedZombieGeometry && !disposed.has(node.geometry)) {
             disposed.add(node.geometry);node.geometry.dispose();
         }
         for (const m of (Array.isArray(node.material) ? node.material : [node.material])) {
@@ -374,7 +382,7 @@ function spawnSpeedBoost(at = null) {
     speedBoosts.push(boost);
 }
 
-const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies});
+const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn:enemy=>zombieModels.attach(enemy)});
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add});
 const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
@@ -394,6 +402,7 @@ function initWorld() {
     forest.updateVisibility(player.position,graphicsQuality,0,true);
     resources.generate(worldSeed);
     wildlife.generate(worldSeed);
+    void zombieModels.preload();
     for (let i=0; i<2; i++) spawnHealthPack();
     for (let i=0; i<2; i++) spawnSpeedBoost();
     for (let i=0; i<2; i++) spawnEnemy('normal');
@@ -1050,6 +1059,7 @@ function animate() {
         wildlife.update(dt,player.position,graphicsQuality);
         guard.update(dt,elapsed,player.position);
         enemyAI.update(dt,elapsed);
+        zombieModels.updateCorpses(dt,removeMesh);
         // Patrulha do cemitério: surgem infectados quando o jogador explora a região.
         cemeterySpawnTimer-=dt;
         if(withinCemetery(player.position,21)&&cemeterySpawnTimer<=0&&enemies.length<12){

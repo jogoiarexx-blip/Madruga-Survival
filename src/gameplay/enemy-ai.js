@@ -44,7 +44,7 @@ function update(dt,elapsed){
             mesh.scale.y=1+Math.sin(elapsed*(boss?3.2:7.4)+mesh.id)*(boss?.024:.055);
             mesh.rotation.z=Math.sin(elapsed*(boss?2.2:4.1)+mesh.id)*(boss?.018:.048);
             if (dist<52) mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
-            animateEnemy(enemy,elapsed,moving);
+            animateEnemy(enemy,elapsed,moving,dt,Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48);
             if (boss && enemy.windup>0) {
                 enemy.windup=Math.max(0,enemy.windup-dt);
                 showBossTelegraph(enemy);
@@ -65,7 +65,7 @@ function update(dt,elapsed){
                 }
             } else if (enemy.attackTimer===0 && dist<52) {
                 if(targetBuilding&&dist<2.25){
-                    enemy.attackTimer=shaman?2.4:1.55;onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
+                    enemy.attackTimer=shaman?2.4:1.55;enemy.rev4Visual?.attack();onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
                     spawnParticle(mesh.position,0xdba679,3);
                 } else if (shaman && visible && dist<28 && dist>2.1) {
                     throwProjectile(enemy);enemy.attackTimer=2.6;
@@ -76,6 +76,7 @@ function update(dt,elapsed){
                     sfx.warning();
                 } else if (!targetBuilding&&!shaman && !boss && visible && dist<meleeRadius) {
                     enemy.attackTimer=1.15+(enemy.type==='fast'?-.15:enemy.type==='tank'?.45:0);
+                    enemy.rev4Visual?.attack();
                     if(targetGuard){onGuardDamage(enemy.damage);}
                     else if(damagePlayer(enemy.damage,mesh.position) && enemy.type==='zombie_toxic')onPoison(ZOMBIE_TYPES.zombie_toxic.poisonSeconds);
                 } else if (boss && visible && dist<22) {

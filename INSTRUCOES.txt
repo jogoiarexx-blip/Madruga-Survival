@@ -1,3 +1,10 @@
+MADRUGACRAFT v1.8 — ZUMBI GEOMÉTRICO ARTICULADO REV4
+
+Modelo original: assets/models/zumbi_geometrico_REV4.glb (40 ossos, 29 animações).
+Para jogar no GitHub Pages, envie TODOS os arquivos e pastas do projeto, inclusive o arquivo GLB binário.
+O GLB não pode ser substituído por um arquivo de texto nem pelo ZIP original do personagem.
+O sistema de variações continua ativo: comum, corredor, tóxico e gigante.
+
 MADRUGACRAFT SOBREVIVÊNCIA v1.7 — PUBLICAÇÃO GITHUB PAGES
 
 1. Abra o ZIP e entre na pasta MadrugaCraft-Sobrevivencia.

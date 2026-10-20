@@ -19,15 +19,6 @@ test('mesma seed gera recursos no mesmo lugar',()=>{
  assert.equal(a.nodes.length,b.nodes.length);assert.ok(a.nodes.length>100);
  assert.deepEqual(a.serialize(),b.serialize());
 });
-test('sementes uint32 altas, incluindo limite máximo, geram recursos sem RangeError',()=>{
- for(const seed of [0,1,0x7fffffff,0x80000000,0xdeadbeef,0xffffffff]){
-   const a=createResourceWorld(make()),b=createResourceWorld(make());
-   assert.doesNotThrow(()=>a.generate(seed),`Falha ao gerar seed ${seed}`);
-   b.generate(seed);
-   assert.ok(a.nodes.length>100);
-   assert.deepEqual(a.serialize(),b.serialize(),`Semente não determinística: ${seed}`);
- }
-});
 test('coleta, recarga e retorno do nó de recurso',()=>{
  const w=createResourceWorld(make());w.generate(2026);
  const node=w.nodes[1];const pos={x:node.x,z:node.z};

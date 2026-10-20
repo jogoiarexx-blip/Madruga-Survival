@@ -18,6 +18,7 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
     if (!enemies.includes(enemy)) return;
     enemy.hp -= amount;
     enemy.knockback = 0.17;
+    if(enemy.hp>0)enemy.rev4Visual?.hurt();
     if(enemy.type==='boss' && enemy.hp>0 && enemy.hp<=enemy.maxHp*.5 && !enemy.enraged){
         enemy.enraged=true;enemy.speed*=1.28;
         enemy.mesh.material.color.setHex(0xe24629);
@@ -37,7 +38,7 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
     sfx.hit();
     if (enemy.hp <= 0) {
         const drop = {x: enemy.mesh.position.x, z: enemy.mesh.position.z};
-        removeMesh(enemy.mesh);
+        removeMesh(enemy.mesh,true);
         enemies.splice(enemies.indexOf(enemy), 1);
         if(credited){onEnemyKilled(enemy.type,drop);
         gainXP(enemy.type === 'boss' ? 22 : enemy.type === 'tank' ? 5 : enemy.type==='shaman'?4:2);}
