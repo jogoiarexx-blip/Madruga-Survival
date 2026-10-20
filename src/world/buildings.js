@@ -1,10 +1,11 @@
+import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
 import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
   resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js';
 import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding} from '../gameplay/base-defense.js';
 import {validChestItems} from '../gameplay/storage.js';
 import {makeCrop,advanceCrop,validCrop} from '../gameplay/farming.js';
-export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}) {
+export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium'}) {
  const structures=[];
  const stone=new THREE.MeshStandardMaterial({color:0x92918a,roughness:.95});
  const wood=new THREE.MeshStandardMaterial({color:0x68432c,roughness:1});
@@ -19,14 +20,15 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
    const p=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);p.position.set(x,y,z);p.castShadow=true;p.receiveShadow=true;group.add(p);return p;
  }
  function createVisual(type,group){
+   const detail=geometryDetail(getQuality());
    let flame=null,glow=null,doorPivot=null,lid=null;
    if(type==='campfire'){
      for(let i=0;i<7;i++){const a=i*Math.PI*2/7;
-       const p=new THREE.Mesh(new THREE.DodecahedronGeometry(.29,0),stone);
+       const p=new THREE.Mesh(new THREE.DodecahedronGeometry(.29,detail.rockSubdivision),stone);
        p.position.set(Math.cos(a)*.75,.15,Math.sin(a)*.75);p.scale.y=.65;group.add(p);}
-     for(let i=0;i<3;i++){const p=new THREE.Mesh(new THREE.CylinderGeometry(.12,.14,1.25,7),wood);
+     for(let i=0;i<3;i++){const p=new THREE.Mesh(new THREE.CylinderGeometry(.12,.14,1.25,detail.resourceCylinder),wood);
        p.rotation.z=Math.PI/2;p.rotation.y=i*Math.PI/3;p.position.y=.18;group.add(p);}
-     flame=new THREE.Mesh(new THREE.ConeGeometry(.40,.95,6),flameMat.clone());
+     flame=new THREE.Mesh(new THREE.ConeGeometry(.40,.95,detail.flame),flameMat.clone());
      flame.position.y=.72;group.add(flame);
      glow=new THREE.PointLight(0xffa44b,2.5,10,2);glow.position.y=1.2;group.add(glow);
    } else if(type==='shelter'){
@@ -34,7 +36,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
      for(const side of [-1,1]){const p=block(group,2.55,.12,3.8,roof,side*.83,1.20);p.rotation.z=side*.82;}
      block(group,1.15,.18,1.75,straw,0,.33,-.25);
      for(const z of [-1.72,1.72]){
-       const p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,2.30,6),wood);
+       const p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,2.30,detail.resourceCylinder),wood);
        p.position.set(0,1.17,z);group.add(p);
      }
    } else if(type==='floor'){
@@ -55,6 +57,10 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
      block(group,1.48,.18,2.25,wood,0,.44);
      block(group,1.35,.21,1.65,cloth,0,.60,.22);
      block(group,1.25,.21,.45,straw,0,.62,-.80);
+     if(THREE.SphereGeometry){
+       const pillow=new THREE.Mesh(new THREE.SphereGeometry(1,detail.bedPillowWidth,detail.bedPillowHeight),straw);
+       pillow.position.set(0,.73,-.80);pillow.scale.set(.55,.12,.22);group.add(pillow);
+     }
      block(group,1.55,.73,.15,darkWood,0,.69,-1.06);
    } else if(type==='roof'){
      // Cobertura piramidal sem colisor: o jogador pode caminhar por baixo.
@@ -78,6 +84,10 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
      lid=new THREE.Group();lid.position.set(0,.94,-.42);group.add(lid);
      block(lid,1.48,.21,1, warmWood,0,.08,.42);
      block(lid,.19,.23,.24,metal,0,.08,.9);
+     if(THREE.TorusGeometry){
+       const keyhole=new THREE.Mesh(new THREE.TorusGeometry(.07,.018,Math.max(5,Math.floor(detail.decoration/2)),detail.decoration*2),metal);
+       keyhole.position.set(0,.1,.995);lid.add(keyhole);
+     }
    }
    return {flame,glow,doorPivot,lid};
  }
@@ -119,7 +129,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
      ...visual,open:!!options.open,items:type==='chest'?{...(options.items||{})}:null,
      hp:buildingHP(type,options.hp),crop:type==='farmPlot'?(validCrop(options.crop)?{...options.crop}:makeCrop()):null};
    if(type==='farmPlot'){item.plantMeshes=[];for(let i=0;i<5;i++){
-     const plant=new THREE.Mesh(new THREE.ConeGeometry(.22,.65,5),new THREE.MeshStandardMaterial({color:0x5da449,roughness:1}));
+     const plant=new THREE.Mesh(new THREE.ConeGeometry(.22,.65,geometryDetail(getQuality()).foliage),new THREE.MeshStandardMaterial({color:0x5da449,roughness:1}));
      plant.position.set((i%3-1)*.67,.42,Math.floor(i/3)*.85-.45);group.add(plant);item.plantMeshes.push(plant);
    }updateCropVisual(item);}
    if(item.doorPivot)item.doorPivot.rotation.y=item.open?-Math.PI*.55:0;
