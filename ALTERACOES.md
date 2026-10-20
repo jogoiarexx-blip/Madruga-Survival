@@ -1,3 +1,12 @@
+# v1.9 — Maior detalhamento de polígonos por perfil
+
+- Novo gerenciador `src/render/geometry-detail.js` com níveis Mínimo/Médio/Alto e caixa procedural de cantos suavizados.
+- Floresta: troncos 6/10/16 lados, copas 7/11/18, arbustos 8x6/12x9/20x14 e rochas com subdivisão somente em Alto.
+- Recursos: cilindros, folhas, frutos, minérios, pedras, borda do poço com facetas por qualidade; geometrias pequenas reaproveitadas em todos os nós.
+- Animais, jogador, guarda, monstros não-GLB, túmulos e mobiliário: facetas e silhuetas mais suaves.
+- Evita custo em celular: modo Mínimo mantém malhas simples; culling já existente permanece; geração e itens salvos não mudam.
+- Incluídos seis novos testes automatizados em `tests/v19-geometry.mjs`. Modelo zumbi REV4 original preservado.
+
 # v1.8 — Zumbi geométrico REV4 integrado
 
 O jogo carrega o modelo original `assets/models/zumbi_geometrico_REV4.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 40 ossos, 29 animações e 2.504 triângulos. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.
