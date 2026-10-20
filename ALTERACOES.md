@@ -1,4 +1,15 @@
-# v1.4 — RPG de profissões e progressão funcional
+# MadrugaCraft v1.7 — Encaixe automático de construções
+
+- Novo `src/world/build-snapping.js`: pontos de encaixe próximos, bordas de pisos, continuação e cantos de paredes, sequência de pisos e telhados.
+- `src/gameplay/placement.js`: ímã opcional na prévia, seleção de âncoras livres, confirmação que usa exatamente a mesma posição visualizada; sem gastos por prévia/cancelamento.
+- `src/world/building-rules.js` e `src/world/buildings.js`: preservação de posições na metade da grade (1,5m), colisões de paredes e prevenção de sobreposição parcial de pisos/telhados, saves antigos sem alteração.
+- Aumento de 100 para 160 construções, com validador de save atualizado.
+- `index.html`, `styles/main.css`, `src/main.js`: tecla C ou botão 🧲, status de encaixe com etiqueta, controles para celular.
+- `tests/v17-snapping.mjs`: 11 verificações novas de alinhamento, colisão, transação, migração e UI.
+- **Resultado:** 123 verificações de `npm test` aprovadas, além de `npm run check`.
+- **Limite da validação:** não foi possível testar uma partida WebGL completa por bloqueios no navegador deste ambiente.
+
+# v1.5 — RPG de profissões e progressão funcional
 
 - Oito profissões persistentes (20 níveis cada): pesca, agricultura, caça, construtor, mineração, coleta, artesanato e sobrevivência.
 - XP obtido por ações reais: capturar peixes, plantar/regar/colher, caçar, construir/reparar, minerar, coletar e fabricar; passar a noite também recompensa resistência.
@@ -34,3 +45,6 @@ Base aplicada: pacote original da v1.1 com 52 arquivos. Não foi criado projeto 
 - Three.js 0.160.0 continua servido pelo jsDelivr conforme arquitetura original: publicação GitHub Pages não exige bundler; é preciso conexão de internet para o motor.
 - Sem validação de partida 3D completa por falta de conexão com a CDN neste ambiente.
 - Testes da campanha histórica `testes.mjs` e `tests/regression.mjs` estão obsoletos. `npm test` é a suíte vigente.
+
+
+Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamento.

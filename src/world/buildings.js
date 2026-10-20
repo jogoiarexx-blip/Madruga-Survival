@@ -1,5 +1,5 @@
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
-import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,orientation,canPlaceAmong,
+import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
   resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js';
 import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding} from '../gameplay/base-defense.js';
 import {validChestItems} from '../gameplay/storage.js';
@@ -81,9 +81,37 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
    }
    return {flame,glow,doorPivot,lid};
  }
+ // Holograma usa o mesmo construtor geométrico dos prédios reais.
+ // Nunca entra na lista structures nem nas colisões/salvamento.
+ function createPreview(type){
+   if(!STRUCTURE_TYPES.includes(type))return null;
+   const group=new THREE.Group();
+   createVisual(type,group);
+   const hologram=new THREE.MeshBasicMaterial({color:0x51f09d,transparent:true,opacity:.49,
+     depthWrite:false,side:THREE.DoubleSide});
+   const geometries=new Set();
+   group.traverse(node=>{
+     if(node.isLight){node.visible=false;return;}
+     if(!node.isMesh)return;
+     geometries.add(node.geometry);
+     if(node.material!==stone&&node.material!==wood&&node.material!==warmWood&&
+       node.material!==darkWood&&node.material!==roof&&node.material!==straw&&
+       node.material!==cloth&&node.material!==metal&&node.material!==flameMat){
+       // Ex.: chama clonada da fogueira.
+       node.material?.dispose?.();
+     }
+     node.material=hologram;node.castShadow=false;node.receiveShadow=false;
+   });
+   scene.add(group);
+   return {group,setPosition(x,z,rotation){
+       group.position.set(x,getGroundHeight(x,z)+.03,z);
+       group.rotation.y=orientation(rotation||0)*Math.PI/2;
+     },setValid(valid){hologram.color.setHex(valid?0x51f09d:0xff6670);},
+     dispose(){scene.remove(group);for(const g of geometries)g.dispose();hologram.dispose();}};
+ }
  function place(type,x,z,rotation=0,options={}){
    if(!STRUCTURE_TYPES.includes(type)||!Number.isFinite(x)||!Number.isFinite(z))return null;
-   const loc=preparePlacement(type,x,z,rotation),group=new THREE.Group();
+   const loc=preparePlacement(type,x,z,rotation,options),group=new THREE.Group();
    const visual=createVisual(type,group);
    group.position.set(loc.x,getGroundHeight(loc.x,loc.z),loc.z);
    group.rotation.y=orientation(loc.rotation||0)*Math.PI/2;
@@ -97,9 +125,9 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
    if(item.doorPivot)item.doorPivot.rotation.y=item.open?-Math.PI*.55:0;
    scene.add(group);structures.push(item);if(item.hp<maxBuildingHP(item.type))updateCondition(item);return item;
  }
- function canPlace(type,x,z,playerPos,rotation=0){
+ function canPlace(type,x,z,playerPos,rotation=0,options={}){
    if(!STRUCTURE_TYPES.includes(type))return false;
-   const p=preparePlacement(type,x,z,rotation);
+   const p=preparePlacement(type,x,z,rotation,options);
    if(Math.abs(p.x)>103||Math.abs(p.z)>103)return false;
    if(type!=='floor'&&Math.hypot(p.x-playerPos.x,p.z-playerPos.z)<(type==='shelter'?2.4:1.15))return false;
    if(!canPlaceAmong(structures,p))return false;
@@ -152,13 +180,13 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree}
    return base;
  });}
  function restore(saved){if(!Array.isArray(saved))return false;
-   for(const b of saved){if(!b||!STRUCTURE_TYPES.includes(b.type)||!Number.isFinite(b.x)||!Number.isFinite(b.z)||Math.abs(b.x)>108||Math.abs(b.z)>108||structures.length>=100)continue;
+   for(const b of saved){if(!b||!STRUCTURE_TYPES.includes(b.type)||!Number.isFinite(b.x)||!Number.isFinite(b.z)||Math.abs(b.x)>108||Math.abs(b.z)>108||structures.length>=MAX_STRUCTURES)continue;
      if(b.type==='chest'&&!validChestItems(b.items||{}))continue;
-     place(b.type,b.x,b.z,b.rotation||0,{open:!!b.open,items:b.items||{},hp:b.hp,crop:b.crop});
+     place(b.type,b.x,b.z,b.rotation||0,{preserveCoordinates:true,open:!!b.open,items:b.items||{},hp:b.hp,crop:b.crop});
    }return true;}
  function resolveCollision(x,z,r=.46){return resolveStructureCollision(structures,x,z,r);}
  function isBlocked(x,z,r=.46){return positionBlocked(structures,x,z,r);}
  function blocksLine(from,to){return structureBlocksLine(structures,from,to);}
- return {structures,place,canPlace,near,covered,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,update,
+ return {structures,place,createPreview,canPlace,near,covered,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,update,
    resolveCollision,isBlocked,blocksLine,serialize,restore};
 }

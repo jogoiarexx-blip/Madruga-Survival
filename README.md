@@ -1,10 +1,42 @@
-# 🌲 MadrugaCraft 3D — Sobrevivência v1.4
+# 🌲 MadrugaCraft 3D — Sobrevivência v1.7
 
-Um jogo 3D em **Three.js** com floresta, inimigos, coleta, crafting, sobrevivência e construção modular de bases. A v1.4 conserva sobrevivência, defesa, caça, pesca, horta, culinária, construção e mineração e acrescenta progressão independente em oito profissões.
+Um jogo 3D em **Three.js** com floresta, inimigos, coleta, crafting, sobrevivência e construção modular de bases. A v1.7 conserva sobrevivência, defesa, caça, pesca, horta, culinária, mineração e oito profissões, além de zumbis variados, cemitério, aldeão guarda, prévia de construção e agora encaixe magnético entre módulos.
 
 **GitHub Pages:** o projeto usa apenas HTML, CSS e módulos JavaScript. **Não precisa de build, framework nem backend.** Os caminhos de import são relativos ao `index.html` e existe o arquivo `.nojekyll`. O motor Three.js 0.160.0 ainda vem do jsDelivr por import map: é necessária uma conexão com a CDN para iniciar o jogo.
 
-## NOVO na v1.4 — evolução real de habilidades
+## NOVO v1.7 — Encaixe magnético para casas e bases
+
+O modo de construção agora possui **Ímã ligado** por padrão. A prévia busca pontos úteis perto da posição que o jogador escolheu:
+
+- **Paredes e portas** encaixam nas **bordas externas** de pisos de 3 × 3 metros, em vez de passarem pelo centro do cômodo.
+- **Paredes e portas** também completam segmentos em linha e formam **cantos em L**, de acordo com a rotação escolhida.
+- **Pisos** se alinham ao lado de outros pisos ou perto de paredes; **telhados** se alinham ao centro dos pisos ou ao lado de outros telhados.
+- O ímã procura locais **livres**. Posições ocupadas continuam vermelhas/bloqueadas e não consomem recursos.
+- Toque no botão **🧲 Ímã** na interface ou pressione **C** no PC para alternar entre encaixe automático e a grade tradicional de 3 metros.
+- No PC use **G** ou no celular **↻ Girar** para escolher a orientação; **F/Enter/Confirmar** conclui, **Esc/Cancelar** desiste.
+- Aumentei o limite para **160 estruturas** para permitir casas e bases maiores. A prévia segue sem colisão e **sem entrar no salvamento**; os materiais só são gastos após a confirmação.
+
+**Compatibilidade:** o salvamento permanece `madrugacraft.survival.v2`. Casas antigas construídas na grade de 3 m conservam suas coordenadas. Novas peças em bordas de 1,5 m também são restauradas exatamente. Evite voltar para a v1.6 depois de construir novas bordas, pois a versão antiga não entende a precisão extra.
+
+**Validação:** `npm test` executa 123 verificações da suíte atual, incluindo 11 testes novos em `tests/v17-snapping.mjs`. `npm run check` verifica a sintaxe. O jogo completo com WebGL ainda não foi testado no navegador neste ambiente (bloqueios ao abrir página local/CDN).
+
+## NOVO v1.6 — Construir escolhendo o local antes de gastar
+
+Agora, as **receitas de estruturas** não colocam mais a peça instantaneamente. Ao escolher fogueira, abrigo, piso, parede, porta, telhado, cama, baú, bancada ou canteiro, o jogo abre uma **prévia 3D sem colisão e sem gasto**. A forma do holograma é idêntica à da peça real: **verde** significa que está livre; **vermelho** significa que há obstáculo, sobreposição, limite do mapa ou falta de material. O sistema só debita os recursos **ao confirmar uma posição válida**. Cancelar mantém a mochila intacta. A prévia nunca entra no save.
+
+**PC:** abra a mochila (I), clique em uma receita do grupo Construções; ande com WASD, olhe com mouse para ajustar a direção, use **←/→** para deslocar lateralmente, **↑/↓** ou roda do mouse para aumentar/reduzir a distância, **G** para girar 90°, **F / Enter / clique na cena** para confirmar, **Esc** para cancelar. Os atalhos B, H, V, M, N, K e L agora abrem a prévia diretamente, não constroem na hora.
+
+**Celular:** selecione uma construção na mochila e ajuste usando os botões **←, →, ± distância, girar, confirmar e cancelar** que aparecem durante o posicionamento; o direcional continua funcionando para andar. O menu separa Construções, Equipamentos, Culinária e Reparos com custos claros. Ferramentas e comidas continuam sendo fabricadas imediatamente, usando o requisito da fogueira ou bancada quando necessário.
+
+Ao construir, ganha XP de Construtor uma única vez. Não existe XP por prévia nem por cancelamento. O modo é descartado ao morrer ou abrir outro painel. A chave `madrugacraft.survival.v2` não foi alterada: saves anteriores continuam compatíveis.
+
+## NOVO v1.6 — Mundo mais perigoso
+
+- **Zumbis:** padrão, corredor (rápido), tóxico (envenena ao acertar) e gigante (mais resistente e perigoso).
+- **Cemitério low-poly:** lápides, cripta, atmosfera sombria e inimigos adicionais quando se aproxima da área.
+- **Aldeão guarda:** personagem recrutável com vida própria, patrulha e combate contra ameaças nas proximidades da base. Não concede recompensas ou XP de jogador pelos inimigos que ele derrota sozinho.
+
+## Evolução de habilidades (desde v1.4)
 
 Pressione **U** durante a partida para abrir o painel de profissões. No celular, toque na mochila e em **⭐ Ver evolução das habilidades**. O painel apresenta nível, barra de XP, benefício atual e atividade que aumenta a experiência. As oito profissões têm 20 níveis cada, independentes do nível geral de combate. O jogador não escolhe pontos manualmente: evolui ao executar ações que realmente funcionam.
 
@@ -19,7 +51,7 @@ Pressione **U** durante a partida para abrir o painel de profissões. No celular
 | 🛠️ Artesanato | Fabricar equipamentos, ferramentas e cozinhar | Receitas mais econômicas e duas porções ao cozinhar a partir do nível 6 |
 | 🔥 Sobrevivência | Passar para um novo dia ou dormir com segurança | Fome e sede diminuem mais devagar conforme o nível |
 
-O sistema **só entrega XP por ações bem-sucedidas**. Ex.: tentar pescar sem água ou sem vara não aumenta a perícia; desmontar construções não gera XP, evitando um ciclo gratuito. O XP total é persistido no mesmo save. Se a partida foi criada antes da v1.4, as profissões são adicionadas automaticamente no nível 1, sem apagar progresso da v1.3 ou anteriores.
+O sistema **só entrega XP por ações bem-sucedidas**. Ex.: tentar pescar sem água ou sem vara não aumenta a perícia; desmontar construções não gera XP, evitando um ciclo gratuito. O XP total é persistido no mesmo save. Se a partida foi criada antes da v1.5, as profissões são adicionadas automaticamente no nível 1, sem apagar progresso da v1.3 ou anteriores.
 
 Os novos arquivos ficam em `src/gameplay/skills.js`, `src/ui/skills-ui.js` e `tests/v14-skills.mjs`. Também foram integrados `src/main.js`, as regras de pesca, agricultura, sobrevivência, mochila, HTML e CSS. **O projeto continua estático, sem build e publicável no GitHub Pages**.
 
@@ -105,7 +137,7 @@ Fique em uma clareira, olhe para onde deseja construir e abra a mochila. Os mód
 
 ## Publicar no GitHub Pages
 
-1. Extraia o ZIP da v1.4.
+1. Extraia o ZIP da v1.5.
 2. Entre na pasta `MadrugaCraft-Sobrevivencia` e envie **o conteúdo dela** para a raiz de seu repositório GitHub, incluindo arquivos ocultos como `.nojekyll` e as pastas `src/` e `styles/`.
 3. Abra **Settings → Pages → Build and deployment → Deploy from a branch**, escolha `main` e `/ (root)`.
 4. Abra `https://SEU-USUARIO.github.io/NOME-DO-REPOSITORIO/` após a publicação. A primeira conexão com a CDN deve estar liberada no navegador.
@@ -128,7 +160,7 @@ styles/main.css                Estilos responsivos
 src/main.js                    Loop e integração
 src/gameplay/survival.js       Vida útil e receitas
 src/gameplay/storage.js        Regras do baú e descanso em cama
-src/gameplay/save-system.js    Saves compatíveis com v1.0, v1.1, v1.2, v1.3 e v1.4
+src/gameplay/save-system.js    Saves compatíveis com v1.0, v1.1, v1.2, v1.3 e v1.5
 src/world/buildings.js         Malhas e interação com estruturas (expandido)
 src/world/building-rules.js    Grade, colisões e visibilidade de paredes
 src/ui/survival-ui.js          Mochila e controles de construção
@@ -153,10 +185,13 @@ tests/                         Testes, incluindo base-building.mjs e storage.mjs
 
 ## Limitações e validação
 
-- Os **90 cenários/conjuntos de teste** (incluindo 13 casos novos na v1.4) passaram em `npm test` no Node; a verificação sintática com `npm run check` também passou.
+- Os **90 cenários/conjuntos de teste** (incluindo 13 casos novos na v1.5) passaram em `npm test` no Node; a verificação sintática com `npm run check` também passou.
 - A interface responsiva reaproveita a base testada na v1.2 em **1366×768, 390×844, 844×390 e 320×640**; os novos botões v1.3 ainda precisam de verificação visual em navegador com Three.js disponível. Isso não equivale a uma partida 3D validada.
 - **Partida completa com WebGL/Three.js não foi validada neste ambiente**, pois as requisições externas à CDN não estavam disponíveis. O funcionamento gráfico final deve ser conferido depois da publicação no GitHub Pages ou num navegador que tenha acesso à CDN.
 - A invasão tem perseguição e escolha de alvos próximas ao jogador, mas os inimigos ainda não possuem navegação complexa nem destroem baús; os modelos ainda são low-poly; não há encaixe livre em qualquer ângulo nem edição voxel por bloco. A física das bases é 2D no plano XZ; a IA possui colisão e obstrução de linha de visão, mas não faz planejamento de rotas complexo.
 - O progresso é armazenado no `localStorage` da origem/navegador. Não sincroniza entre celulares e computadores.
 
-> **Testes antigos:** `testes.mjs` e `tests/regression.mjs` são vestígios de testes da campanha antiga e não foram adaptados ao modo livre; execute `npm test` para a suíte válida da v1.4.
+> **Testes antigos:** `testes.mjs` e `tests/regression.mjs` são vestígios de testes da campanha antiga e não foram adaptados ao modo livre; execute `npm test` para a suíte válida da v1.5.
+
+
+Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamento.

@@ -1,3 +1,4 @@
+import {withinCemetery} from '../gameplay/zombie-variants.js';
 // Floresta estática: gerada de uma semente persistida para restaurar os checkpoints.
 // Não depende de bundler, CDN ou chamadas de rede.
 import {createSeededRandom} from './random.js';
@@ -157,12 +158,12 @@ function generate(quality, seed) {
     for (let i = 0; i < treeCount; i++) {
         const x = (random()-0.5)*190;
         const z = (random()-0.5)*190;
-        if (Math.hypot(x,z)>8 && Math.hypot(x-shrinePosition.x,z-shrinePosition.z)>10) createTree(x,z);
+        if (Math.hypot(x,z)>8 && Math.hypot(x-shrinePosition.x,z-shrinePosition.z)>10 && !withinCemetery({x,z},17)) createTree(x,z);
     }
     for (let i = 0; i < rockCount; i++) {
         const x = (random() - 0.5) * 190;
         const z = (random() - 0.5) * 190;
-        if (Math.hypot(x,z)>5 && Math.hypot(x-shrinePosition.x,z-shrinePosition.z)>10) {
+        if (Math.hypot(x,z)>5 && Math.hypot(x-shrinePosition.x,z-shrinePosition.z)>10 && !withinCemetery({x,z},17)) {
             const scale = 0.6 + random() * 1.4;
             createRock(x, z, scale);
         }

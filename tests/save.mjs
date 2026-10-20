@@ -37,3 +37,10 @@ test('localStorage bloqueado não derruba o jogo',()=>{
  const bad={getItem(){throw Error('deny')},setItem(){throw Error('deny')},removeItem(){throw Error('deny')}};
  assert.equal(readSave(bad),null);assert.equal(writeSave(bad,sample()),false);assert.equal(clearSave(bad),false);
 });
+
+test('save aceita zumbi como inimigo válido e rejeita tipo desconhecido',()=>{
+ const s=sample();s.enemies=[{type:'zombie',x:7,z:-2,hp:3,enraged:false}];
+ assert.ok(validateSave({version:2,...s}));
+ s.enemies=[{type:'mutant',x:0,z:0,hp:1,enraged:false}];
+ assert.equal(validateSave({version:2,...s}),null);
+});

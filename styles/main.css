@@ -230,3 +230,51 @@ body.touch-playing #inventory-toggle{display:none}
  border:2px solid #f3d58f;border-radius:12px;padding:10px 16px;background:#3a3925e8;color:#fff1ba;
  box-shadow:0 4px 18px #0008;font-weight:800;font-size:clamp(13px,2vw,17px);text-align:center;max-width:92vw}
 @media(max-width:700px){#skill-level-up{top:10px;left:8px;right:8px;transform:none;max-width:none;font-size:12px}}
+
+/* v1.6 Craft revisado: holograma real no cenário e confirmação sem gasto antecipado. */
+#placement-panel{position:fixed;bottom:86px;left:50%;transform:translateX(-50%);z-index:35;
+ width:min(560px,calc(100vw - 24px));padding:12px 14px;background:rgba(14,34,27,.94);
+ border:2px solid #8bb892;border-radius:14px;box-shadow:0 8px 32px #000b;text-align:center;
+ color:#edf7eb;display:flex;flex-direction:column;gap:8px;pointer-events:auto}
+#placement-panel.hidden{display:none!important}
+.placement-heading{display:flex;gap:5px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.placement-heading strong{font-size:14px;color:#ffe2a5}
+#placement-coords{font-size:11px;color:#afd5bd;font-variant-numeric:tabular-nums}
+#placement-status{font-size:13px;font-weight:750;color:#9bffbc;margin:0}
+#placement-status.blocked{color:#ff9c9c}
+.placement-adjust,.placement-decide{display:flex;justify-content:center;align-items:stretch;flex-wrap:wrap;gap:7px}
+#placement-panel button{border-radius:9px;border:1px solid #93cba8;color:#fff;background:#315d48;
+ font-size:12px;font-weight:750;cursor:pointer;min-height:40px;padding:8px 11px;touch-action:manipulation}
+#placement-panel button:disabled{opacity:.45;cursor:not-allowed}
+#placement-panel #placement-confirm{background:#24794b;border-color:#a8ffd0;flex:1}
+#placement-panel #placement-cancel{background:#723b3c;border-color:#f2a7a9;flex:1}
+#placement-panel small{font-size:10px;line-height:1.35;color:#c1d6c9}
+.craft-explainer{border-left:3px solid #a1d49e;padding:8px;background:#213d31}
+.recipe-section-label{grid-column:1/-1;color:#ffe0ac;font-size:14px;font-weight:800;
+ margin-top:12px;border-bottom:1px solid #718e73;padding-bottom:5px}
+.recipe-btn{line-height:1.4;text-align:left;white-space:normal}
+.recipe-btn .recipe-title{display:block;font-size:13px;color:#fff6d5;font-weight:800}
+.recipe-btn .recipe-cost{display:block;font-size:12px;color:#d5efdb;margin-top:4px}
+.recipe-btn .recipe-detail{display:block;font-size:11px;color:#c4d9c5;margin-top:3px;font-weight:400}
+body.placing #interact-hint{display:none}
+@media(max-width:700px){
+ #placement-panel{bottom:162px;width:min(410px,calc(100vw - 16px));padding:8px 10px;gap:5px}
+ #placement-panel button{min-height:35px;padding:6px 9px}
+ #placement-panel small{display:none}
+ #placement-coords{font-size:9px}
+}
+@media(pointer:coarse) and (max-height:560px){
+ #placement-panel{bottom:95px;right:4px;left:auto;transform:none;width:min(320px,57vw)}
+ #placement-panel .placement-heading,#placement-coords{display:none}
+ #placement-panel button{min-height:32px;font-size:10px;padding:5px}
+ #placement-panel .placement-adjust{gap:3px}
+}
+@media(max-width:360px){#placement-panel button{min-height:34px;font-size:10px;padding:5px 7px}}
+
+/* v1.7 — o estado do ímã precisa ser visível também no celular. */
+#placement-snap[aria-pressed="true"]{background:#28685f;border-color:#80f0c1;color:#edfff5}
+#placement-snap[aria-pressed="false"]{background:#4c4c50;border-color:#aaaeb6;color:#e7e7e7}
+@media (max-width: 420px){
+ #placement-panel .placement-adjust #placement-snap{flex:1 1 42%;font-weight:700}
+ #placement-panel .placement-adjust{row-gap:5px}
+}

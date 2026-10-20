@@ -72,17 +72,19 @@ const enemies=[];
 const shrinePosition={x:32,z:-28};
 const spawnEnemy=createEnemySpawner({THREE,scene,getGroundHeight:()=>0,
   findSpawnPoint:()=>({x:15,z:10}),shrinePosition,enemies});
-pass('fabricante cria normal, veloz, tanque, xamã e guardião',()=>{
- for(const type of ['normal','fast','tank','shaman','boss'])spawnEnemy(type);
- assert.equal(enemies.length,5);
- assert.equal(enemies[4].hp,24);
- assert.equal(enemies[4].mesh.position.x,32);
- assert.ok(enemies[3].mesh.children.length>4);
+pass('fabricante cria normal, zumbi, veloz, tanque, xamã e guardião',()=>{
+ for(const type of ['normal','zombie','fast','tank','shaman','boss'])spawnEnemy(type);
+ assert.equal(enemies.length,6);
+ assert.equal(enemies[5].hp,24);
+ assert.equal(enemies[5].mesh.position.x,32);
+ assert.equal(enemies[1].type,'zombie');
+ assert.equal(enemies[1].hp,3);
+ assert.ok(enemies[4].mesh.children.length>4);
 });
 let warned=0,hitPlayer=0,missiles=0;
 pass('IA preserva aviso do chefe e projéteis de xamã',()=>{
- const boss=enemies[4];boss.mesh.position.set(0,1.45,-3);boss.attackTimer=0;
- const shaman=enemies[3];shaman.mesh.position.set(0,.46,-11);shaman.attackTimer=0;
+ const boss=enemies[5];boss.mesh.position.set(0,1.45,-3);boss.attackTimer=0;
+ const shaman=enemies[4];shaman.mesh.position.set(0,.46,-11);shaman.attackTimer=0;
  const ai=createEnemyAI({enemies:[boss,shaman],player:rig.player,getGroundHeight:()=>0,
    resolveCollision:(x,z)=>({x,z}),isGameActive:()=>true,
    showBossTelegraph(){warned++},hideBossTelegraph(){},
@@ -100,7 +102,7 @@ pass('arena registra pilares físicos e aviso com raio da segunda fase',()=>{
  shrine.create();
  assert.equal(all.length,8);
  assert.ok(all.every(c=>Math.hypot(c.x-32,c.z+28)>7));
- const boss=enemies[4];boss.enraged=true;boss.windup=.35;
+ const boss=enemies[5];boss.enraged=true;boss.windup=.35;
  shrine.showBossTelegraph(boss);shrine.update(.1,1);shrine.hideBossTelegraph();
 });
 pass('projétil causa impacto e é removido',()=>{

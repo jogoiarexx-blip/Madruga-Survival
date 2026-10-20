@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v1.4 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v1.6 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -23,7 +23,8 @@ import {createSurvivalUI} from './ui/survival-ui.js';
 import {createTouchControls} from './input/touch-controls.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
-import {MODULAR_TYPES,orientation,collidesWithStructure} from './world/building-rules.js';
+import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
+import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
@@ -101,7 +102,7 @@ const controls = {
 
 // ========== GAME STATE ==========
 let survival=createSurvival();
-let raidState=createRaidState(),raidAlertUntil=0;
+let raidState=createRaidState(),raidAlertUntil=0,poisonTimer=0,cemeterySpawnTimer=5;
 let health = 100;
 let maxHealth = 100;
 let level = 1, xp = 0, kills = 0;
@@ -173,6 +174,9 @@ function updateHUD() {
     document.getElementById('score-display').textContent = `🌲 Acampamento livre`;
     document.getElementById('quest-display').textContent = `🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`;
     document.getElementById('wave-display').textContent = `Perigo: ${wave}/6 · Invasões: ${raidState.waves}`;
+    document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Guarda caído · F para reanimar':guard.recruited?`🛡 Guarda aliado · ${guard.hp}/80 PV`:'🛡 Encontre o aldeão perto do acampamento (F)';
+    document.getElementById('poison-status').textContent = poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'';
+    document.getElementById('cemetery-status').textContent = withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'';
     document.getElementById('raid-alert').classList.toggle('hidden',!(gameActive&&elapsed<raidAlertUntil));
     document.getElementById('enemies-left').textContent = `Criaturas: ${enemies.length}`;
     document.getElementById('boost-display').textContent = speedBoostTimer > 0 ? `⚡ Velocidade: ${speedBoostTimer.toFixed(1)}s` : '';
@@ -181,7 +185,7 @@ function updateHUD() {
     document.getElementById('mission-goal').textContent = survival.firesBuilt ?
       'Construa um telhado, um canteiro e fabrique uma vara de pesca'  : 'Reúna 4 madeiras e 4 pedras para a fogueira';
     document.getElementById('equipment-display').textContent = `Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`;
-    document.getElementById('target-hint').textContent = 'F coletar/plantar · Y pescar · I mochila · G girar';
+    document.getElementById('target-hint').textContent = placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir/coletar · Y pescar · I mochila · U habilidades';
     document.getElementById('boss-bar-wrapper').classList.add('hidden');
     survivalUI.update();
     skillsUI.update();
@@ -189,9 +193,14 @@ function updateHUD() {
     const closestBuilding=buildings.nearest(player.position,2.85);
     const closest=resources.findNearby(player.position);
     const prompt=document.getElementById('interact-hint');
-    if(closestBuilding&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    if(placement){
+        prompt.classList.add('hidden');
+    }else if(closestBuilding&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         const names={door:closestBuilding.open?'Fechar porta':'Abrir porta',bed:'Dormir até amanhecer',chest:'Abrir baú',workbench:'Usar bancada',farmPlot:!closestBuilding.crop.planted?'Plantar sementes':closestBuilding.crop.growth>=CROP_MATURITY?'Colher legumes':closestBuilding.crop.water>8?'Canteiro crescendo':'Regar canteiro'};
         prompt.textContent=`[F] ${names[closestBuilding.type]} · [X] desmontar`;
+        prompt.classList.remove('hidden');
+    }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent=guard.hp===0?'[F] Reanimar aldeão com 2 frutas e 1 água':'[F] Recrutar aldeão para defender sua base';
         prompt.classList.remove('hidden');
     }else if(closest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         const names={wood:'madeira',stone:'pedras',fiber:'fibras',berries:'frutas',water:'água',iron:'ferro (requer picareta)'};
@@ -363,6 +372,11 @@ function spawnSpeedBoost(at = null) {
 }
 
 const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies});
+const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add});
+const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
+    getStructures:()=>buildings.structures,getEnemies:()=>enemies,
+    canSee:(a,b)=>!buildings.blocksLine(a,b),
+    attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false)});
 const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
     addCollider:collisionWorld.add,cameraObstacles,getGraphicsQuality:()=>graphicsQuality});
 let worldSeed = Math.floor(Math.random() * 0x100000000);
@@ -371,6 +385,8 @@ function initWorld() {
     forest.generate(graphicsQuality,worldSeed);
     // Primeiro a arena e os obstáculos; depois os elementos dinâmicos.
     shrine.create();
+    cemetery.create();
+    cameraObstacles.push(...cemetery.cameraObstacles);
     cameraRig.refreshObstacles();
     forest.updateVisibility(player.position,graphicsQuality,0,true);
     resources.generate(worldSeed);
@@ -379,6 +395,7 @@ function initWorld() {
     for (let i=0; i<2; i++) spawnSpeedBoost();
     for (let i=0; i<2; i++) spawnEnemy('normal');
     spawnEnemy('fast');
+    if(Math.random()<0.35)spawnEnemy('zombie');
     updateHUD();
 }
 
@@ -388,6 +405,7 @@ let availableSave = readSave(progressStorage);
 let saveTick=0;
 let buildingCameraMeshes=[];
 let rotationOffset=0;
+let placement=null,placementGhost=null,placementInfo=null;
 function refreshBuildingCamera(){
     for(const old of buildingCameraMeshes){const i=cameraObstacles.indexOf(old);if(i!==-1)cameraObstacles.splice(i,1);}
     buildingCameraMeshes=buildings.structures.map(s=>s.group);
@@ -397,7 +415,7 @@ function serializeProgress() {
     return {
         seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
         currentWeapon,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
-        survival,raid:raidState,resources:resources.serialize(),buildings:buildings.serialize(),
+        survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
         wildlife:wildlife.serialize(),
         healthPacks:healthPacks.map(item=>({x:item.position.x,z:item.position.z})),
         speedBoosts:speedBoosts.map(item=>({x:item.position.x,z:item.position.z})),
@@ -422,6 +440,7 @@ function restoreProgress(data) {
     level=data.level;xp=data.xp;kills=data.kills;maxHealth=data.maxHealth;health=data.health;
     wave=data.wave;elapsed=data.elapsed;spawnTimer=4;
     survival=data.survival;raidState=data.raid||createRaidState();raidAlertUntil=0;
+    poisonTimer=data.poisonTimer||0;cemeterySpawnTimer=5;guard.setState(data.guard);
     buildings.restore(data.buildings);
     if(Array.isArray(data.wildlife))wildlife.restore(data.wildlife);
     refreshBuildingCamera();
@@ -468,6 +487,20 @@ function showPauseMenu(message = '') {
 function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); controls.lock(); }
 document.addEventListener('keydown', e => {
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+    // O modo construção captura atalhos antes de combate e coleta.
+    if (placement && !e.repeat){
+        if(['Escape','Backspace'].includes(e.code)){cancelPlacement();return;}
+        if(['Enter','KeyF'].includes(e.code)){confirmPlacement();return;}
+        if(['KeyG','KeyR'].includes(e.code)){rotateBuild();return;}
+        if(e.code==='KeyC'){switchPlacementSnap();return;}
+        if(e.code==='ArrowLeft'){movePlacement('lateral',-1.5);return;}
+        if(e.code==='ArrowRight'){movePlacement('lateral',1.5);return;}
+        if(e.code==='ArrowUp'){movePlacement('distance',.75);return;}
+        if(e.code==='ArrowDown'){movePlacement('distance',-.75);return;}
+        if(e.code==='KeyI'){cancelPlacement();openInventory();return;}
+        if(e.code==='KeyP'){saveProgress(true);return;}
+        if(!['KeyW','KeyA','KeyS','KeyD','ShiftLeft','ShiftRight'].includes(e.code))return;
+    }
     keys[e.code] = true;
     if (e.code === 'F3') e.preventDefault();
     if (e.code === 'KeyI' && !e.repeat && gameActive) {toggleInventory();return;}
@@ -526,6 +559,7 @@ document.getElementById('gfx-high').onclick = () => setGfx('high', document.getE
         } catch (_) {}
 let worldInitialized = false;
 function beginAdventure(restore=false) {
+    if(placement)releasePlacement();
     const save = restore ? availableSave : null;
     if (!save) {clearSave(progressStorage);availableSave=null;}
     else {
@@ -547,11 +581,12 @@ document.getElementById('restart-btn').onclick = () => location.reload();
 document.addEventListener('pointerlockchange', () => {
     document.getElementById('instructions').style.opacity = controls.isLocked ? '0.6' : '1';
     if (controls.isLocked) pauseMenu.classList.add('hidden');
-    else if (gameActive && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen) {saveProgress();showPauseMenu();}
+    else if (gameActive && !placement && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen) {saveProgress();showPauseMenu();}
 });
 document.addEventListener('wheel', e => {
     if (!controls.isLocked || !gameActive) return;
     e.preventDefault();
+    if(placement){movePlacement('distance', e.deltaY>0?.75:-.75);return;}
     cameraZoom=THREE.MathUtils.clamp(cameraZoom+e.deltaY*.004,4.0,11.0);
     cameraRig.setDistance(cameraZoom);
 }, {passive:false});
@@ -565,7 +600,7 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
-    onEnemyKilled:(type)=>{kills++;if(type!=='boss'&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
+    onEnemyKilled:(type)=>{kills++;if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
     getWeaponBonus:()=>currentWeapon===2&&survival.crafted.ironSpear?3:0,
     onSwing:(range,arc,damage,yaw)=>wildlife.attack(player.position,yaw,range,arc,damage),
     onWeaponHit:()=>{const tool=currentWeapon===1?'hammer':currentWeapon===2?'spear':null;
@@ -578,6 +613,9 @@ const enemyAI = createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
     damagePlayer,spawnParticle,throwProjectile:projectileSystem.throwProjectile,sfx,
     isGameActive:()=>gameActive,hasLineOfSight:(from,to)=>!buildings.blocksLine(from,to),
     getRaidTarget:(pos)=>raidTarget(buildings.structures,pos,player.position),
+    getGuard:()=>guard.recruited&&guard.alive?guard.position:null,
+    onGuardDamage:amount=>{if(guard.damage(amount)&&!guard.alive){showToast('💔 O aldeão caiu! Reanime-o com comida e água.');saveProgress();}},
+    onPoison:seconds=>{poisonTimer=Math.max(poisonTimer,seconds);showToast('☣ Zumbi tóxico! Você foi envenenado.');},
     onRaidDamage:(structure,damage)=>{const hit=buildings.damage(structure,damage);
        if(hit.destroyed){refreshBuildingCamera();
            if(structure.type==='campfire')survival.firesBuilt=Math.max(0,survival.firesBuilt-1);
@@ -586,9 +624,95 @@ const enemyAI = createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
     }});
 
 // Jogabilidade de sobrevivência: interação próxima, consumo e construção.
-function rotateBuild(){rotationOffset=(rotationOffset+1)%4;
-    showToast(`🧭 Rotação adicional: ${rotationOffset*90}°`);
+function rotateBuild(){
+    if(placement){rotatePlacement(placement);updatePlacementPreview();return;}
+    rotationOffset=(rotationOffset+1)%4;
+    showToast(`🧭 Rotação inicial: ${rotationOffset*90}°`);
 }
+const placementPanel=document.getElementById('placement-panel');
+const placementName=document.getElementById('placement-name');
+const placementStatusLabel=document.getElementById('placement-status');
+function releasePlacement(){
+    placementGhost?.dispose();placementGhost=null;placement=null;placementInfo=null;
+    placementPanel.classList.add('hidden');document.body.classList.remove('placing');
+}
+function cancelPlacement(){
+    if(!placement)return false;
+    releasePlacement();showToast('↩ Construção cancelada — materiais preservados');updateHUD();return true;
+}
+function switchPlacementSnap(){
+    if(!placement)return false;
+    const active=toggleSnap(placement);
+    updatePlacementPreview();showToast(active?'🧲 Encaixe automático ligado':'🧲 Encaixe automático desligado');
+    return active;
+}
+function movePlacement(axis,delta){
+    if(!placement)return;
+    nudgePlacement(placement,axis,delta);updatePlacementPreview();
+}
+function updatePlacementPreview(){
+    if(!placement||!placementGhost)return;
+    const status=placementStatus(placement,player.position,playerYaw,
+       (...args)=>buildings.canPlace(...args),
+       type=>canAfford(survival,type,recipeCost(type,RECIPES[type].cost,survival.skills)),
+       buildings.structures);
+    placementInfo=status;
+    const c=status.candidate;
+    if(c)placementGhost.setPosition(c.x,c.z,c.rotation||0);
+    placementGhost.setValid(status.valid);
+    placementStatusLabel.textContent=`${status.valid?'✅':'⛔'} ${status.reason}`;
+    document.getElementById('placement-snap').textContent=placement.snapEnabled?'🧲 Ímã: ligado [C]':'🧲 Ímã: desligado [C]';
+    document.getElementById('placement-snap').setAttribute('aria-pressed',String(placement.snapEnabled));
+    placementStatusLabel.classList.toggle('blocked',!status.valid);
+    document.getElementById('placement-confirm').disabled=!status.valid;
+    document.getElementById('placement-coords').textContent=c?`Local ${c.x.toFixed(1)}, ${c.z.toFixed(1)} · giro ${(c.rotation||0)*90}°`:'';
+}
+function startPlacement(recipe){
+    if(!gameActive||!isStructureRecipe(recipe)||!RECIPES[recipe])return false;
+    const cost=recipeCost(recipe,RECIPES[recipe].cost,survival.skills);
+    if(!canAfford(survival,recipe,cost)){showToast('Materiais insuficientes para construir.');return false;}
+    if(buildings.structures.length>=MAX_STRUCTURES){showToast('Limite de construções atingido.');return false;}
+    // A construção real só acontece na confirmação; o holograma não salva nem colide.
+    releasePlacement();
+    placement=beginPlacement(recipe,playerYaw,rotationOffset);
+    placementGhost=buildings.createPreview(recipe);
+    if(!placementGhost){releasePlacement();return false;}
+    placementName.textContent=`🧱 ${RECIPES[recipe].label}`;
+    placementPanel.classList.remove('hidden');document.body.classList.add('placing');
+    if(survivalUI.isOpen)survivalUI.close();
+    pauseMenu.classList.add('hidden');
+    initAudio();controls.lock();
+    updatePlacementPreview();updateHUD();
+    return true;
+}
+function confirmPlacement(){
+    if(!gameActive||!placement)return false;
+    // Revalida com a localização atual e confirma como uma transação única.
+    const cost=recipeCost(placement.type,RECIPES[placement.type].cost,survival.skills);
+    const result=commitPlacement({
+      plan:placement,position:player.position,yaw:playerYaw,structures:buildings.structures,
+      canPlace:(...args)=>buildings.canPlace(...args),
+      canAfford:type=>canAfford(survival,type,cost),
+      spend:type=>spendRecipe(survival,type,cost),
+      place:c=>buildings.place(placement.type,c.x,c.z,c.rotation||0,{preserveCoordinates:!!c.snapped}),
+      refund:()=>{for(const [id,count] of Object.entries(cost))addResource(survival,id,count);}
+    });
+    if(!result.ok){updatePlacementPreview();showToast(result.reason);return false;}
+    const type=placement.type;
+    if(type==='campfire')survival.firesBuilt++;
+    if(type==='shelter')survival.sheltersBuilt++;
+    refreshBuildingCamera();releasePlacement();
+    earnSkill('building',25);sfx.boost();showToast(`✅ ${RECIPES[type].label} posicionada!`);
+    updateHUD();saveProgress();return true;
+}
+for(const [id,callback] of [
+    ['placement-confirm',confirmPlacement],['placement-cancel',cancelPlacement],
+    ['placement-rotate',rotateBuild],['placement-snap',switchPlacementSnap],
+    ['placement-left',()=>movePlacement('lateral',-1.5)],
+    ['placement-right',()=>movePlacement('lateral',1.5)],
+    ['placement-far',()=>movePlacement('distance',.75)],
+    ['placement-near',()=>movePlacement('distance',-.75)]
+])document.getElementById(id).addEventListener('click',callback);
 const skillsUI=createSkillsUI({getState:()=>survival,onClose:closeSkills});
 const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume:consume,
     onClose:closeInventory,onRotate:rotateBuild,onDismantle:deconstructNear,onRepair:repairNear,onFish:fishNearby,
@@ -664,8 +788,14 @@ function deconstructNear(){
 
 function harvestNear(){
     if(interactWithBuilding())return true;
+    if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)){
+        showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
+    }
     const result=resources.harvest(player.position,canUseTool(survival,'pickaxe'));
-    if(!result){showToast('Procure madeira, pedras, minério, planta ou água (F)');return false;}
+    if(!result){
+        if(guard.nearby(player.position)){showToast(guard.interact(survival.inventory));return true;}
+        showToast('Procure madeira, pedras, minério, planta ou água (F)');return false;
+    }
     if(result.requires){showToast('⛏ Faça uma picareta na bancada e repare se estiver quebrada!');return false;}
     if(result.type==='iron'){
         useTool(survival,'pickaxe',Math.max(1,4-Math.floor((skillLevel(survival,'mining')-1)/6)));
@@ -693,6 +823,7 @@ function consume(type){
     if(!useConsumable(survival,type)){
         showToast('Você não tem este alimento ou água na mochila');return false;
     }
+    if(type==='water')poisonTimer=Math.max(0,poisonTimer-3);
     sfx.heal();showToast(type==='water'?'💧 Sede recuperada!':'🍖 Fome recuperada!');updateHUD();return true;
 }
 function canCraftAtPosition(recipe){
@@ -711,27 +842,12 @@ function canCraftAtPosition(recipe){
 function craft(recipe){
     if(!gameActive||!RECIPES[recipe])return false;
     if(!canCraftAtPosition(recipe)){
-        showToast('Use uma bancada/fogueira próxima ou verifique se o equipamento já foi feito.');return false;
+        showToast('Precisa da bancada/fogueira ou o equipamento já foi produzido.');return false;
     }
-    let location=null;
-    if(['campfire','shelter',...MODULAR_TYPES].includes(recipe)){
-        const distance=recipe==='shelter'?4:3.1;
-        const x=player.position.x-Math.sin(playerYaw)*distance;
-        const z=player.position.z-Math.cos(playerYaw)*distance;
-        const rotation=orientation(Math.round(playerYaw/(Math.PI/2))+rotationOffset);
-        if(!buildings.canPlace(recipe,x,z,player.position,rotation)){
-            showToast('Espaço ocupado: procure uma clareira ou mude a rotação.');return false;
-        }
-        location={x,z,rotation};
-    }
+    if(isStructureRecipe(recipe))return startPlacement(recipe);
     const cost=recipeCost(recipe,RECIPES[recipe].cost,survival.skills);
     if(!canAfford(survival,recipe,cost)){showToast('Faltam recursos! Confira os custos da mochila.');return false;}
     if(!spendRecipe(survival,recipe,cost))return false;
-    if(location){buildings.place(recipe,location.x,location.z,location.rotation);
-        refreshBuildingCamera();
-        if(recipe==='campfire')survival.firesBuilt++;
-        if(recipe==='shelter')survival.sheltersBuilt++;
-    }
     if(recipe==='fishingRod')survival.crafted.fishingRod=true;
     if(['hammer','spear','pickaxe'].includes(recipe)){
         makeTool(survival,recipe);
@@ -742,12 +858,13 @@ function craft(recipe){
     if(recipe.startsWith('repair'))restoreTool(survival,recipe.slice(6).toLowerCase());
     const cooking=['cooked','grilledFish','stew'].includes(recipe);
     if(cooking)addResource(survival,recipe,cookedYield(skillLevel(survival,'crafting')));
-    earnSkill(location?'building':'crafting',location?25:cooking?14:22);
-    sfx.boost();showToast(`🔨 ${RECIPES[recipe].label} — pronto!`);
+    earnSkill('crafting',cooking?14:22);
+    sfx.boost();showToast(`🔨 ${RECIPES[recipe].label} — fabricado!`);
     updateHUD();saveProgress();return true;
 }
 function openInventory(){
     if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen)return;
+    if(placement)releasePlacement();
     survivalUI.open();
     controls.unlock();
     pauseMenu.classList.add('hidden');
@@ -759,6 +876,7 @@ function closeInventory(){
 function toggleInventory(){if(storageUI.isOpen||skillsUI.isOpen)return;if(survivalUI.isOpen)closeInventory();else openInventory();}
 function openSkills(){
     if(!gameActive||storageUI.isOpen||skillsUI.isOpen)return;
+    if(placement)releasePlacement();
     if(survivalUI.isOpen)survivalUI.close();
     skillsUI.open();controls.unlock();pauseMenu.classList.add('hidden');
 }
@@ -772,14 +890,18 @@ const touchControls=createTouchControls({canvas:renderer.domElement,enabled:touc
       playerYaw-=dx*.006;mousePitch=THREE.MathUtils.clamp(mousePitch+dy*.005,-.30,.76);},
     onKey:(code,down)=>{document.dispatchEvent(new KeyboardEvent(down?'keydown':'keyup',{
         code,bubbles:true,cancelable:true}));},
-    onPause:()=>{if(gameActive){controls.unlock();touchControls.release();showPauseMenu();saveProgress();}},
+    onPause:()=>{if(gameActive){if(placement)releasePlacement();controls.unlock();touchControls.release();showPauseMenu();saveProgress();}},
     onInventory:toggleInventory});
-document.addEventListener('mousedown', e => { if (e.button === 0 && controls.isLocked) combat.attack(); });
+document.addEventListener('mousedown', e => {
+    if(e.button!==0||e.target!==renderer.domElement||!controls.isLocked)return;
+    if(placement)confirmPlacement();else combat.attack();
+});
 
 // ========== MINIMAPA ==========
 const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
   player, treeColliders, rockColliders, collectibles:[], healthPacks, speedBoosts,
-  enemies, shrinePosition, playerYaw, resources:resources.nodes, structures:buildings.structures
+  enemies, shrinePosition, playerYaw, resources:resources.nodes, structures:buildings.structures,
+  cemeteryPosition:CEMETERY_POS,guardPosition:guard.alive?guard.position:null
 }));
 
 // ========== GAME LOOP ==========
@@ -816,13 +938,15 @@ function animate() {
             nearFire:buildings.near('campfire',player.position,7),sheltered:buildings.near('shelter',player.position,5)||buildings.covered(player.position),
             survivalLevel:skillLevel(survival,'survival')});
         if(survival.days>beforeDay)earnSkill('survival',40);
-        if(vitals.damage>0){health=Math.max(0,health-vitals.damage);if(health<=0){loseGame();return;}}
+        const poisonStep=Math.min(dt,poisonTimer);poisonTimer=Math.max(0,poisonTimer-poisonStep);
+        const dotDamage=poisonStep*.92;
+        if(vitals.damage+dotDamage>0){health=Math.max(0,health-vitals.damage-dotDamage);if(health<=0){loseGame();return;}}
         wave=Math.min(6,1+Math.floor((survival.days-1)/2));
         const raid=planRaid(survival,raidState,buildings.structures.length);
         if(raid){
             const allowed=Math.max(0,12-enemies.length);
             for(let i=0;i<Math.min(raid.count,allowed);i++){
-                spawnEnemy(i%3===0?'tank':i%2===0?'fast':'normal');
+                spawnEnemy(i%4===0?chooseZombieType({night:true,day:survival.days,roll:Math.random()}):i%3===0?'zombie_runner':i%2===0?'fast':'normal');
                 const invader=enemies[enemies.length-1];
                 const location=findSpawnPoint(18,27,invader.size*.55);
                 invader.mesh.position.set(location.x,getGroundHeight(location.x,location.z)+invader.size/2,location.z);
@@ -832,7 +956,7 @@ function animate() {
             showToast(`⚔️ Invasão da noite ${raid.night}! Defenda as estruturas!`);
             saveProgress();
         }
-        const currentSpeed=(baseSpeed+(level-1)*.15)*speedBoost*(runningFast?runMultiplier:1);
+        const currentSpeed=(baseSpeed+(level-1)*.15)*speedBoost*(runningFast?runMultiplier:1)*(poisonTimer>0?.76:1);
         const cos = Math.cos(playerYaw), sin = Math.sin(playerYaw);
         dashCooldown=Math.max(0,dashCooldown-dt);
         dashTimer=Math.max(0,dashTimer-dt);
@@ -856,6 +980,7 @@ function animate() {
             }
         } else player.position.y = groundY;
         player.rotation.y = playerYaw;
+        if(placement)updatePlacementPreview();
 
         const movingSpeed = Math.hypot(velocity.x, velocity.z);
         const motionFactor = THREE.MathUtils.clamp(movingSpeed/baseSpeed,0,1.7);
@@ -920,7 +1045,21 @@ function animate() {
         resources.update(dt,player.position,graphicsQuality);
         buildings.update(elapsed,dt);
         wildlife.update(dt,player.position,graphicsQuality);
+        guard.update(dt,elapsed,player.position);
         enemyAI.update(dt,elapsed);
+        // Patrulha do cemitério: surgem infectados quando o jogador explora a região.
+        cemeterySpawnTimer-=dt;
+        if(withinCemetery(player.position,21)&&cemeterySpawnTimer<=0&&enemies.length<12){
+            cemeterySpawnTimer=7+Math.random()*4;
+            const type=chooseZombieType({graveyard:true,night:vitals.night,day:survival.days,roll:Math.random()});
+            for(let attempt=0;attempt<8;attempt++){
+                const angle=Math.random()*Math.PI*2,radius=8+Math.random()*4;
+                const x=CEMETERY_POS.x+Math.cos(angle)*radius,z=CEMETERY_POS.z+Math.sin(angle)*radius;
+                if(!isPositionFree(x,z,.85))continue;
+                spawnEnemy(type);const spawned=enemies[enemies.length-1];
+                spawned.mesh.position.set(x,getGroundHeight(x,z)+spawned.size/2,z);break;
+            }
+        }
         projectileSystem.update(dt);
         if (!gameActive) { drawMinimap(); renderer.render(scene,camera); return; }
         // Spawn por SEGUNDOS, não por quadro: dificuldade coerente a 30/60/144 FPS.
@@ -928,7 +1067,7 @@ function animate() {
         if (spawnTimer<=0) {
             spawnTimer=Math.max(2.7,10-wave*.7-(vitals.night?3:0))+Math.random()*2;
             if (enemies.length<Math.min(12,4+wave*2)) {
-                const r=Math.random();spawnEnemy(r<0.4?'normal':r<0.66?'fast':r<0.86?'tank':'shaman');
+                const r=Math.random();spawnEnemy(vitals.night ? (r<0.43?chooseZombieType({night:true,day:survival.days,roll:Math.random()}):r<0.66?'normal':r<0.81?'fast':r<0.92?'tank':'shaman') : (r<0.42?'normal':r<0.68?'fast':r<0.88?'tank':'shaman'));
             }
         }
         hudTick+=dt;
@@ -939,9 +1078,11 @@ function animate() {
         const sunAngle=((dayTime%480)/480)*Math.PI*2;
         sun.position.set(Math.cos(sunAngle)*80,Math.sin(sunAngle-Math.PI/2)*65+5,Math.sin(sunAngle)*40);
         const intensity=Math.max(0.08,Math.sin(sunAngle-Math.PI/2)*.5+.5);
-        sun.intensity=.13+intensity*1.35;
-        ambient.intensity=.12+intensity*.49;
-        scene.background.setHSL(.59,.38,.065+intensity*.55);
+        const graveDist=Math.hypot(player.position.x-CEMETERY_POS.x,player.position.z-CEMETERY_POS.z);
+        const graveAtmosphere=THREE.MathUtils.clamp((26-graveDist)/14,0,1);
+        sun.intensity=(.13+intensity*1.35)*(1-graveAtmosphere*.47);
+        ambient.intensity=(.12+intensity*.49)*(1-graveAtmosphere*.30);
+        scene.background.setHSL(.59,.38-graveAtmosphere*.21,.065+intensity*.55-graveAtmosphere*.075);
         scene.fog.color.copy(scene.background);
 
         shrine.update(dt,elapsed);
@@ -960,6 +1101,7 @@ function animate() {
 }
 
 function loseGame() {
+    if(placement)releasePlacement();
     gameActive = false;
     // Permitir retomar o último checkpoint após morrer.
     sfx.lose();

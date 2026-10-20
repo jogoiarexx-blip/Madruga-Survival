@@ -2,12 +2,15 @@
 export const BUILD_GRID=3;
 export const MODULAR_TYPES=Object.freeze(['floor','wall','door','bed','chest','workbench','roof','farmPlot']);
 export const STRUCTURE_TYPES=Object.freeze(['campfire','shelter',...MODULAR_TYPES]);
-export const MAX_STRUCTURES=100;
+export const MAX_STRUCTURES=160;
 export const orientation=angle=>((Math.round(angle)%4)+4)%4;
 export const snapToGrid=n=>Math.round(n/BUILD_GRID)*BUILD_GRID;
-export function preparePlacement(type,x,z,rotation=0){
-  return {type,x:MODULAR_TYPES.includes(type)?snapToGrid(x):x,
-    z:MODULAR_TYPES.includes(type)?snapToGrid(z):z,
+export function preparePlacement(type,x,z,rotation=0,options={}){
+  // Posições magnéticas podem cair nas bordas, em múltiplos de 1,5 m.
+  // Casas antigas seguem usando a grade original de 3 m.
+  const free=!!options.preserveCoordinates;
+  return {type,x:MODULAR_TYPES.includes(type)&&!free?snapToGrid(x):x,
+    z:MODULAR_TYPES.includes(type)&&!free?snapToGrid(z):z,
     ...(MODULAR_TYPES.includes(type)?{rotation:orientation(rotation)}:{})};
 }
 function localOf(s,x,z){
@@ -50,28 +53,33 @@ export function resolveStructureCollision(structures,x,z,r=.46){
   return {x,z};
 }
 export function positionBlocked(structures,x,z,r=.45){return structures.some(s=>collidesWithStructure(s,x,z,r));}
+// Evita sobreposição de pisos e telhados inclusive em encaixes de 1,5 m.
+function flatOverlap(a,b){return Math.abs(a.x-b.x)<BUILD_GRID-.04&&Math.abs(a.z-b.z)<BUILD_GRID-.04;}
+function wallExtents(s){return orientation(s.rotation||0)%2===0?{x:1.5,z:.14}:{x:.14,z:1.5};}
+function wallOverlap(a,b){
+ const aa=wallExtents(a),bb=wallExtents(b);
+ return aa.x+bb.x-Math.abs(a.x-b.x)>.20&&aa.z+bb.z-Math.abs(a.z-b.z)>.20;
+}
 export function canPlaceAmong(structures,candidate){
-  if(structures.length>=MAX_STRUCTURES||!STRUCTURE_TYPES.includes(candidate.type)||Math.abs(candidate.x)>104||Math.abs(candidate.z)>104)return false;
-  const isFloor=candidate.type==='floor',isRoof=candidate.type==='roof';
-  for(const s of structures){
-    const dist=Math.hypot(s.x-candidate.x,s.z-candidate.z);
-    if(isFloor||isRoof){if(s.type===candidate.type&&dist<.5)return false;continue;}
-    if(s.type==='floor'||s.type==='roof')continue;
-    if(s.type==='campfire'||s.type==='shelter'||candidate.type==='campfire'||candidate.type==='shelter'){
-      const r=t=>t==='shelter'?2.5:t==='campfire'?1.2:1.1;
-      if(dist<r(s.type)+r(candidate.type))return false;
-      continue;
-    }
-    // Paredes e portas ocupam o mesmo módulo de grade (permite piso embaixo).
-    if(['wall','door'].includes(candidate.type)&&['wall','door'].includes(s.type)){
-      if(dist<.5)return false;
-      continue;
-    }
-    // Móveis não atravessam paredes nem se sobrepõem.
-    if(['bed','chest','workbench','farmPlot'].includes(candidate.type)&&['bed','chest','workbench','farmPlot'].includes(s.type)&&dist<1.7)return false;
-    if(dist<1.25)return false;
-  }
-  return true;
+ if(structures.length>=MAX_STRUCTURES||!STRUCTURE_TYPES.includes(candidate.type)||!Number.isFinite(candidate.x)||!Number.isFinite(candidate.z)||Math.abs(candidate.x)>104||Math.abs(candidate.z)>104)return false;
+ const isFloor=candidate.type==='floor',isRoof=candidate.type==='roof';
+ for(const s of structures){
+   const dist=Math.hypot(s.x-candidate.x,s.z-candidate.z);
+   if(isFloor||isRoof){if(s.type===candidate.type&&flatOverlap(s,candidate))return false;continue;}
+   if(s.type==='floor'||s.type==='roof')continue;
+   if(s.type==='campfire'||s.type==='shelter'||candidate.type==='campfire'||candidate.type==='shelter'){
+     const r=t=>t==='shelter'?2.5:t==='campfire'?1.2:1.1;
+     if(dist<r(s.type)+r(candidate.type))return false;
+     continue;
+   }
+   if(['wall','door'].includes(candidate.type)&&['wall','door'].includes(s.type)){
+     if(wallOverlap(s,candidate))return false;
+     continue;
+   }
+   if(['bed','chest','workbench','farmPlot'].includes(candidate.type)&&['bed','chest','workbench','farmPlot'].includes(s.type)&&dist<1.7)return false;
+   if(dist<1.25)return false;
+ }
+ return true;
 }
 export function nearestInteractive(structures,position,radius=2.85){
   let closest=null,shortest=radius;

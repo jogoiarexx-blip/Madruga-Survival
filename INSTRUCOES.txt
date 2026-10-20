@@ -1,4 +1,4 @@
-MADRUGACRAFT SOBREVIVÊNCIA v1.4 — PUBLICAÇÃO GITHUB PAGES
+MADRUGACRAFT SOBREVIVÊNCIA v1.7 — PUBLICAÇÃO GITHUB PAGES
 
 1. Abra o ZIP e entre na pasta MadrugaCraft-Sobrevivencia.
 2. Envie o CONTEÚDO dessa pasta (index.html, src/, styles/, .nojekyll etc.) à raiz do repositório.
@@ -18,3 +18,25 @@ Saves v1.2 devem ser preservados no mesmo domínio e navegador.
 
 TESTES: npm run check e npm test.
 OBS: o teste automático não substitui uma partida completa com WebGL.
+
+
+Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamento.
+
+NOVO v1.6: o botão de construção NÃO constrói imediatamente.
+Escolha uma peça na mochila e confira a prévia no mapa. Verde = local livre;
+vermelho = bloqueado. Ande/olhe para escolher a posição; setas ajustam,
+roda do mouse muda a distância e G gira. F, Enter ou clique confirmam;
+Esc cancela. No celular há botões de mover, girar, confirmar e cancelar.
+Os materiais são consumidos APENAS ao confirmar. Receitas de ferramentas e
+comida continuam instantâneas, respeitando bancada e fogueira.
+Nesta versão também há 3 variantes novas de zumbis, cemitério e aldeão guarda.
+
+NOVO v1.7 — ENCAIXE MAGNÉTICO
+Paredes/portas encaixam nas bordas dos pisos e nos extremos de outras paredes.
+Pisos alinham aos pisos vizinhos e telhados cobrem os módulos.
+Use C no PC ou o botão 🧲 Ímã no celular para ligar/desligar.
+G gira a peça, F/Enter confirma e Esc cancela; no celular use os botões.
+Peças encaixadas são verdes quando a posição é livre; se estiver ocupado, vermelho.
+Limite elevado para 160 estruturas. Novos encaixes de 1,5m são salvos com exatidão.
+IMPORTANTE: salvar no mesmo domínio de GitHub Pages preserva sua partida.
+Verificações: npm test e npm run check. 123 testes atuais aprovados; WebGL não validado.

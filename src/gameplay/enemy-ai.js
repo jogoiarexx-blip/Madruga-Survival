@@ -1,22 +1,27 @@
+import {ZOMBIE_TYPES,isZombieType} from './zombie-variants.js';
 import {animateEnemy} from '../characters/enemy-animation.js';
 
 // Atualização de IA independente da renderização e dos controles.
 export function createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
-  showBossTelegraph,hideBossTelegraph,damagePlayer,spawnParticle,throwProjectile,sfx,isGameActive,hasLineOfSight,getRaidTarget=()=>null,onRaidDamage=()=>{}}) {
+  showBossTelegraph,hideBossTelegraph,damagePlayer,spawnParticle,throwProjectile,sfx,isGameActive,hasLineOfSight,getRaidTarget=()=>null,onRaidDamage=()=>{},getGuard=()=>null,onGuardDamage=()=>{},onPoison=()=>{}}) {
 function update(dt,elapsed){
         // IA por tipo: melee perseguidor, xamã de longo alcance e chefe com aviso de ataque.
         for (const enemy of enemies) {
             if (!isGameActive()) break;
             const mesh=enemy.mesh;
             const targetBuilding=enemy.raider?getRaidTarget(mesh.position):null;
-            const targetPos=targetBuilding||player.position;
+            const ally=!targetBuilding&&isZombieType(enemy.type)?getGuard():null;
+            const guardDistance=ally?Math.hypot(mesh.position.x-ally.x,mesh.position.z-ally.z):Infinity;
+            const playerDistance=Math.hypot(mesh.position.x-player.position.x,mesh.position.z-player.position.z);
+            const targetGuard=ally&&guardDistance<9&&guardDistance<playerDistance+.4?ally:null;
+            const targetPos=targetBuilding||targetGuard||player.position;
             const dx=targetPos.x-mesh.position.x, dz=targetPos.z-mesh.position.z;
             const dist=Math.hypot(dx,dz);
             enemy.attackTimer=Math.max(0,enemy.attackTimer-dt);
             enemy.knockback=Math.max(0,enemy.knockback-dt);
             const shaman=enemy.type==='shaman', boss=enemy.type==='boss';
             const meleeRadius=boss?2.65:1.85;
-            const visible=!hasLineOfSight||hasLineOfSight(mesh.position,player.position);
+            const visible=!hasLineOfSight||hasLineOfSight(mesh.position,targetPos);
             const wantsToMove=shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8;
             const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0;
             if (moving) {
@@ -60,7 +65,7 @@ function update(dt,elapsed){
                 }
             } else if (enemy.attackTimer===0 && dist<52) {
                 if(targetBuilding&&dist<2.25){
-                    enemy.attackTimer=shaman?2.4:1.55;onRaidDamage(targetBuilding,enemy.damage);
+                    enemy.attackTimer=shaman?2.4:1.55;onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
                     spawnParticle(mesh.position,0xdba679,3);
                 } else if (shaman && visible && dist<28 && dist>2.1) {
                     throwProjectile(enemy);enemy.attackTimer=2.6;
@@ -71,7 +76,8 @@ function update(dt,elapsed){
                     sfx.warning();
                 } else if (!targetBuilding&&!shaman && !boss && visible && dist<meleeRadius) {
                     enemy.attackTimer=1.15+(enemy.type==='fast'?-.15:enemy.type==='tank'?.45:0);
-                    damagePlayer(enemy.damage,mesh.position);
+                    if(targetGuard){onGuardDamage(enemy.damage);}
+                    else if(damagePlayer(enemy.damage,mesh.position) && enemy.type==='zombie_toxic')onPoison(ZOMBIE_TYPES.zombie_toxic.poisonSeconds);
                 } else if (boss && visible && dist<22) {
                     // Segunda fase: salva oblíqua com espaços para esquiva.
                     if(enemy.enraged){

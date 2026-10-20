@@ -104,7 +104,7 @@ test('main liga todos os eventos e painel à jogabilidade real',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const ui=readFileSync(new URL('../src/ui/survival-ui.js',import.meta.url),'utf8');
- for(const symbol of ["earnSkill('hunting'","earnSkill('farming'","earnSkill('building'","earnSkill(skill","earnSkill('fishing'","earnSkill(location?'building':'crafting'","earnSkill('survival'",'KeyU','openSkills(','recipeCost(','fishingBonus(','farmingBonus('])assert.ok(main.includes(symbol),symbol);
+ for(const symbol of ["earnSkill('hunting'","earnSkill('farming'","earnSkill('building'","earnSkill(skill","earnSkill('fishing'","earnSkill('crafting'","earnSkill('survival'",'KeyU','openSkills(','recipeCost(','fishingBonus(','farmingBonus('])assert.ok(main.includes(symbol),symbol);
  assert.match(ui,/getRecipeCost\(key\)/);
  for(const id of ['skills-toggle','skills-close','skills-panel','skills-list','open-skills-inventory'])assert.ok(html.includes(`id="${id}"`));
 });

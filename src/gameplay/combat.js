@@ -14,7 +14,7 @@ export function createCombatSystem({THREE,scene,player,enemies,weaponTypes,healt
   getWeaponBonus=()=>0,onWeaponHit=()=>{},onSwing=()=>0}) {
 let attackCooldown=0, specialCooldown=0, attackAnimTimer=0, attackAnimDuration=.2;
 const slashEffects=[];
-function damageEnemy(enemy, amount, knockback = 0.35) {
+function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
     if (!enemies.includes(enemy)) return;
     enemy.hp -= amount;
     enemy.knockback = 0.17;
@@ -39,12 +39,12 @@ function damageEnemy(enemy, amount, knockback = 0.35) {
         const drop = {x: enemy.mesh.position.x, z: enemy.mesh.position.z};
         removeMesh(enemy.mesh);
         enemies.splice(enemies.indexOf(enemy), 1);
-        onEnemyKilled(enemy.type,drop);
-        gainXP(enemy.type === 'boss' ? 22 : enemy.type === 'tank' ? 5 : enemy.type==='shaman'?4:2);
+        if(credited){onEnemyKilled(enemy.type,drop);
+        gainXP(enemy.type === 'boss' ? 22 : enemy.type === 'tank' ? 5 : enemy.type==='shaman'?4:2);}
         if (enemy.type === 'boss') { onBossDefeated(); showToast('🏆 Guardião derrotado! Termine de juntar as peças!'); }
         advanceQuestIfReady();
-        if (healthPacks.length < 12 && Math.random() < (enemy.type==='boss'?1:0.18)) spawnHealthPack(drop);
-        if (speedBoosts.length < 9 && Math.random() < 0.1) spawnSpeedBoost(drop);
+        if (credited && healthPacks.length < 12 && Math.random() < (enemy.type==='boss'?1:0.18)) spawnHealthPack(drop);
+        if (credited && speedBoosts.length < 9 && Math.random() < 0.1) spawnSpeedBoost(drop);
     }
     updateHUD();
 }

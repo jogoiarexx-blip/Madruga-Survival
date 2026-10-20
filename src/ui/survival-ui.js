@@ -1,4 +1,5 @@
 import {RESOURCES,RECIPES,canAfford,cycleClock,isNight} from '../gameplay/survival.js';
+import {isStructureRecipe} from '../gameplay/placement.js';
 export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,onDismantle,onRepair,onFish=()=>{},getRotation,getCanCraft=()=>true,getRecipeCost=id=>RECIPES[id]?.cost}) {
   const el=id=>document.getElementById(id);
   const panel=el('inventory-panel'),inventory=el('inventory-items'),recipes=el('recipe-list');
@@ -10,10 +11,22 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
     const name=create(div,'resource-name');name.textContent=`${icon} ${label}`;
     buttons['resource-'+key]=create(div,'resource-count');
   }
-  for(const [key,recipe] of Object.entries(RECIPES)) {
-    const btn=document.createElement('button');btn.className='recipe-btn';
-    btn.type='button';btn.addEventListener('click',()=>{onCraft(key);update(true);});
-    recipes.appendChild(btn);buttons['recipe-'+key]=btn;
+  const buckets=[
+    ['🧱 Construções · escolha a posição antes de gastar',id=>isStructureRecipe(id)],
+    ['⚒ Ferramentas e equipamentos',id=>!isStructureRecipe(id)&&id!=='ironSpear'&&!['cooked','grilledFish','stew'].includes(id)&&!id.startsWith('repair')],
+    ['🍲 Culinária',id=>['cooked','grilledFish','stew'].includes(id)],
+    ['🛠 Reparos e melhorias',id=>id.startsWith('repair')||id==='ironSpear']
+  ];
+  for(const [heading,filter] of buckets){
+    const title=document.createElement('h4');title.className='recipe-section-label';title.textContent=heading;recipes.appendChild(title);
+    for(const [key] of Object.entries(RECIPES).filter(([id])=>filter(id))){
+      const btn=document.createElement('button');btn.className='recipe-btn';btn.type='button';
+      const name=document.createElement('span');name.className='recipe-title';btn.appendChild(name);
+      const costs=document.createElement('span');costs.className='recipe-cost';btn.appendChild(costs);
+      const description=document.createElement('span');description.className='recipe-detail';btn.appendChild(description);
+      btn.addEventListener('click',()=>{onCraft(key);update(true);});
+      recipes.appendChild(btn);buttons['recipe-'+key]={btn,name,costs,description};
+    }
   }
   for(const key of ['berries','water','cooked','vegetables','grilledFish','stew']){
     const btn=el('use-'+key);btn.addEventListener('click',()=>{onConsume(key);update(true);});
@@ -38,12 +51,14 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
     el('rotation-indicator').textContent=`Rotação adicional: ${getRotation()}°`;
     for(const key of Object.keys(RESOURCES))buttons['resource-'+key].textContent=s.inventory[key];
     for(const [key,recipe] of Object.entries(RECIPES)){
-      const button=buttons['recipe-'+key];
+      const {btn,name,costs,description}=buttons['recipe-'+key];
       const cost=getRecipeCost(key);
-      const requirements=Object.entries(cost).map(([k,v])=>`${RESOURCES[k].icon}${v}`).join(' ');
-      button.textContent=`${recipe.label} · ${requirements}`;
-      button.disabled=!canAfford(s,key,cost)||!getCanCraft(key);
-      button.title=recipe.hint;
+      const requirements=Object.entries(cost).map(([k,v])=>`${RESOURCES[k].icon}${v}`).join('  ');
+      name.textContent=`${isStructureRecipe(key)?'🧱 Posicionar':'⚒ Fabricar'} ${recipe.label}`;
+      costs.textContent=requirements||'Sem custo';
+      description.textContent=isStructureRecipe(key)?'Prévia 3D → ajustar → confirmar':recipe.hint;
+      btn.disabled=!canAfford(s,key,cost)||!getCanCraft(key);
+      btn.title=recipe.hint;
     }
     for(const key of ['berries','water','cooked','vegetables','grilledFish','stew'])el('use-'+key).disabled=s.inventory[key]<=0;
   }

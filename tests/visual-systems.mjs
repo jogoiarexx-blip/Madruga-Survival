@@ -72,7 +72,7 @@ check('rig de inimigo anima sem mexer no collider/posição principal',()=>{
   assert.equal(rig.aura.visible,true);
   assert.deepEqual(enemy.mesh.position,before);
 });
-check('nova fábrica oferece membros articulados aos cinco tipos',()=>{
+check('nova fábrica oferece membros articulados aos seis tipos, incluindo zumbi',()=>{
   class Obj{constructor(){this.children=[];this.userData={};this.rotation={x:0,y:0,z:0};this.position={x:0,y:0,z:0,set(x,y,z){Object.assign(this,{x,y,z})}};this.scale={setScalar(){}}}add(...children){this.children.push(...children)}}
   class Mesh extends Obj{constructor(g,m){super();this.geometry=g;this.material=m}}
   class Geo{constructor(...args){this.args=args}clone(){return new Geo(...this.args)}}
@@ -81,13 +81,14 @@ check('nova fábrica oferece membros articulados aos cinco tipos',()=>{
   for(const name of ['BoxGeometry','SphereGeometry','ConeGeometry','CylinderGeometry','OctahedronGeometry','TorusGeometry'])THREE[name]=Geo;
   const enemies=[];const spawn=createEnemySpawner({THREE,scene:{add(){}},getGroundHeight:()=>0,
     findSpawnPoint:()=>({x:10,z:9}),shrinePosition:{x:32,z:-28},enemies});
-  for(const type of ['normal','fast','tank','shaman','boss']){
+  for(const type of ['normal','zombie','fast','tank','shaman','boss']){
     spawn(type);
     const {rig}=enemies.at(-1).mesh.userData;
     assert.ok(rig.leftArm&&rig.rightArm&&rig.leftLeg&&rig.rightLeg&&rig.head);
     assert.equal(enemies.at(-1).mesh.children.includes(rig.leftArm),true);
   }
-  assert.equal(enemies.length,5);
+  assert.equal(enemies.length,6);
+  assert.equal(enemies[1].type,'zombie');
 });
 check('câmera reduz distância ao atingir árvore e descarta bloqueador distante',()=>{
   class Vec{constructor(x=0,y=0,z=0){this.set(x,y,z)}set(x,y,z){this.x=x;this.y=y;this.z=z;return this}copy(v){return this.set(v.x,v.y,v.z)}

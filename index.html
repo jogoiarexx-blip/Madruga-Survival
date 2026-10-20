@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MadrugaCraft — Sobrevivência v1.4</title>
+    <title>MadrugaCraft — Sobrevivência v1.7 · Construção magnética</title>
     <link rel="stylesheet" href="./styles/main.css">
 </head>
 <body>
@@ -22,6 +22,8 @@
         <div id="right-hud">
             <div id="wave-display">Onda: 1</div>
             <div id="enemies-left">Inimigos: 0</div>
+            <div id="guard-status" aria-live="off">🛡 Aldeão disponível</div>
+            <div id="poison-status" aria-live="off"></div>
             <div id="ability-display" class="ready">E · Golpe giratório pronto</div>
         </div>
     </div>
@@ -29,6 +31,7 @@
         <h3>Acampamento · Sobrevivência</h3>
         <div id="mission-title">Explore, colete e construa</div>
         <div id="mission-goal">Construa uma fogueira antes de anoitecer</div>
+        <div id="cemetery-status" aria-live="off"></div>
         <div id="equipment-display">Armas podem ser fabricadas na mochila</div>
         <div id="target-hint">Pontos coloridos: recursos</div>
     </aside>
@@ -36,11 +39,28 @@
         <div id="boss-bar-outer"><div id="boss-bar"></div></div>
     </div>
     <div id="instructions">
-        <strong>WASD</strong> mover · <strong>F</strong> coletar/plantar · <strong>I</strong> mochila/crafting · <strong>B</strong> fogueira · <strong>H</strong> abrigo · <strong>V/M/N/K/L</strong> construir base · <strong>G</strong> girar · <strong>X</strong> desmontar · <strong>T</strong> reparar · <strong>U</strong> habilidades · <strong>Y</strong> pescar · <strong>4/5/6</strong> comer/beber · <strong>Shift</strong> correr · <strong>Clique/J</strong> atacar · <strong>E</strong> especial · <strong>Q</strong> esquiva · <strong>U</strong> habilidades · <strong>P</strong> salvar
+        <strong>WASD</strong> mover · <strong>F</strong> coletar/plantar · <strong>I</strong> mochila/crafting · <strong>B</strong> fogueira · <strong>H</strong> abrigo · <strong>V/M/N/K/L</strong> escolher construção · <strong>F/Enter</strong> confirmar · <strong>Esc</strong> cancelar · <strong>G</strong> girar · <strong>C</strong> encaixe · <strong>X</strong> desmontar · <strong>T</strong> reparar · <strong>Y</strong> pescar · <strong>4/5/6</strong> comer/beber · <strong>Shift</strong> correr · <strong>Clique/J</strong> atacar · <strong>E</strong> especial · <strong>Q</strong> esquiva · <strong>U</strong> habilidades · <strong>P</strong> salvar
     </div>
     <canvas id="minimap" aria-label="Minimapa da floresta"></canvas>
     <div id="crosshair" aria-hidden="true"></div>
     <div id="interact-hint" class="hidden" aria-live="off"></div>
+    <section id="placement-panel" class="hidden" aria-label="Posicionar construção" aria-live="off">
+      <div class="placement-heading"><strong id="placement-name">🧱 Posicionar estrutura</strong><span id="placement-coords"></span></div>
+      <p id="placement-status" role="status" aria-live="polite">Escolha onde construir</p>
+      <div class="placement-adjust" aria-label="Ajustes de posicionamento">
+        <button type="button" id="placement-left" aria-label="Mover prévia para a esquerda">←</button>
+        <button type="button" id="placement-right" aria-label="Mover prévia para a direita">→</button>
+        <button type="button" id="placement-near" aria-label="Aproximar prévia">− Distância</button>
+        <button type="button" id="placement-far" aria-label="Afastar prévia">+ Distância</button>
+        <button type="button" id="placement-rotate">↻ Girar</button>
+        <button type="button" id="placement-snap" aria-pressed="true" title="Ativar ou desativar encaixe automático">🧲 Ímã: ligado [C]</button>
+      </div>
+      <div class="placement-decide">
+        <button type="button" id="placement-confirm">✓ Confirmar [F/Enter]</button>
+        <button type="button" id="placement-cancel">✕ Cancelar [Esc]</button>
+      </div>
+      <small>Ande para escolher a posição. Setas e roda do mouse ajustam; G gira e C liga/desliga o ímã. Pisos, paredes e telhados alinham com peças existentes.</small>
+    </section>
     <div id="toast" aria-live="polite"></div>
     <section id="survival-hud" aria-label="Status de sobrevivência">
       <div id="clock-display">Dia 1 · 08:09</div>
@@ -69,6 +89,7 @@
         <div class="recipe-actions"><button id="fish-now" type="button">🎣 Pescar próximo à água [Y]</button></div>
         <div class="recipe-actions"><button id="open-skills-inventory" type="button">⭐ Ver evolução das habilidades</button></div>
         <h3>Construir e fabricar</h3>
+        <p class="craft-explainer">🧱 <strong>Construções:</strong> escolha a receita para abrir uma prévia no cenário. Os materiais só serão gastos ao confirmar. 🛠 <strong>Equipamentos e comida:</strong> são feitos imediatamente.</p>
         <div id="recipe-list"></div>
         <div class="build-controls">
           <button id="rotate-build" type="button">↻ Girar próxima peça</button>
@@ -76,7 +97,7 @@
           <button id="remove-build" type="button">♻ Desmontar peça próxima</button>
           <button id="repair-build" type="button">🛠 Reparar peça próxima (T)</button>
         </div>
-        <p class="build-tip">🧱 <strong>Montagem:</strong> As peças encaixam em uma grade de 3 metros na direção do personagem. G gira as próximas peças em 90°. No celular, toque na receita para posicionar.</p>
+        <p class="build-tip">🧱 <strong>Montagem:</strong> escolha uma receita de construção, mova a prévia pelo mundo e confirme antes de gastar. Use G para girar ou Esc para cancelar. Telhados, pisos e paredes encaixam automaticamente nas peças existentes, inclusive nas bordas. C ativa/desativa o ímã.</p>
         <p class="inventory-help">Crie pisos, paredes, telhados, canteiros, portas, camas, baús e bancadas. G alterna a orientação. F abre portas, usa camas e baús. X desmonta peças vazias.</p>
       </div>
     </section>
@@ -99,10 +120,10 @@
     </section>
     <div id="pause-menu" class="hidden"><h2>Jogo pausado</h2><p>Sua sobrevivência fica pausada.</p><button id="resume-btn">Voltar ao acampamento</button><button id="save-btn" class="secondary-btn">💾 Salvar progresso</button><p>Esc libera o mouse e pausa o jogo</p></div>
     <div id="overlay">
-        <h1>🌲 MadrugaCraft 3D</h1><p style="color:#aef2d9;font-size:13px;letter-spacing:.12em;">SOBREVIVÊNCIA · EDIÇÃO v1.4</p>
-        <p>Nova evolução: oito habilidades com XP, níveis e bônus ativos para pesca, agricultura, caça, construção, mineração, coleta, artesanato e sobrevivência.</p>
+        <h1>🌲 MadrugaCraft 3D</h1><p style="color:#aef2d9;font-size:13px;letter-spacing:.12em;">SOBREVIVÊNCIA · EDIÇÃO v1.6 · CONSTRUÇÃO LIVRE</p>
+        <p>Novidade: zumbis corredores, tóxicos e gigantes, cemitério, aldeão guarda e construção com prévia transparente, posicionamento e confirmação.</p>
         <p>Seu Madruga está perdido numa floresta hostil. Colete recursos, encontre água, fabrique ferramentas e construa uma base com paredes, telhados, portas, canteiros, cama e baús!</p>
-        <p>Sobreviva aos dias e noites: fome, sede, energia e frio importam. <strong>F</strong> coleta; <strong>I</strong> abre a mochila; <strong>B</strong> constrói fogueira; <strong>H</strong> constrói abrigo. Cace coelhos e javalis com seus ataques, use F para plantar ou regar canteiros e Y para pescar junto à água. Abra a mochila para construir e cozinhar.</p>
+        <p>Sobreviva aos dias e noites: fome, sede, energia e frio importam. <strong>F</strong> coleta; <strong>I</strong> abre a mochila; <strong>B</strong> constrói fogueira; <strong>H</strong> constrói abrigo. Cace coelhos e javalis com seus ataques, use F para plantar ou regar canteiros e Y para pescar junto à água. Abra a mochila para construir e cozinhar. Encontre o aldeão perto do início e pressione F para recrutar; a área do cemitério fica a noroeste. Envenenamento pode ser aliviado ao beber água.</p>
         <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; pointer-events: auto;">
             <button id="gfx-low" class="gfx-btn" style="padding:8px 16px; background:#555; border:none; border-radius:6px; color:#fff; cursor:pointer;">Mínimo</button>
             <button id="gfx-med" class="gfx-btn" style="padding:8px 16px; background:#e74c3c; border:none; border-radius:6px; color:#fff; cursor:pointer;">Médio</button>
