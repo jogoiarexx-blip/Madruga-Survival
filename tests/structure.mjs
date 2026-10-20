@@ -42,5 +42,8 @@ for(const [file,symbols] of [
   ['./gameplay/zombie-variants.js',['chooseZombieType']]
 ])for(const symbol of symbols)assert.ok(imports.get(file)?.has(symbol),
   `Símbolo ${symbol} não importado no main.js a partir de ${file}`);
+// Cache busting obrigatório no carregamento principal: Pages não pode reutilizar JS de builds anteriores.
+assert.match(html,/src=["']\.\/src\/main\.js\?v=[^"'\s]+["']/,
+  'Cache busting obrigatório no carregamento principal');
 assert.ok(existsSync(resolve(root,'.nojekyll')));
 console.log(`OK estrutura estática, ${count} imports locais e GitHub Pages`);
