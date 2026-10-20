@@ -1,3 +1,10 @@
+MADRUGACRAFT v1.9 — MELHORIA REAL DE GEOMETRIA E POLÍGONOS
+
+Use ALTO para malhas mais suaves de vegetação, pedras, animais e detalhes de construções.
+Em celulares fracos, prefira MÍNIMO. Não é necessário recompilar para GitHub Pages.
+Os zumbis REV4 continuam usando o GLB original com 40 ossos e 29 animações.
+Teste: npm run check && npm test. Saves preservados no mesmo navegador.
+
 MADRUGACRAFT v1.8 — ZUMBI GEOMÉTRICO ARTICULADO REV4
 
 Modelo original: assets/models/zumbi_geometrico_REV4.glb (40 ossos, 29 animações).
