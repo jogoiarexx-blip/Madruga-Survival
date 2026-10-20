@@ -1,0 +1,232 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #000;
+            color: #fff;
+            user-select: none;
+        }
+        #hud {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 20px;
+            pointer-events: none;
+            z-index: 10;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+        }
+        #left-hud, #right-hud { display: flex; flex-direction: column; gap: 6px; }
+        .bar-container {
+            width: 180px;
+            height: 18px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #444;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .bar { height: 100%; transition: width 0.2s; }
+        #health-bar { background: linear-gradient(90deg, #c0392b, #e74c3c); width: 100%; }
+        #score-display, #wave-display, #boost-display {
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000;
+        }
+        #score-display { color: #f1c40f; }
+        #boost-display { color: #00d4ff; font-size: 14px; }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+        #overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            text-align: center;
+        }
+        #overlay h1 { font-size: 48px; color: #f1c40f; margin-bottom: 10px; text-shadow: 3px 3px 0 #000; }
+        #overlay p { font-size: 18px; margin: 8px 0; max-width: 520px; }
+        #start-btn, #restart-btn {
+            margin-top: 20px;
+            padding: 14px 40px;
+            font-size: 20px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            pointer-events: auto;
+        }
+        #start-btn:hover, #restart-btn:hover { background: #c0392b; }
+        #minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 140px;
+            height: 140px;
+            background: rgba(0,0,0,0.6);
+            border: 2px solid #555;
+            border-radius: 8px;
+            z-index: 10;
+        }
+        #damage-flash {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,0,0,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+            z-index: 5;
+        }
+        #hud { align-items: flex-start; }
+        #xp-container { width: 180px; height: 9px; background: #142234; border: 1px solid #5f6d81; border-radius: 9px; overflow: hidden; }
+        #xp-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #5c7df4, #98c8ff); }
+        #level-display, #ability-display { font-size: 13px; color: #d7eaff; text-shadow: 1px 1px 3px #000; }
+        #ability-display.ready { color: #ffeb8e; }
+        #crosshair { position: absolute; left: 50%; top: 46%; width: 7px; height: 7px; border: 1px solid #fff; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; opacity: 0.75; z-index: 4; }
+        #pause-menu { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; z-index:110; background:rgba(8,15,25,.84); text-align:center; }
+        #pause-menu h2 { font-size: clamp(26px, 5vw, 44px); color:#ffdb69; }
+        #resume-btn { padding:13px 30px; border:0; border-radius:8px; color:white; font-size:18px; background:#246e9a; cursor:pointer; }
+        #toast { position:absolute; top:24%; left:50%; transform:translateX(-50%); z-index:20; color:#ffedab; font-size:clamp(18px,3vw,29px); text-shadow:2px 2px 3px #000; pointer-events:none; opacity:0; transition:opacity .2s; text-align:center; }
+        #instructions { max-width:calc(100vw - 20px); line-height:1.5; }
+        #campaign-hud { position:absolute;top:88px;right:20px;z-index:10;min-width:210px;max-width:300px;
+            background:rgba(11,25,22,.82);border:1px solid #7c9266;border-radius:12px;padding:12px 15px;
+            pointer-events:none;box-shadow:0 8px 22px rgba(0,0,0,.25); }
+        #campaign-hud h3 {color:#ffe0a0;font-size:13px;letter-spacing:.09em;text-transform:uppercase;margin-bottom:5px;}
+        #mission-title {font-size:15px;font-weight:700;color:#fff4c5;margin-bottom:4px;}
+        #mission-goal {font-size:13px;color:#cfe6d0;line-height:1.4;}
+        #equipment-display {font-size:12px;color:#a8f4ff;line-height:1.5;margin-top:8px;}
+        #dodge-display {font-size:12px;color:#dae2ff;}
+        #boss-bar-wrapper {position:absolute;bottom:94px;left:50%;transform:translateX(-50%);width:min(460px,80vw);
+            z-index:10;text-align:center;color:#ffe1cb;font-weight:700;text-shadow:1px 1px 3px #000;pointer-events:none;}
+        #boss-bar-outer {height:14px;margin-top:6px;border:2px solid #d49c79;background:#281114;border-radius:15px;overflow:hidden;}
+        #boss-bar {height:100%;width:100%;background:linear-gradient(90deg,#ad2932,#fd8755);transition:width .12s;}
+        #target-hint {color:#ffe9a1;font-weight:bold;font-size:12px;text-shadow:1px 1px 2px #000;}
+        @media(max-width:700px){#campaign-hud{top:auto;bottom:175px;left:10px;right:auto;min-width:0;max-width:190px;padding:8px;}#campaign-hud h3{font-size:11px;}#mission-title{font-size:12px;}#mission-goal,#equipment-display{font-size:11px;}#boss-bar-wrapper{bottom:54px;} }
+        @media(max-width:700px) { #hud{padding:10px;} #minimap{width:105px;height:105px;bottom:80px;right:10px;} #instructions{font-size:11px;bottom:8px;padding:7px;} .bar-container,#xp-container{width:132px;} #score-display,#wave-display{font-size:14px;} #left-hud,#right-hud{gap:4px;} #overlay h1{font-size:35px;} }
+        .hidden { display: none !important; }
+
+#fps-display {position:absolute;left:16px;bottom:16px;padding:6px 9px;background:rgba(0,0,0,.65);z-index:20;border-radius:5px;font:12px/1.4 monospace;color:#adffb3;pointer-events:none}
+
+/* Controles de checkpoint: estilo consistente no menu inicial e pausa. */
+.secondary-btn {margin: 8px; padding: 12px 18px; background:#245c52; color:#fff; border:1px solid #67c6ab; border-radius:8px; cursor:pointer;}
+.secondary-btn:hover {background:#317968;}
+.hidden {display:none !important;}
+
+/* Sobrevivência — HUD compacto, mochila navegável e controles responsivos. */
+#survival-hud{position:fixed;top:98px;left:16px;z-index:11;width:190px;background:rgba(10,23,22,.84);border:1px solid #65937b;border-radius:12px;padding:11px;pointer-events:none;box-shadow:0 8px 24px #07120c55;backdrop-filter:blur(5px)}
+#clock-display{font-size:14px;font-weight:800;color:#ffda90;margin-bottom:6px}
+.vital{margin:7px 0;font-size:12px}.vital span{display:flex;justify-content:space-between}.vital b{font-variant-numeric:tabular-nums;color:#f7ffe4}
+.vital-track{margin-top:3px;height:7px;background:#26312b;border-radius:8px;overflow:hidden;border:1px solid #597564}
+.vital-bar{height:100%;width:100%;transition:width .18s}
+#hunger-bar{background:#d98d58}#thirst-bar{background:#54b8f0}#stamina-bar{background:#e8d66e}#warmth-bar{background:#e77841}
+#survival-hint{font-size:11px;line-height:1.4;color:#f5c987;margin-top:8px}#survival-goal{font-size:11px;margin-top:5px;color:#b5e4d5}
+#inventory-toggle{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:18}
+.hud-button{background:#284f37;color:#fff8da;border:1px solid #9ac391;padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+#inventory-panel{position:fixed;inset:0;z-index:130;display:flex;justify-content:center;align-items:center;background:rgba(5,13,10,.78);padding:12px}
+.inventory-dialog{background:linear-gradient(140deg,#1c3227,#101f20);border:2px solid #72916f;box-shadow:0 22px 60px #000a;border-radius:16px;max-width:620px;width:100%;max-height:min(90dvh,760px);overflow:auto;padding:20px;color:#eef8e4}
+.inventory-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}.inventory-dialog h2{font-size:clamp(18px,3vw,24px);color:#f5d88b}
+.inventory-dialog h3{margin:16px 0 9px;color:#b4f3c8;font-size:15px}.inventory-dialog p{line-height:1.4;color:#d1dac9;font-size:13px;margin:8px 0}
+#inventory-close{background:#573b38;color:#fff;border:1px solid #daab93;border-radius:7px;padding:8px 12px;cursor:pointer}
+#inventory-items{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}
+.inventory-item{padding:8px;background:#264337;border:1px solid #496a50;border-radius:9px;text-align:center;min-width:0}.resource-name{font-size:12px}.resource-count{font-weight:bold;color:#fff3b6;font-size:20px}
+#recipe-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.recipe-actions{display:flex;gap:8px;flex-wrap:wrap}
+.recipe-btn,.recipe-actions button{background:#3c6651;border:1px solid #83aa7d;color:white;border-radius:8px;padding:11px;cursor:pointer;font-weight:700;flex:1;font-size:12px}
+.recipe-btn:disabled,.recipe-actions button:disabled{opacity:.35;cursor:not-allowed}
+.inventory-help{color:#ffce89!important}
+@media(max-width:700px){#survival-hud{top:89px;left:8px;width:142px;padding:8px}.vital{font-size:10px;margin:4px 0}#clock-display{font-size:11px}#survival-hint,#survival-goal{font-size:9px}#campaign-hud{left:auto;right:8px;top:93px;bottom:auto;max-width:140px;padding:7px}#campaign-hud h3{font-size:10px}#mission-title,#mission-goal,#equipment-display,#target-hint{font-size:9px}#inventory-toggle{top:auto;left:auto;bottom:16px;right:12px;transform:none}#minimap{bottom:65px;right:8px}#instructions{display:none}#inventory-items{grid-template-columns:repeat(3,minmax(0,1fr))}#recipe-list{grid-template-columns:1fr}#overlay{padding:10px;overflow-y:auto}#overlay p{font-size:14px}}
+
+/* Touch sem bibliotecas: olhar arrastando o cenário, segurar direcional e correr. */
+#touch-controls{position:fixed;inset:0;z-index:13;pointer-events:none;touch-action:none}
+#touch-controls button{pointer-events:auto;touch-action:none;background:#142b27c9;border:1px solid #add6b6a8;border-radius:13px;color:white;box-shadow:0 3px 8px #0008;font-weight:800;min-width:45px;min-height:43px;user-select:none}
+.touch-pad{position:absolute;left:14px;bottom:21px;width:160px;height:150px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px}
+.touch-up{grid-area:1/2}.touch-left{grid-area:2/1}.touch-down{grid-area:2/2}.touch-right{grid-area:2/3}
+.touch-actions{position:absolute;right:13px;bottom:20px;display:grid;grid-template-columns:repeat(3,50px);gap:7px;align-items:center}
+.touch-actions [data-hold="ShiftLeft"]{grid-column:1/4;font-size:11px;min-height:31px}
+#touch-pause{position:absolute;top:8px;right:10px;min-width:34px!important;min-height:32px!important}
+#touch-inventory{position:absolute;top:8px;right:58px;min-width:34px!important;min-height:32px!important}
+body.touch-playing #inventory-toggle{display:none}
+@media(pointer:coarse){#minimap{right:12px;bottom:174px;width:95px;height:95px}#instructions{display:none}}
+@media(pointer:coarse) and (max-height:560px){#campaign-hud{display:none}#survival-hud{top:35px;width:125px}#minimap{width:78px;height:78px;bottom:160px}#touch-controls button{min-width:36px;min-height:35px}.touch-pad{transform:scale(.8);transform-origin:left bottom}.touch-actions{transform:scale(.82);transform-origin:right bottom}}
+#interact-hint{position:fixed;left:50%;bottom:116px;transform:translateX(-50%);padding:9px 16px;border:1px solid #e2d99b;border-radius:9px;background:#14241edc;color:#ffeeab;font-size:13px;z-index:14;pointer-events:none;white-space:nowrap;text-shadow:1px 1px 2px #000}
+@media(pointer:coarse){#interact-hint{bottom:183px;font-size:11px}}
+
+/* Construção v1.1: contêineres, botões grandes e ergonomia em celulares. */
+#storage-panel{position:fixed;inset:0;z-index:91;display:flex;justify-content:center;align-items:center;background:rgba(5,13,10,.83);padding:12px}
+#storage-panel.hidden{display:none!important}
+.storage-dialog{width:min(670px,100%);max-height:90dvh;overflow:auto;padding:clamp(13px,3vw,22px);border-radius:16px;background:#162b24;border:2px solid #72916f;box-shadow:0 22px 60px #000a;color:#f5f2df}
+.storage-dialog header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.storage-dialog h2{color:#f5d88b;font-size:clamp(17px,3vw,23px)}
+.storage-dialog p,.build-tip{font-size:12px;line-height:1.5;color:#d7e3d5}
+#storage-close{background:#573b38;border:1px solid #daab93;color:white;padding:8px 13px;border-radius:8px;cursor:pointer}
+#storage-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+.storage-item{padding:9px;border:1px solid #456d55;background:#244336;border-radius:9px;min-width:0}
+.storage-item strong{display:block;margin-bottom:6px;font-size:13px}
+.storage-item-actions{display:flex;gap:5px;flex-wrap:wrap}
+.storage-item button{flex:1;min-height:38px;background:#3c6651;border:1px solid #83aa7d;color:#fff;border-radius:7px;font-weight:700;cursor:pointer;font-size:11px}
+.storage-item button:disabled{opacity:.35;cursor:not-allowed}
+@media(max-width:430px){#storage-items{grid-template-columns:1fr}.storage-item{padding:6px}.storage-item strong{font-size:12px}.storage-dialog{max-height:94dvh}#recipe-list{grid-template-columns:1fr}}
+@media(pointer:coarse){#inventory-panel,#storage-panel{overscroll-behavior:contain}.recipe-btn{min-height:43px}}
+
+.build-controls{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:12px 0}
+.build-controls button{min-height:41px;padding:8px 12px;color:white;background:#4e6649;border:1px solid #aad19e;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer}
+.build-controls #remove-build{background:#574737;border-color:#d0a77c}
+.build-controls span{font-size:12px;color:#dfeda6}
+
+/* Sobrevivência v1.2: status de ferramentas e alerta de invasão. */
+#tool-status{font-size:10px;line-height:1.5;color:#c0def1;margin-top:7px;overflow-wrap:anywhere}
+#raid-alert{position:fixed;top:17px;left:50%;transform:translateX(-50%);z-index:24;pointer-events:none;
+ padding:10px 15px;border:2px solid #f19b76;border-radius:12px;background:#4c1d1de8;color:#fff4cf;
+ font-weight:850;font-size:clamp(12px,2.3vw,18px);box-shadow:0 4px 18px #0b0708aa;text-align:center;width:max-content;max-width:86vw}
+@media(max-width:700px){#raid-alert{top:55px;font-size:12px}#tool-status{font-size:9px}}
+
+/* v1.3 — mais ações móveis sem sobrepor os dois controles virtuais. */
+@media (pointer:coarse) and (max-width:430px){
+ .touch-pad{left:5px;width:137px;height:143px}
+ .touch-actions{right:5px;grid-template-columns:repeat(3,42px);gap:6px}
+ .touch-actions button{min-width:38px;min-height:39px;padding:4px}
+ #interact-hint{max-width:90vw;white-space:normal;text-align:center}
+ .recipe-actions button{min-width:105px}
+}
+
+/* v1.4 — profissões: progressão visível, painel acessível e compatível com toque. */
+#hud-shortcuts{position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:18;display:flex;gap:8px;white-space:nowrap}
+#hud-shortcuts #inventory-toggle{position:static;transform:none}
+#hud-shortcuts #skills-toggle{position:static;background:#4e432d;border-color:#e4c785}
+#skill-hud{font-size:10px;color:#e7dba1;margin-top:5px;overflow-wrap:anywhere}
+#skills-panel{position:fixed;inset:0;z-index:145;display:flex;align-items:center;justify-content:center;background:rgba(5,13,10,.85);padding:12px;overscroll-behavior:contain}
+.skills-dialog{background:linear-gradient(145deg,#1d352a,#102021);border:2px solid #b2a16c;color:#f1f4de;border-radius:17px;max-height:92dvh;overflow-y:auto;width:min(790px,100%);padding:clamp(13px,3vw,24px);box-shadow:0 20px 55px #000a}
+.skills-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.skills-dialog h2{font-size:clamp(19px,3vw,26px);color:#ffe2a1}
+.skills-dialog p{margin:10px 0;font-size:13px;line-height:1.45;color:#d1e2d3}
+#skills-close{cursor:pointer;border:1px solid #d9b391;border-radius:9px;padding:8px 13px;background:#543e31;color:white;min-height:42px}
+.skills-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.skill-card{border:1px solid #637b56;background:#284236;border-radius:11px;padding:11px;min-width:0}
+.skill-name{font-size:15px;font-weight:800;color:#f7dfaf}
+.skill-level{font-size:12px;color:#d7e9d1;margin:6px 0;font-variant-numeric:tabular-nums}
+.skill-track{height:9px;border:1px solid #6d805f;background:#12251c;border-radius:12px;overflow:hidden}
+.skill-fill{height:100%;width:0;background:linear-gradient(90deg,#5cb9a5,#f0d270);transition:width .2s}
+.skill-perk{font-size:12px;line-height:1.4;margin-top:8px;color:#fff2ba}
+.skill-activity{font-size:11px;color:#b5cec1;margin-top:5px}
+@media(max-width:700px){#hud-shortcuts{top:auto;left:auto;right:10px;bottom:15px;transform:none}#hud-shortcuts #skills-toggle{display:none}#hud-shortcuts #inventory-toggle{position:static;transform:none}#skill-hud{font-size:9px}.skills-grid{grid-template-columns:1fr}.skills-dialog{max-height:95dvh}}
+@media(pointer:coarse){body.touch-playing #hud-shortcuts{display:none}}
+
+#skill-level-up{position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:24;pointer-events:none;
+ border:2px solid #f3d58f;border-radius:12px;padding:10px 16px;background:#3a3925e8;color:#fff1ba;
+ box-shadow:0 4px 18px #0008;font-weight:800;font-size:clamp(13px,2vw,17px);text-align:center;max-width:92vw}
+@media(max-width:700px){#skill-level-up{top:10px;left:8px;right:8px;transform:none;max-width:none;font-size:12px}}

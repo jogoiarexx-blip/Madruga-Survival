@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MadrugaCraft — Sobrevivência v1.4</title>
+    <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+    <div id="damage-flash"></div>
+    <div id="fps-display" class="hidden" aria-live="off">FPS: --</div>
+    <div id="hud">
+        <div id="left-hud">
+            <div class="bar-container"><div id="health-bar" class="bar"></div></div>
+            <div id="level-display">Nível 1 · XP 0/7</div>
+            <div id="xp-container"><div id="xp-bar"></div></div>
+            <div id="score-display">Sobrevivência livre</div>
+            <div id="quest-display" style="font-size:12px;color:#ffe0a0;text-shadow:1px 1px 2px #000;">Explore e recolha recursos</div>
+            <div id="boost-display"></div>
+            <div id="dodge-display">Q · Esquiva pronta</div>
+        </div>
+        <div id="right-hud">
+            <div id="wave-display">Onda: 1</div>
+            <div id="enemies-left">Inimigos: 0</div>
+            <div id="ability-display" class="ready">E · Golpe giratório pronto</div>
+        </div>
+    </div>
+    <aside id="campaign-hud" aria-live="polite">
+        <h3>Acampamento · Sobrevivência</h3>
+        <div id="mission-title">Explore, colete e construa</div>
+        <div id="mission-goal">Construa uma fogueira antes de anoitecer</div>
+        <div id="equipment-display">Armas podem ser fabricadas na mochila</div>
+        <div id="target-hint">Pontos coloridos: recursos</div>
+    </aside>
+    <div id="boss-bar-wrapper" class="hidden"><span id="boss-name">Guardião da Floresta · Fase 1</span>
+        <div id="boss-bar-outer"><div id="boss-bar"></div></div>
+    </div>
+    <div id="instructions">
+        <strong>WASD</strong> mover · <strong>F</strong> coletar/plantar · <strong>I</strong> mochila/crafting · <strong>B</strong> fogueira · <strong>H</strong> abrigo · <strong>V/M/N/K/L</strong> construir base · <strong>G</strong> girar · <strong>X</strong> desmontar · <strong>T</strong> reparar · <strong>U</strong> habilidades · <strong>Y</strong> pescar · <strong>4/5/6</strong> comer/beber · <strong>Shift</strong> correr · <strong>Clique/J</strong> atacar · <strong>E</strong> especial · <strong>Q</strong> esquiva · <strong>U</strong> habilidades · <strong>P</strong> salvar
+    </div>
+    <canvas id="minimap" aria-label="Minimapa da floresta"></canvas>
+    <div id="crosshair" aria-hidden="true"></div>
+    <div id="interact-hint" class="hidden" aria-live="off"></div>
+    <div id="toast" aria-live="polite"></div>
+    <section id="survival-hud" aria-label="Status de sobrevivência">
+      <div id="clock-display">Dia 1 · 08:09</div>
+      <div class="vital"><span>🍖 Fome <b id="hunger-value">85</b></span><div class="vital-track"><div id="hunger-bar" class="vital-bar"></div></div></div>
+      <div class="vital"><span>💧 Sede <b id="thirst-value">80</b></span><div class="vital-track"><div id="thirst-bar" class="vital-bar"></div></div></div>
+      <div class="vital"><span>⚡ Energia <b id="stamina-value">100</b></span><div class="vital-track"><div id="stamina-bar" class="vital-bar"></div></div></div>
+      <div class="vital"><span>🔥 Calor <b id="warmth-value">100</b></span><div class="vital-track"><div id="warmth-bar" class="vital-bar"></div></div></div>
+      <div id="survival-hint">F: coletar · I: mochila · B: fogueira · H: abrigo</div>
+      <div id="skill-hud" aria-live="off">⭐ Profissões: nível 1</div>
+      <div id="tool-status" aria-live="off">⛏ Picareta 0/80 · 🔨 0/100 · 🗡 0/90</div>
+      <div id="survival-goal">Fogueiras 0 · Abrigos 0 · Sobreviveu 1 dia</div>
+    </section>
+    <div id="skill-level-up" class="hidden" role="status" aria-live="polite">⭐ Nova habilidade!</div>
+    <div id="raid-alert" class="hidden" role="status">⚔️ ATAQUE À BASE — Defenda suas construções!</div>
+    <div id="hud-shortcuts">
+      <button id="inventory-toggle" class="hud-button" type="button">🎒 Mochila [I]</button>
+      <button id="skills-toggle" class="hud-button" type="button">⭐ Habilidades [U]</button>
+    </div>
+    <section id="inventory-panel" class="hidden" aria-hidden="true" aria-label="Mochila e fabricação">
+      <div class="inventory-dialog">
+        <header><h2>🎒 Mochila e fabricação</h2><button id="inventory-close" type="button" aria-label="Fechar mochila">✕</button></header>
+        <p>Explore a floresta e aperte F perto de recursos. Os itens reaparecem depois de um tempo.</p>
+        <div id="inventory-items"></div>
+        <h3>Consumir</h3>
+        <div class="recipe-actions"><button id="use-berries">🫐 Frutas [4]</button><button id="use-water">💧 Água [5]</button><button id="use-cooked">🍖 Carne [6]</button><button id="use-vegetables">🥕 Legumes</button><button id="use-grilledFish">🍤 Peixe</button><button id="use-stew">🍲 Ensopado</button></div>
+        <div class="recipe-actions"><button id="fish-now" type="button">🎣 Pescar próximo à água [Y]</button></div>
+        <div class="recipe-actions"><button id="open-skills-inventory" type="button">⭐ Ver evolução das habilidades</button></div>
+        <h3>Construir e fabricar</h3>
+        <div id="recipe-list"></div>
+        <div class="build-controls">
+          <button id="rotate-build" type="button">↻ Girar próxima peça</button>
+          <span id="rotation-indicator">Rotação adicional: 0°</span>
+          <button id="remove-build" type="button">♻ Desmontar peça próxima</button>
+          <button id="repair-build" type="button">🛠 Reparar peça próxima (T)</button>
+        </div>
+        <p class="build-tip">🧱 <strong>Montagem:</strong> As peças encaixam em uma grade de 3 metros na direção do personagem. G gira as próximas peças em 90°. No celular, toque na receita para posicionar.</p>
+        <p class="inventory-help">Crie pisos, paredes, telhados, canteiros, portas, camas, baús e bancadas. G alterna a orientação. F abre portas, usa camas e baús. X desmonta peças vazias.</p>
+      </div>
+    </section>
+    <section id="skills-panel" class="hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Evolução de habilidades">
+      <div class="skills-dialog">
+        <header><h2>⭐ Evolução de habilidades</h2><button id="skills-close" type="button" aria-label="Fechar habilidades">✕</button></header>
+        <p id="skills-summary">8 profissões disponíveis</p>
+        <p>Suas ações dão experiência específica. Ganhe níveis para desbloquear benefícios permanentes na pesca, agricultura, caça, construção e muito mais.</p>
+        <div id="skills-list" class="skills-grid"></div>
+        <p class="build-tip">O nível geral de combate continua separado. Todas as profissões são salvas junto com o seu acampamento.</p>
+      </div>
+    </section>
+    <section id="storage-panel" class="hidden" aria-hidden="true" aria-label="Inventário do baú">
+      <div class="storage-dialog">
+        <header><h2>📦 Baú do acampamento</h2><button id="storage-close" aria-label="Fechar baú" type="button">✕</button></header>
+        <p>Guarde materiais para suas próximas construções. Capacidade: <strong id="storage-usage">0/80</strong></p>
+        <div id="storage-items"></div>
+        <p class="inventory-help">Um baú precisa ser esvaziado antes de ser desmontado.</p>
+      </div>
+    </section>
+    <div id="pause-menu" class="hidden"><h2>Jogo pausado</h2><p>Sua sobrevivência fica pausada.</p><button id="resume-btn">Voltar ao acampamento</button><button id="save-btn" class="secondary-btn">💾 Salvar progresso</button><p>Esc libera o mouse e pausa o jogo</p></div>
+    <div id="overlay">
+        <h1>🌲 MadrugaCraft 3D</h1><p style="color:#aef2d9;font-size:13px;letter-spacing:.12em;">SOBREVIVÊNCIA · EDIÇÃO v1.4</p>
+        <p>Nova evolução: oito habilidades com XP, níveis e bônus ativos para pesca, agricultura, caça, construção, mineração, coleta, artesanato e sobrevivência.</p>
+        <p>Seu Madruga está perdido numa floresta hostil. Colete recursos, encontre água, fabrique ferramentas e construa uma base com paredes, telhados, portas, canteiros, cama e baús!</p>
+        <p>Sobreviva aos dias e noites: fome, sede, energia e frio importam. <strong>F</strong> coleta; <strong>I</strong> abre a mochila; <strong>B</strong> constrói fogueira; <strong>H</strong> constrói abrigo. Cace coelhos e javalis com seus ataques, use F para plantar ou regar canteiros e Y para pescar junto à água. Abra a mochila para construir e cozinhar.</p>
+        <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; pointer-events: auto;">
+            <button id="gfx-low" class="gfx-btn" style="padding:8px 16px; background:#555; border:none; border-radius:6px; color:#fff; cursor:pointer;">Mínimo</button>
+            <button id="gfx-med" class="gfx-btn" style="padding:8px 16px; background:#e74c3c; border:none; border-radius:6px; color:#fff; cursor:pointer;">Médio</button>
+            <button id="gfx-high" class="gfx-btn" style="padding:8px 16px; background:#555; border:none; border-radius:6px; color:#fff; cursor:pointer;">Alto</button>
+        </div>
+        <button id="start-btn">Iniciar sobrevivência</button>
+        <button id="load-btn" class="secondary-btn hidden">Retomar sobrevivência</button>
+    </div>
+    <div id="touch-controls" class="hidden" aria-label="Controles de toque">
+      <div class="touch-pad">
+        <button data-hold="KeyW" class="touch-up" aria-label="Avançar">▲</button>
+        <button data-hold="KeyA" class="touch-left" aria-label="Esquerda">◀</button>
+        <button data-hold="KeyS" class="touch-down" aria-label="Recuar">▼</button>
+        <button data-hold="KeyD" class="touch-right" aria-label="Direita">▶</button>
+      </div>
+      <div class="touch-actions">
+        <button data-action="KeyJ">⚔</button><button data-action="KeyF">✋</button><button data-action="KeyY" aria-label="Pescar">🎣</button>
+        <button data-action="Space">⤴</button><button data-action="KeyE">✦</button>
+        <button data-hold="ShiftLeft">CORRER</button>
+      </div>
+      <button id="touch-pause" aria-label="Pausar jogo">Ⅱ</button>
+      <button id="touch-inventory" aria-label="Abrir mochila e construção">🧱</button>
+    </div>
+    <div id="gameover" class="hidden" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.9);z-index:200;">
+        <h1 id="go-title" style="font-size:42px;color:#e74c3c;">Game Over</h1>
+        <p id="go-msg" style="font-size:20px;margin:15px 0;"></p>
+        <button id="restart-btn">Jogar Novamente</button>
+    </div>
+
+    <script>
+      // Erro de rede ou WebGL: não deixar botão aparentemente funcional sem jogo.
+      setTimeout(() => {
+        if (window.__madrugaReady) return;
+        const overlay = document.getElementById('overlay');
+        if (!overlay || overlay.classList.contains('hidden')) return;
+        const notice = document.createElement('p');
+        notice.style.cssText = 'color:#ffc09e;font-size:14px;max-width:480px;padding:12px;';
+        notice.textContent = 'O motor 3D não carregou. Confira sua conexão (Three.js via CDN) e a aceleração WebGL do navegador, depois atualize a página.';
+        overlay.appendChild(notice);
+        document.getElementById('start-btn').disabled = true;
+      }, 12000);
+    </script>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>

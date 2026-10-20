@@ -1,0 +1,15 @@
+{
+  "name": "madrugacraft-3d",
+  "private": true,
+  "version": "1.4.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "test": "node tests/structure.mjs && node tests/modules.mjs && node tests/systems.mjs && node tests/forest.mjs && node tests/visual-systems.mjs && node tests/survival.mjs && node tests/save.mjs && node tests/world-survival.mjs && node tests/base-building.mjs && node tests/storage.mjs && node tests/v12-systems.mjs && node tests/v13-systems.mjs && node tests/v14-skills.mjs",
+    "check": "node --check src/main.js && node --check src/gameplay/survival.js && node --check src/gameplay/save-system.js && node --check src/world/resources.js && node --check src/world/buildings.js && node --check src/ui/survival-ui.js && node --check src/input/touch-controls.js && node --check src/world/forest.js && node --check src/gameplay/combat.js && node --check src/world/building-rules.js && node --check src/gameplay/storage.js && node --check src/ui/storage-ui.js && node --check src/gameplay/tools.js && node --check src/gameplay/raids.js && node --check src/gameplay/base-defense.js && node --check src/gameplay/farming.js && node --check src/gameplay/fishing.js && node --check src/world/wildlife.js && node --check src/gameplay/skills.js && node --check src/ui/skills-ui.js",
+    "test:legacy": "node tests/regression.mjs && node testes.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

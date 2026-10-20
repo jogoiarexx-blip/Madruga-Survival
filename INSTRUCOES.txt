@@ -1,0 +1,20 @@
+MADRUGACRAFT SOBREVIVÊNCIA v1.4 — PUBLICAÇÃO GITHUB PAGES
+
+1. Abra o ZIP e entre na pasta MadrugaCraft-Sobrevivencia.
+2. Envie o CONTEÚDO dessa pasta (index.html, src/, styles/, .nojekyll etc.) à raiz do repositório.
+3. Em Settings > Pages, configure Deploy from a branch > main > /(root).
+4. Abra seu endereço https://USUARIO.github.io/REPOSITORIO/.
+5. Precisa de conexão de internet para carregar a biblioteca Three.js por CDN.
+6. Para testar no computador: npm test e npm run dev (Node >= 18).
+
+NOVO: U abre habilidades; no celular, mochila > ⭐ Ver evolução das habilidades.
+Oito profissões sobem até o nível 20. Saves da v1.3 preservados no mesmo navegador.
+
+COMANDOS: F plantar / regar / colher próximo ao canteiro; Y pescar perto da água;
+J ou clique atacar animais; I abrir receitas; G girar peças; X desmontar; T reparar.
+No celular: botão 🎣 ou botão Pescar na mochila, com receitas clicáveis.
+Saves v1.2 devem ser preservados no mesmo domínio e navegador.
+
+
+TESTES: npm run check e npm test.
+OBS: o teste automático não substitui uma partida completa com WebGL.

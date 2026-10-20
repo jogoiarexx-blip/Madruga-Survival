@@ -1,0 +1,115 @@
+import {createSkills,restoreSkills,survivalDrain} from './skills.js';
+// Regras puras da sobrevivência (sem dependências de DOM/Three.js).
+export const RESOURCES = Object.freeze({
+  wood: {label:'Madeira',icon:'🪵'}, stone:{label:'Pedra',icon:'🪨'},
+  fiber:{label:'Fibra',icon:'🌿'}, berries:{label:'Frutas',icon:'🫐'},
+  water:{label:'Água',icon:'💧'}, meat:{label:'Carne crua',icon:'🥩'},
+  cooked:{label:'Carne assada',icon:'🍖'}, iron:{label:'Minério de ferro',icon:'⛏️'},
+  seeds:{label:'Sementes',icon:'🌱'},vegetables:{label:'Legumes',icon:'🥕'},
+  fish:{label:'Peixe cru',icon:'🐟'},grilledFish:{label:'Peixe assado',icon:'🍤'},
+  stew:{label:'Ensopado de legumes',icon:'🍲'}
+});
+export const RECIPES = Object.freeze({
+  campfire:{label:'Fogueira',cost:{wood:4,stone:4},hint:'Aquece e permite cozinhar'},
+  shelter:{label:'Abrigo',cost:{wood:8,fiber:6},hint:'Protege do frio noturno'},
+  floor:{label:'Piso de madeira',cost:{wood:3},hint:'Base encaixável de 3 metros'},
+  wall:{label:'Parede',cost:{wood:5,fiber:1},hint:'Bloqueia passagem e criaturas'},
+  door:{label:'Porta',cost:{wood:4,stone:1},hint:'Abre e fecha usando F'},
+  bed:{label:'Cama',cost:{wood:5,fiber:4},hint:'Dormir até amanhecer; usa F'},
+  chest:{label:'Baú',cost:{wood:6,stone:2},hint:'Guarda 80 itens; usa F'},
+  workbench:{label:'Bancada de trabalho',cost:{wood:8,stone:5},hint:'Permite ferramentas e reforços de ferro'},
+  roof:{label:'Telhado de madeira',cost:{wood:7,fiber:4},hint:'Cobertura de 3 metros; reduz exposição ao frio'},
+  farmPlot:{label:'Canteiro de plantio',cost:{wood:3,stone:2,fiber:2},hint:'Plante e regue com F; colher ao amadurecer'},
+  fishingRod:{label:'Vara de pesca',cost:{wood:3,fiber:5,stone:1},hint:'Pesca junto à água com Y ou botão da mochila'},
+  hammer:{label:'Marreta',cost:{wood:3,stone:4},hint:'Arma mais forte'},
+  spear:{label:'Lança',cost:{wood:4,stone:2,fiber:2},hint:'Ataque de maior alcance'},
+  pickaxe:{label:'Picareta de pedra',cost:{wood:3,stone:5},hint:'Exige bancada; minera ferro'},
+  ironSpear:{label:'Reforçar lança com ferro',cost:{iron:6,wood:2},hint:'Exige bancada; +3 dano à lança'},
+  repairPickaxe:{label:'Reparar picareta',cost:{wood:1,stone:2},hint:'Exige bancada; restaura durabilidade'},
+  repairHammer:{label:'Reparar marreta',cost:{stone:2,wood:1},hint:'Exige bancada; restaura durabilidade'},
+  repairSpear:{label:'Reparar lança',cost:{wood:2,iron:1},hint:'Exige bancada; restaura durabilidade'},
+  cooked:{label:'Assar carne',cost:{meat:1,wood:1},hint:'Exige fogueira acesa'},
+  grilledFish:{label:'Assar peixe',cost:{fish:1,wood:1},hint:'Exige fogueira próxima'},
+  stew:{label:'Cozinhar ensopado',cost:{vegetables:2,water:1},hint:'Exige fogueira próxima'}
+});
+export const DAY_SECONDS = 480;
+export const clamp = n => Math.max(0,Math.min(100,n));
+export function createSurvival() {
+  return {hunger:85,thirst:80,stamina:100,warmth:100,days:1,time:DAY_SECONDS*.34,
+    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0},
+    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,skills:createSkills()};
+}
+export function isNight(state) {
+  const t=(state.time%DAY_SECONDS)/DAY_SECONDS;
+  return t < .20 || t >= .76;
+}
+export function cycleClock(state) {
+  const t=(state.time%DAY_SECONDS)/DAY_SECONDS;
+  const hour=Math.floor(t*24),minute=Math.floor((t*24-hour)*60);
+  return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+}
+export function advanceSurvival(state,dt,{sprinting=false,moving=false,nearFire=false,sheltered=false,survivalLevel=1}={}) {
+  const d=Math.max(0,Math.min(dt,.1));
+  state.time += d;
+  state.days=1+Math.floor(state.time/DAY_SECONDS);
+  const drain=survivalDrain(survivalLevel);
+  state.hunger=clamp(state.hunger-d*(moving?.055:.038)*drain);
+  state.thirst=clamp(state.thirst-d*(sprinting?.135:.080)*drain);
+  const canRun=state.stamina>4 && state.hunger>5 && state.thirst>5;
+  state.stamina=clamp(state.stamina+d*(sprinting&&canRun?-19:moving?10:18));
+  const exposed=isNight(state)&&!nearFire&&!sheltered;
+  state.warmth=clamp(state.warmth+d*(exposed?-3.2:nearFire?9:sheltered?5:3));
+  const starving=state.hunger<=0||state.thirst<=0;
+  const freezing=state.warmth<=0;
+  return {canRun,damage:d*((starving?2:0)+(freezing?2.5:0)),night:isNight(state)};
+}
+export function canAfford(state,recipeId,costOverride=null) {
+  const recipe=RECIPES[recipeId];
+  return !!recipe&&Object.entries(costOverride||recipe.cost).every(([key,count])=>(state.inventory[key]||0)>=count);
+}
+export function spendRecipe(state,recipeId,costOverride=null) {
+  if(!canAfford(state,recipeId,costOverride))return false;
+  for(const [key,count] of Object.entries(costOverride||RECIPES[recipeId].cost))state.inventory[key]-=count;
+  return true;
+}
+export function addResource(state,key,amount=1){
+  if(!Object.hasOwn(RESOURCES,key) || !Number.isInteger(amount)||amount<1) return false;
+  state.inventory[key]=Math.min(999,(state.inventory[key]||0)+amount);return true;
+}
+export function useConsumable(state,key) {
+  if((state.inventory[key]||0)<1)return false;
+  if(key==='berries'){state.hunger=clamp(state.hunger+18);state.thirst=clamp(state.thirst+4);}
+  else if(key==='water'){state.thirst=clamp(state.thirst+40);}
+  else if(key==='cooked'){state.hunger=clamp(state.hunger+48);}
+  else if(key==='vegetables'){state.hunger=clamp(state.hunger+23);state.thirst=clamp(state.thirst+5);}
+  else if(key==='grilledFish'){state.hunger=clamp(state.hunger+40);}
+  else if(key==='stew'){state.hunger=clamp(state.hunger+65);state.thirst=clamp(state.thirst+12);}
+  else return false;
+  state.inventory[key]--;return true;
+}
+export function restoreSurvival(data){
+  const exemplar=createSurvival();
+  if(!data||typeof data!=='object'||Array.isArray(data))return null;
+  const obj={...exemplar,...data};
+  const isPct=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=100;
+  if(!['hunger','thirst','stamina','warmth'].every(k=>isPct(obj[k])))return null;
+  if(!Number.isFinite(obj.time)||obj.time<0||obj.time>1e7)return null;
+  if(!Number.isInteger(obj.days)||obj.days<1||obj.days>100000)return null;
+  // Migração da v1.1: recurso de ferro e ferramentas ainda não existiam.
+  obj.inventory={...exemplar.inventory,...(obj.inventory||{})};
+  if(!Object.keys(RESOURCES).every(k=>Number.isInteger(obj.inventory[k])&&obj.inventory[k]>=0&&obj.inventory[k]<=999))return null;
+  if(!obj.crafted||typeof obj.crafted.hammer!=='boolean'||typeof obj.crafted.spear!=='boolean')return null;
+  const oldTools=!data.durability;obj.crafted={...exemplar.crafted,...obj.crafted};
+  obj.durability={...exemplar.durability,...(obj.durability||{})};
+  if(oldTools){if(obj.crafted.hammer)obj.durability.hammer=100;if(obj.crafted.spear)obj.durability.spear=90;}
+  if(!['pickaxe','ironSpear','fishingRod'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
+  if(!Number.isFinite(obj.fishReadyAt)||obj.fishReadyAt<0||obj.fishReadyAt>1e7)return null;
+  if(obj.crafted.ironSpear&&!obj.crafted.spear)return null;
+  if(!Object.entries({pickaxe:80,hammer:100,spear:90}).every(([k,max])=>Number.isInteger(obj.durability[k])&&obj.durability[k]>=0&&obj.durability[k]<=max&&(!obj.durability[k]||obj.crafted[k])))return null;
+  if(!Number.isInteger(obj.firesBuilt)||obj.firesBuilt<0||obj.firesBuilt>100)return null;
+  if(!Number.isInteger(obj.sheltersBuilt)||obj.sheltersBuilt<0||obj.sheltersBuilt>100)return null;
+  const skills=restoreSkills(data.skills);if(!skills)return null;
+  return {hunger:obj.hunger,thirst:obj.thirst,stamina:obj.stamina,warmth:obj.warmth,
+    time:obj.time,days:obj.days,inventory:Object.fromEntries(Object.keys(RESOURCES).map(k=>[k,obj.inventory[k]])),
+    crafted:{...obj.crafted},fishReadyAt:obj.fishReadyAt,durability:{...obj.durability},firesBuilt:obj.firesBuilt,sheltersBuilt:obj.sheltersBuilt,skills};
+}
