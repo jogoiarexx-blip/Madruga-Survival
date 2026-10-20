@@ -45,5 +45,10 @@ for(const [file,symbols] of [
 // Cache busting obrigatório no carregamento principal: Pages não pode reutilizar JS de builds anteriores.
 assert.match(html,/src=["']\.\/src\/main\.js\?v=[^"'\s]+["']/,
   'Cache busting obrigatório no carregamento principal');
+// Favicon do MadrugaCraft deve ser relativo à pasta do GitHub Pages, não à raiz do domínio.
+assert.match(html, /<link rel="icon"[^>]*href="\.\/favicon\.svg"/,
+  'Favicon do MadrugaCraft ausente ou com caminho absoluto');
+assert.ok(existsSync(resolve(root,'favicon.svg')), 'Arquivo favicon.svg não encontrado');
+assert.match(load('favicon.svg'), /<svg\b/, 'Favicon SVG inválido');
 assert.ok(existsSync(resolve(root,'.nojekyll')));
 console.log(`OK estrutura estática, ${count} imports locais e GitHub Pages`);
