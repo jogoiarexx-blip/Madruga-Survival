@@ -17,7 +17,7 @@ import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,addResource,useConsumable,spendRecipe,canAfford,RECIPES} from './gameplay/survival.js';
-import {createResourceWorld} from './world/resources.js';
+import {createResourceWorld} from './world/resources.js?v=1.7.3-seed-fix';
 import {createBuildingWorld} from './world/buildings.js';
 import {createSurvivalUI} from './ui/survival-ui.js';
 import {createTouchControls} from './input/touch-controls.js';
