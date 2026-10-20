@@ -1,3 +1,4 @@
+import {geometryDetail} from '../render/geometry-detail.js';
 // Fauna leve low-poly: coelhos fogem, javalis se defendem; caça por colisão do ataque.
 import {createSeededRandom} from './random.js';
 import {isInAttackArc} from '../gameplay/combat.js';
@@ -14,7 +15,8 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
  const boarMat=new THREE.MeshStandardMaterial({color:0x64483a,roughness:1});
  const hooves=new THREE.MeshStandardMaterial({color:0x332c2b,roughness:1});
  const eyes=new THREE.MeshStandardMaterial({color:0x101313,roughness:.5});
- const rabbitGeo=new THREE.SphereGeometry(1,8,6), boxGeo=new THREE.BoxGeometry(1,1,1);
+ let rabbitGeo=new THREE.SphereGeometry(1,12,9);
+ const boxGeo=new THREE.BoxGeometry(1,1,1);
  function sphere(g,mat,x,y,z,sx,sy,sz){const m=new THREE.Mesh(rabbitGeo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m);return m;}
  function block(g,mat,x,y,z,sx,sy,sz){const m=new THREE.Mesh(boxGeo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);g.add(m);return m;}
  function spawn(type,x,z,hp=null,heading=0){
@@ -42,8 +44,11 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
    const a={type,x,z,heading,hp:hp??(type==='boar'?5:2),group:g,pace:1,attackDelay:0,wander:0};
    animals.push(a);return a;
  }
- function generate(seed=2026){
+ function generate(seed=2026,quality='medium'){
    if(animals.length)return;
+   const detail=geometryDetail(quality);
+   rabbitGeo.dispose?.();
+   rabbitGeo=new THREE.SphereGeometry(1,detail.bushWidth,detail.bushHeight);
    const rand=createSeededRandom((seed^0xBBCC1342)>>>0);
    for(let i=0;i<MAX_ANIMALS;i++){
      const type=i<7?'rabbit':'boar';
