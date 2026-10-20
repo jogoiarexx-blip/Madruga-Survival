@@ -21,7 +21,7 @@ function listJs(dir) {
 for (const from of listJs('src')) {
   const code=load(from);
   for (const [,rel] of code.matchAll(/from ['"](\.[^'"]+)['"]/g)) {
-    assert.ok(existsSync(resolve(root,dirname(from),rel)),`Import quebrado: ${from} -> ${rel}`);
+    assert.ok(existsSync(resolve(root,dirname(from),rel.split('?')[0])),`Import quebrado: ${from} -> ${rel}`);
     count++;
   }
 }
