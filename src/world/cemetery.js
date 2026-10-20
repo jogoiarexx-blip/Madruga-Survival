@@ -1,12 +1,14 @@
+import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Bioma sombreado de cemitério low-poly. Sem texturas/downloads externos.
 import {CEMETERY_POS,withinCemetery} from '../gameplay/zombie-variants.js';
 export {CEMETERY_POS,withinCemetery};
-export function createCemetery({THREE,scene,getGroundHeight,addCollider=()=>{}}){
+export function createCemetery({THREE,scene,getGroundHeight,addCollider=()=>{},getQuality=()=> 'medium'}){
   let group=null;
   const cameraMeshes=[];
   function create(){
     if(group)return group;
     const {x,z}=CEMETERY_POS,y=getGroundHeight(x,z);
+    const detail=geometryDetail(getQuality());
     group=new THREE.Group();group.position.set(x,y,z);scene.add(group);
     const earth=new THREE.MeshStandardMaterial({color:0x363d37,roughness:1});
     const stone=new THREE.MeshStandardMaterial({color:0x777e76,roughness:1});
@@ -14,8 +16,8 @@ export function createCemetery({THREE,scene,getGroundHeight,addCollider=()=>{}})
     const moss=new THREE.MeshStandardMaterial({color:0x4e6a49,roughness:1});
     const wood=new THREE.MeshStandardMaterial({color:0x383128,roughness:1});
     const ghost=new THREE.MeshBasicMaterial({color:0x9bddb5,transparent:true,opacity:.6,depthWrite:false});
-    function block(parent,w,h,d,mat,px,py,pz){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(px,py,pz);m.castShadow=true;parent.add(m);return m;}
-    const ground=new THREE.Mesh(new THREE.CylinderGeometry(13.8,13.8,.22,36),earth);
+    function block(parent,w,h,d,mat,px,py,pz){const geo=(getQuality()==='high'&&h>0.5&&w<2)?roundedBoxGeometry(THREE,w,h,d,Math.min(w,h,d)*.10,3):new THREE.BoxGeometry(w,h,d);const m=new THREE.Mesh(geo,mat);m.position.set(px,py,pz);m.castShadow=true;parent.add(m);return m;}
+    const ground=new THREE.Mesh(new THREE.CylinderGeometry(13.8,13.8,.22,Math.max(28,detail.resourceCylinder*3)),earth);
     ground.position.y=-.08;ground.receiveShadow=true;group.add(ground);
     const gravePositions=[];
     for(let row=-2;row<=2;row++)for(let col=-2;col<=2;col++){
@@ -35,7 +37,7 @@ export function createCemetery({THREE,scene,getGroundHeight,addCollider=()=>{}})
     const roof=block(group,4.8,.55,4.25,stone,0,3.32,0);roof.rotation.z=.035;
     block(group,1.32,2.25,.11,wood,0,1.20,1.82);
     for(const px of [-1.3,1.3]){
-      const torch=new THREE.Mesh(new THREE.ConeGeometry(.22,.55,5),ghost);
+      const torch=new THREE.Mesh(new THREE.ConeGeometry(.22,.55,detail.flame),ghost);
       torch.position.set(px,2.25,1.95);group.add(torch);
     }
     for(const px of [-7,7]) for(const pz of [-7,7]){

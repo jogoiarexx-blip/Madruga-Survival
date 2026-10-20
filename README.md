@@ -1,3 +1,13 @@
+# v1.9 — Geometria aprimorada por qualidade
+
+- **Mínimo/Médio/Alto:** geometrias de árvores, folhas, rochas, arbustos e coleta usam orçamentos de polígonos específicos em `src/render/geometry-detail.js`.
+- **Personagens:** cabeça/rosto e chapéu mais suaves; braços, pernas e roupas com cantos realmente arredondados por deformação das malhas e normais recalculadas. Aldeão guarda e inimigos procedurais seguem o mesmo padrão.
+- **Animais:** coelhos e javalis usam malhas esféricas mais densas no modo Alto, compartilhadas entre todos os indivíduos.
+- **Objetos:** minério, madeira, fibras, água, frutos, fogueiras, camas, baús e lápides receberam facetas mais detalhadas conforme o perfil gráfico; geometrias repetidas continuam em cache.
+- **Otimização:** `Mínimo` mantém contagem baixa; buffers das árvores e dos recursos só são preparados na geração do mapa; culling e salvamentos mantidos.
+- **Zumbis REV4:** o GLB original articulado (40 ossos, 29 animações, 2.504 triângulos) não foi reprocessado. A versão 1.9 melhora o restante do mundo, mantendo o original do zumbi intacto.
+- **Validação:** `npm test` + `npm run check`, incluindo seis testes novos de nível de detalhe, normais, geometrias compartilhadas e geração determinística. A execução visual WebGL ainda requer teste no navegador.
+
 # v1.8 — Zumbi geométrico REV4 integrado
 
 O jogo carrega o modelo original `assets/models/zumbi_geometrico_REV4.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 40 ossos, 29 animações e 2.504 triângulos. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.

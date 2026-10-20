@@ -1,3 +1,4 @@
+import {roundedBoxGeometry} from '../render/geometry-detail.js';
 // NPC aliado: recruta com F, patrulha as construções, defende e pode ser reanimado.
 export const GUARD_MAX_HP=80;
 export function validGuard(data){
@@ -23,7 +24,7 @@ export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollisio
  const skin=new THREE.MeshStandardMaterial({color:0xe2b58c,roughness:.88});
  const brown=new THREE.MeshStandardMaterial({color:0x60412d,roughness:1});
  const steel=new THREE.MeshStandardMaterial({color:0xb8bcc0,metalness:.30,roughness:.65});
- function box(parent,w,h,d,mat,x,y,z){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;}
+ function box(parent,w,h,d,mat,x,y,z){const mesh=new THREE.Mesh(roundedBoxGeometry(THREE,w,h,d,Math.min(w,h,d)*.14,3),mat);mesh.position.set(x,y,z);mesh.castShadow=true;parent.add(mesh);return mesh;}
  box(model,.75,.87,.42,tunic,0,1.17,0);
  box(model,.49,.48,.49,skin,0,1.86,0);
  box(model,.56,.19,.56,brown,0,2.15,0);

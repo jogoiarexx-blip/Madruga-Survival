@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v1.6 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v1.9 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -20,7 +20,7 @@ import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,addResource,useConsumable,spendRecipe,canAfford,RECIPES} from './gameplay/survival.js';
-import {createResourceWorld} from './world/resources.js?v=1.7.3-seed-fix';
+import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
 import {createBuildingWorld} from './world/buildings.js';
 import {createSurvivalUI} from './ui/survival-ui.js';
 import {createTouchControls} from './input/touch-controls.js';
@@ -155,7 +155,7 @@ const forest = createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosi
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
 const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),findSpawnPoint:(min,max,r)=>findSpawnPoint(min,max,r)});
-const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)});
+const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
     canSee:(from,to)=>!buildings.blocksLine(from,to),
@@ -382,8 +382,8 @@ function spawnSpeedBoost(at = null) {
     speedBoosts.push(boost);
 }
 
-const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn:enemy=>zombieModels.attach(enemy)});
-const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add});
+const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,getQuality:()=>graphicsQuality,onSpawn:enemy=>zombieModels.attach(enemy)});
+const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
 const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
     canSee:(a,b)=>!buildings.blocksLine(a,b),
@@ -393,6 +393,7 @@ const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
 let worldSeed = Math.floor(Math.random() * 0x100000000);
 function initWorld() {
     applyGraphicsSettings(THREE,graphicsQuality,renderer,scene,sun);
+    natureAssets.setQuality(graphicsQuality);
     forest.generate(graphicsQuality,worldSeed);
     // Primeiro a arena e os obstáculos; depois os elementos dinâmicos.
     shrine.create();
@@ -400,8 +401,8 @@ function initWorld() {
     cameraObstacles.push(...cemetery.cameraObstacles);
     cameraRig.refreshObstacles();
     forest.updateVisibility(player.position,graphicsQuality,0,true);
-    resources.generate(worldSeed);
-    wildlife.generate(worldSeed);
+    resources.generate(worldSeed,graphicsQuality);
+    wildlife.generate(worldSeed,graphicsQuality);
     void zombieModels.preload();
     for (let i=0; i<2; i++) spawnHealthPack();
     for (let i=0; i<2; i++) spawnSpeedBoost();

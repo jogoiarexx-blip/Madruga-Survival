@@ -1,3 +1,4 @@
+import {geometryDetail} from '../render/geometry-detail.js';
 import {createSeededRandom} from './random.js';
 // Recursos exploráveis: nós em low-poly com regeneração e sem física pesada.
 export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,findSpawnPoint}) {
@@ -10,14 +11,24 @@ export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,
   water:new THREE.MeshStandardMaterial({color:0x55bbec,roughness:.2,metalness:.2}),
   iron:new THREE.MeshStandardMaterial({color:0x546878,roughness:.48,metalness:.65})
  };
- const geometry={
-  wood:new THREE.CylinderGeometry(.28,.32,1.0,6),
-  stone:new THREE.DodecahedronGeometry(.48,0),
-  berries:new THREE.IcosahedronGeometry(.37,0),
-  fiber:new THREE.ConeGeometry(.40,.95,5),
-  water:new THREE.CylinderGeometry(.88,.88,.18,12),
-  iron:new THREE.DodecahedronGeometry(.60,0)
- };
+ // Os buffers são gerados apenas quando o mundo começa, após a escolha gráfica.
+ let geometry=null,detail=geometryDetail();
+ function makeGeometries(quality){
+   detail=geometryDetail(quality);
+   const sides=detail.resourceCylinder;
+   geometry={
+     wood:new THREE.CylinderGeometry(.28,.32,1.0,sides),
+     stone:new THREE.DodecahedronGeometry(.48,detail.resourceFacet),
+     berries:new THREE.IcosahedronGeometry(.37,detail.resourceSphere),
+     fiber:new THREE.ConeGeometry(.40,.95,Math.max(5,sides)),
+     water:new THREE.CylinderGeometry(.88,.88,.18,Math.max(12,sides*2)),
+     iron:new THREE.DodecahedronGeometry(.60,detail.resourceFacet),
+     vein:new THREE.IcosahedronGeometry(.13,detail.resourceSphere),
+     berry:new THREE.SphereGeometry(.11,detail.smallSphereWidth,detail.smallSphereHeight),
+     rim:new THREE.TorusGeometry(.96,.11,Math.max(6,Math.floor(detail.decoration/2)),Math.max(14,detail.decoration*2)),
+     wellPost:new THREE.CylinderGeometry(.09,.09,1.65,detail.resourceCylinder)
+   };
+ }
  function makeNode(type,x,z,ready=true) {
    const group=new THREE.Group();
    const mesh=new THREE.Mesh(geometry[type],materials[type]);
@@ -31,19 +42,19 @@ export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,
      }
    }
    if(type==='iron'){
-     for(let i=0;i<3;i++){const vein=new THREE.Mesh(new THREE.IcosahedronGeometry(.13,0),materials.water);
+     for(let i=0;i<3;i++){const vein=new THREE.Mesh(geometry.vein,materials.water);
        vein.position.set(Math.sin(i*2.2)*.33,.5+Math.sin(i*2)*.12,Math.cos(i*2.2)*.25);group.add(vein);}
    }
    if(type==='berries'){
      for(let i=0;i<4;i++) {
-      const berry=new THREE.Mesh(new THREE.SphereGeometry(.11,6,5),materials.berries);
+      const berry=new THREE.Mesh(geometry.berry,materials.berries);
       berry.position.set(Math.sin(i*2)*.28,.76,Math.cos(i*2)*.28);group.add(berry);
      }
    }
    if(type==='water') {
-     const rim=new THREE.Mesh(new THREE.TorusGeometry(.96,.11,6,14),materials.stone);
+     const rim=new THREE.Mesh(geometry.rim,materials.stone);
      rim.rotation.x=-Math.PI/2;rim.position.y=.23;group.add(rim);
-     const post=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,1.65,7),materials.wood);
+     const post=new THREE.Mesh(geometry.wellPost,materials.wood);
      post.position.set(-1,.82,0);group.add(post);
    }
    group.position.set(x,getGroundHeight(x,z),z);
@@ -52,7 +63,9 @@ export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,
    group.visible=ready;
    return node;
  }
- function generate(seed=1234){
+ function generate(seed=1234,quality='medium'){
+   if(nodes.length)return; // Evita buffers extras e duplicação dos nós.
+   makeGeometries(quality);
    const random=createSeededRandom((seed^0xA4F38B)>>>0);
    const spawn=(min,max,radius=.8)=>{
      for(let tries=0;tries<100;tries++){
