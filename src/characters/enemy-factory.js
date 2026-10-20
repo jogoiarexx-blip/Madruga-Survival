@@ -1,6 +1,7 @@
+import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 import {ZOMBIE_TYPES,isZombieType} from '../gameplay/zombie-variants.js';
 // Construção procedural de inimigos, centralizada e testável.
-export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn=()=>{}}) {
+export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn=()=>{},getQuality=()=> 'medium'}) {
 function spawnEnemy(type = 'normal') {
     let size = 0.9, color = 0xe74c3c, speed = 3.2, hp = 2, damage = 12;
     let skinColor = color, clothColor = color, eyeColor = 0xfff4ac, accentColor = 0x4b2227;
@@ -26,19 +27,21 @@ function spawnEnemy(type = 'normal') {
     } else if (type === 'boss') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     }
+    const curve=geometryDetail(getQuality());
+    const rounded=(w,h,d,r)=>roundedBoxGeometry(THREE,w,h,d,r,getQuality()==='high'?4:3);
     const material = new THREE.MeshStandardMaterial({ color: clothColor, roughness: 0.62, emissive: isZombieType(type)?skinColor:clothColor, emissiveIntensity: 0 });
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(size*.81, size*.74, size*.78), material);
+    const mesh = new THREE.Mesh(rounded(size*.81,size*.74,size*.78,size*.075), material);
     const limbMat = new THREE.MeshStandardMaterial({color:skinColor,roughness:.78});
     const rig={};
     for (const side of [-1,1]) {
         const arm=new THREE.Group();
         arm.position.set(side*size*.47,size*.12,0);
-        const armShape=new THREE.Mesh(new THREE.BoxGeometry(size*.22,size*.46,size*.25),limbMat);
+        const armShape=new THREE.Mesh(rounded(size*.22,size*.46,size*.25,size*.04),limbMat);
         armShape.position.y=-size*.19; arm.add(armShape); mesh.add(arm);
         rig[side<0?'leftArm':'rightArm']=arm;
         const leg=new THREE.Group();
         leg.position.set(side*size*.21,-size*.24,0);
-        const legShape=new THREE.Mesh(new THREE.BoxGeometry(size*.28,size*.48,size*.32),limbMat);
+        const legShape=new THREE.Mesh(rounded(size*.28,size*.48,size*.32,size*.04),limbMat);
         legShape.position.y=-size*.19;leg.add(legShape);mesh.add(leg);
         rig[side<0?'leftLeg':'rightLeg']=leg;
     }
@@ -46,19 +49,19 @@ function spawnEnemy(type = 'normal') {
     const mask=new THREE.Mesh(new THREE.BoxGeometry(size*.47,size*.27,size*.12),
         new THREE.MeshStandardMaterial({color:accentColor,roughness:.8}));
     mask.position.z=size*.43;head.add(mask);
-    const aura=new THREE.Mesh(new THREE.TorusGeometry(size*.65,size*.025,5,20),
+    const aura=new THREE.Mesh(new THREE.TorusGeometry(size*.65,size*.025,Math.max(5,Math.floor(curve.decoration/2)),Math.max(20,curve.decoration*3)),
         new THREE.MeshBasicMaterial({color:0xff8e40,transparent:true,opacity:.75}));
     aura.rotation.x=Math.PI/2;aura.visible=false;aura.position.y=-size*.38;mesh.add(aura);rig.aura=aura;
     mesh.userData.rig=rig;
     const eyeMat = new THREE.MeshBasicMaterial({color: eyeColor});
-    const eyeGeo = new THREE.SphereGeometry(size * 0.09, 8, 6);
+    const eyeGeo = new THREE.SphereGeometry(size * 0.09,curve.smallSphereWidth,curve.smallSphereHeight);
     for (const offset of [-0.2, 0.2]) {
         const eye = new THREE.Mesh(eyeGeo.clone(), eyeMat.clone());
         eye.position.set(offset * size, -size * 0.16, size * 0.54);
         head.add(eye);
     }
     if (!isZombieType(type)) for (const offset of [-0.25, 0.25]) {
-        const horn = new THREE.Mesh(new THREE.ConeGeometry(size * 0.14, size * 0.38, 6),
+        const horn = new THREE.Mesh(new THREE.ConeGeometry(size * 0.14, size * 0.38,curve.decoration),
             new THREE.MeshStandardMaterial({color: 0x3d1b27}));
         horn.position.set(offset * size, size * 0.33, 0);
         horn.rotation.z = offset * 0.7;
@@ -85,7 +88,7 @@ function spawnEnemy(type = 'normal') {
         }
     }
     if (type==='shaman') {
-        const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,1.4,6),
+        const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,1.4,curve.decoration),
             new THREE.MeshStandardMaterial({color:0x523827}));
         staff.position.set(-size*0.64,0.15,0);mesh.add(staff);
         const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.16),
