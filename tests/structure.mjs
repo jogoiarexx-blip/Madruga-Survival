@@ -33,5 +33,14 @@ assert.match(main,/if \(document\.hidden\) return/,'Aba oculta não deve renderi
 assert.match(main,/const natureAssets = createNatureAssets/,'Geometrias não foram compartilhadas');
 assert.match(load('src/world/nature-assets.js'),/leafGeometry/);
 assert.match(load('scripts/serve.ps1'),/TcpListener/);
+// Evita que funções do cemitério, aldeão e variantes fiquem indefinidas na inicialização.
+const imports=new Map([...main.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/gs)]
+  .map(([,names,path])=>[path,new Set(names.split(',').map(name=>name.trim().split(/\s+as\s+/)[0]))]));
+for(const [file,symbols] of [
+  ['./world/cemetery.js',['createCemetery','CEMETERY_POS','withinCemetery']],
+  ['./characters/villager-guard.js',['createVillagerGuard']],
+  ['./gameplay/zombie-variants.js',['chooseZombieType']]
+])for(const symbol of symbols)assert.ok(imports.get(file)?.has(symbol),
+  `Símbolo ${symbol} não importado no main.js a partir de ${file}`);
 assert.ok(existsSync(resolve(root,'.nojekyll')));
 console.log(`OK estrutura estática, ${count} imports locais e GitHub Pages`);
