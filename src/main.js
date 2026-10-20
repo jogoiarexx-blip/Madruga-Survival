@@ -31,6 +31,9 @@ import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
 import {tryFish} from './gameplay/fishing.js';
 import {createWildlifeWorld} from './world/wildlife.js';
+import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
+import {createVillagerGuard} from './characters/villager-guard.js';
+import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
 import {SKILLS,awardSkill,skillLevel,fishingBonus,farmingBonus,huntingBonus,
     resourceBonus,recipeCost,cookedYield} from './gameplay/skills.js';
