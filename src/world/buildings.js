@@ -1,3 +1,4 @@
+import {batchStaticMeshes} from '../render/static-batching.js';
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
 import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
@@ -5,7 +6,7 @@ import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientatio
 import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding} from '../gameplay/base-defense.js';
 import {validChestItems} from '../gameplay/storage.js';
 import {makeCrop,advanceCrop,validCrop} from '../gameplay/farming.js';
-export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium'}) {
+export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium',mergeGeometries=null}) {
  const structures=[];
  const stone=new THREE.MeshStandardMaterial({color:0x92918a,roughness:.95});
  const wood=new THREE.MeshStandardMaterial({color:0x68432c,roughness:1});
@@ -123,6 +124,8 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    if(!STRUCTURE_TYPES.includes(type)||!Number.isFinite(x)||!Number.isFinite(z))return null;
    const loc=preparePlacement(type,x,z,rotation,options),group=new THREE.Group();
    const visual=createVisual(type,group);
+   // Reduz draw calls dos elementos rígidos sem fundir peças animadas.
+   batchStaticMeshes({THREE,group,mergeGeometries,exclude:[visual.flame]});
    group.position.set(loc.x,getGroundHeight(loc.x,loc.z),loc.z);
    group.rotation.y=orientation(loc.rotation||0)*Math.PI/2;
    const item={type,x:loc.x,z:loc.z,rotation:loc.rotation||0,group,
