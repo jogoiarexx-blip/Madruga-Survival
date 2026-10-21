@@ -1,4 +1,4 @@
-MADRUGACRAFT v1.9 — MELHORIA REAL DE GEOMETRIA E POLÍGONOS
+MADRUGACRAFT v2.0 — MELHORIA REAL DE GEOMETRIA E POLÍGONOS
 
 Use ALTO para malhas mais suaves de vegetação, pedras, animais e detalhes de construções.
 Em celulares fracos, prefira MÍNIMO. Não é necessário recompilar para GitHub Pages.
@@ -54,3 +54,6 @@ Peças encaixadas são verdes quando a posição é livre; se estiver ocupado, v
 Limite elevado para 160 estruturas. Novos encaixes de 1,5m são salvos com exatidão.
 IMPORTANTE: salvar no mesmo domínio de GitHub Pages preserva sua partida.
 Verificações: npm test e npm run check. 123 testes atuais aprovados; WebGL não validado.
+
+
+NOVO V2.0: otimização automática de peças rígidas da base, cena econômica em pausa e animação de zumbis somente próximos. Pressione F3 para comparar FPS/draw calls antes e depois no mesmo dispositivo.
