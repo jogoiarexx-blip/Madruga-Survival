@@ -1,3 +1,11 @@
+# MadrugaCraft v2.0 — desempenho estrutural (21/10/2026)
+- Peças estáticas dos módulos de construção mescladas por material quando compatíveis; portas, baús, plantações e fogo preservam animações e colisões.
+- Renderização em pausa/menu limitada a uma vez a cada 250 ms (até 4 FPS), sem alterar progresso do jogo nem a física.
+- O modelo REV4 de zumbis distantes fica invisível e suspende atualização do esqueleto até voltar à região visível.
+- Sete novos testes de desempenho, mesclagem e fallback, mais suíte anterior; 141 verificações na cópia local.
+- Mantidos arquivos GLB, save v2, perfis Mínimo/Médio/Alto e hospedagem sem build no GitHub Pages.
+- Nota: ainda não há benchmark WebGL real comprovando FPS ou tempo de renderização no hardware.
+
 # v1.9 — Maior detalhamento de polígonos por perfil
 
 - Novo gerenciador `src/render/geometry-detail.js` com níveis Mínimo/Médio/Alto e caixa procedural de cantos suavizados.
