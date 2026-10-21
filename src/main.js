@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v1.9 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v2.0 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -11,6 +11,8 @@ import { initAudio, sfx } from './audio/sfx.js';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js';
 import { createPlayerModel } from './characters/player-model.js';
 import { createEnemySpawner } from './characters/enemy-factory.js';
@@ -155,7 +157,7 @@ const forest = createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosi
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
 const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),findSpawnPoint:(min,max,r)=>findSpawnPoint(min,max,r)});
-const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality});
+const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality,mergeGeometries});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
     canSee:(from,to)=>!buildings.blocksLine(from,to),
@@ -921,6 +923,7 @@ const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
 const clock = new THREE.Clock();
 let walkTime = 0, hudTick = 0, minimapTick = 0, fpsTime = 0, fpsFrames = 0;
 let showFps = false;
+let lastIdleRenderAt=-Infinity;
 const fpsDisplay = document.getElementById('fps-display');
 player.position.y = getGroundHeight(0,0);
 camera.position.set(0, 3.8, 7.4);
@@ -931,6 +934,13 @@ function animate() {
     const dt = Math.min(clock.getDelta(), 0.05);
     if (document.hidden) return;
     const running = gameActive && controls.isLocked && health > 0;
+    // Pausa/menu: 4 FPS para manter cena visível sem consumir GPU a 60/144 Hz.
+    // Relógio é atualizado primeiro, evitando salto de física ao retomar.
+    if (!running) {
+        const now=performance.now();
+        if (!shouldRenderFrame({running,now,lastIdleRenderAt})) return;
+        lastIdleRenderAt=now;
+    }
 
     if (running) {
         elapsed += dt;
