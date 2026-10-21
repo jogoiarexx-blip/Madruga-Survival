@@ -1,4 +1,4 @@
-# v1.9 — Geometria aprimorada por qualidade
+# v2.0 — Geometria aprimorada por qualidade
 
 - **Mínimo/Médio/Alto:** geometrias de árvores, folhas, rochas, arbustos e coleta usam orçamentos de polígonos específicos em `src/render/geometry-detail.js`.
 - **Personagens:** cabeça/rosto e chapéu mais suaves; braços, pernas e roupas com cantos realmente arredondados por deformação das malhas e normais recalculadas. Aldeão guarda e inimigos procedurais seguem o mesmo padrão.
@@ -211,3 +211,8 @@ tests/                         Testes, incluindo base-building.mjs e storage.mjs
 
 
 Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamento.
+
+
+## v2.0 — FPS e estabilidade
+
+Agrupamento seguro de peças fixas por material com BufferGeometryUtils, reduzindo malhas a serem desenhadas. Não inclui portas, tampas, chamas ou vegetação animada no agrupamento. Menus/pausa renderizam no máximo 4 vezes por segundo; zumbis REV4 distantes deixam de atualizar seu rig. Sete novos testes em `tests/v20-performance.mjs`. A execução WebGL em dispositivos reais ainda precisa ser medida: pressione F3 no jogo para verificar FPS e draw calls.
