@@ -81,6 +81,8 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,u
       attack(){this.play(enemy.type==='zombie_runner'?'LungeAttack':enemy.type==='zombie_brute'?'Flail':'Attack',true);this.hold=.65;},
       hurt(){if(this.hold>0)return;this.play('Hurt',true);this.hold=.32;},
       update(dt,moving,near=true){
+        // Esqueleto parado e invisível fora da região útil: poupa skinning e draw calls.
+        this.model.visible=!!near;
         if(!near)return;
         const step=Math.max(0,Math.min(.05,dt));
         this.hold=Math.max(0,this.hold-step);
