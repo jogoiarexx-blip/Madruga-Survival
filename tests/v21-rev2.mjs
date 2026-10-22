@@ -38,7 +38,7 @@ await test('carrega uma vez, aplica REV2 aos zumbis e escala base fica próxima 
  assert.equal(a.mesh.material.visible,false);assert.equal(a.mesh.children[0].visible,false);
  assert.notEqual(a.rev4Visual.model,b.rev4Visual.model);
  assert.equal(a.rev4Visual.walk,'Andar');assert.equal(b.rev4Visual.walk,'Correr');
- assert.ok(a.rev4Visual.model.scale.value>1.25 && a.rev4Visual.model.scale.value<1.35);
+ assert.ok(a.rev4Visual.model.scale.value>1.34 && a.rev4Visual.model.scale.value<1.39);
  assert.ok(a.rev4Visual.model.position.values[1]>.7 && a.rev4Visual.model.position.values[1]<.9);
  a.rev4Visual.update(.03,true);assert.equal(a.rev4Visual.current,'Andar');
  a.rev4Visual.attack();assert.equal(a.rev4Visual.current,'Morder');
@@ -54,8 +54,8 @@ await test('tóxico e gigante preservam tipos e escalas maiores',()=>{
  assert.equal(ZOMBIE_ANIMATIONS.zombie_toxic,'Andar');assert.equal(ZOMBIE_ANIMATIONS.zombie_brute,'Andar');
 });
 await test('animação procedural não sobrescreve o GLB montado',()=>{
- let called=0;const enemy={rev4Visual:{update(dt,moving,near){called++;assert.equal(dt,.016);assert.equal(moving,true);assert.equal(near,true);}}};
- animateEnemy(enemy,1,true,.016,true);assert.equal(called,1);
+ let called=0;const enemy={rev4Visual:{update(dt,moving,near,pace){called++;assert.equal(dt,.016);assert.equal(moving,true);assert.equal(near,true);assert.equal(pace,1.2);}}};
+ animateEnemy(enemy,1,true,.016,true,1.2);assert.equal(called,1);
 });
 await test('falha de carregamento preserva modelo low-poly e não causa exceção',async()=>{
  shouldFail=true;const manager=createZombieModelManager({THREE,scene:new Node(),GLTFLoader:Loader,cloneSkeleton});
