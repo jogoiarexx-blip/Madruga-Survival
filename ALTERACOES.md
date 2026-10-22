@@ -1,12 +1,21 @@
-## v2.1.5 — Apoio dos pés REV2 no solo
+## v2.2.0 — Player Striped Wanderer REV5
 
-- Modelo REV2 mantido, com altura base de 2,58 unidades.
-- Criado controlador de contato de pés com terreno, apoios alternados, rampas de transição e correção limitada de quadril e joelho.
-- Controlador executado apenas nos zumbis próximos ao jogador (raio de 16 unidades), preservando o fallback sem rig.
-- Ajustada cadência dos clipes de caminhada/corrida ao deslocamento real do inimigo.
-- Removidos bob vertical, pulsação de escala e inclinação artificial dos zumbis com GLB, sem alterar a colisão.
-- Regressões adicionadas em `tests/v214-zombie-scale-slide.mjs` e `tests/v215-foot-plant.mjs`.
-- Testes automatizados verificados na versão ZIP; ainda falta validação visual WebGL no site público.
+Modelo GLB original carregado com GLTFLoader, bonecos procedurais ocultos ao carregar, ações de jogo ligadas a clipes do rig, armas da campanha anexadas à mão do esqueleto. Preservadas colisões, salvamentos, zumbis REV2, construção e combate. Fallback do jogador em caso de indisponibilidade do GLB.
+
+# v2.1.5 — Correção da passada dos zumbis REV2
+
+- Apoio procedural dos pés por CCD limitado nos ossos originais L_Hip/L_Knee/L_Foot e R_Hip/R_Knee/R_Foot.
+- Amostragem da altura do terreno debaixo de cada pé com âncoras de contato e transições suaves.
+- Retirado o bob/pulso de escala do rig REV2 para evitar que a sola atravesse o terreno.
+- Retiming da locomoção por tipo, mantendo o impacto de mordida/agarrão na mesma posição da animação.
+- Otimização: apoio calculado apenas perto do jogador; regressões de escala, IA e combate preservadas.
+
+# v2.1.2 — Orientação REV2 e deslocamento
+
+- O zumbi REV2 tem frente local +Z e já não recebe rotação de 180 graus.
+- IA passa a orientar zumbis na direção real do movimento e volta a mirar no alvo durante a mordida ou quando parado.
+- Mantidas colisões, combates, salvamentos e demais tipos de inimigo.
+- Novo teste de simulação de caminhada e desvio de obstáculo (`tests/v212-zombie-facing.mjs`).
 
 ## v2.1.1 — Calibração do zumbi REV2 e impacto de ataques
 
