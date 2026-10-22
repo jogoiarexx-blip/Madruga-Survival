@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v1.9 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v2.2.0 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -15,6 +15,7 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import { createPlayerModel } from './characters/player-model.js';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.0-player-rev5';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
 import { createCombatSystem } from './gameplay/combat.js';
@@ -87,6 +88,9 @@ const natureAssets = createNatureAssets(THREE);
 // ========== PERSONAGEM ==========
 const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,hammerHead,spearHead} =
     createPlayerModel(THREE,scene);
+const playerRev5=createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,
+    onStatus:message=>console.info(message)});
+void playerRev5.preload();
 
 // ========== CONTROLS ==========
 // Terceira pessoa: não use PointerLockControls sobre a mesma câmera,
@@ -265,7 +269,8 @@ function equipWeapon(index) {
     hammerHead.visible = index === 1;
     spearHead.visible = index === 2;
     weapon.material.color.setHex(selected.color);
-    weapon.position.y = -1.17;
+    weapon.position.y = playerRev5.loaded ? -.43 : -1.17;
+    playerRev5.equip(index);
     showToast(`⚔ ${selected.name} equipada`);
     updateHUD(); return true;
 }
@@ -285,12 +290,12 @@ function doDodge() {
     dashDirection.normalize();
     dashCooldown = 3.6; dashTimer = 0.24;
     invulnerableTimer = Math.max(invulnerableTimer,0.32);
-    sfx.boost(); updateHUD(); return true;
+    sfx.boost(); playerRev5.jump(); updateHUD(); return true;
 }
 function damagePlayer(amount, origin) {
     if (!gameActive || invulnerableTimer > 0) return false;
     health = Math.max(0,health-amount);
-    invulnerableTimer = 0.86; flashDamage(); sfx.damage();
+    invulnerableTimer = 0.86; flashDamage(); sfx.damage(); playerRev5.hurt();
     const dx = player.position.x-origin.x, dz = player.position.z-origin.z;
     const d = Math.hypot(dx,dz)||1;
     const away = resolveCollision(player.position.x+dx/d*0.5,player.position.z+dz/d*0.5,0.46);
@@ -529,7 +534,7 @@ document.addEventListener('keydown', e => {
     }
     if (!gameActive || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || e.repeat) return;
     if (e.code === 'Space' && isGrounded) {
-        verticalVelocity = jumpForce; isGrounded = false; sfx.boost();
+        verticalVelocity = jumpForce; isGrounded = false; sfx.boost(); playerRev5.jump();
     }
     if (e.code === 'KeyJ') combat.attack();
     if (e.code === 'KeyE') combat.special();
@@ -618,6 +623,7 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     onEnemyKilled:(type)=>{kills++;if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
     getWeaponBonus:()=>currentWeapon===2&&survival.crafted.ironSpear?3:0,
     onSwing:(range,arc,damage,yaw)=>wildlife.attack(player.position,yaw,range,arc,damage),
+    onAttackStart:()=>playerRev5.attack(),onSpecialStart:()=>playerRev5.special(),
     onWeaponHit:()=>{const tool=currentWeapon===1?'hammer':currentWeapon===2?'spear':null;
         if(tool&&useTool(survival,tool,1)&&!canUseTool(survival,tool)){equipWeapon(0);showToast('⚠ Arma quebrada! Repare na bancada.');}},
     getLevel:()=>level,getWeaponIndex:()=>currentWeapon,getPlayerYaw:()=>playerYaw,
@@ -990,6 +996,7 @@ function animate() {
         velocity.z += (targetVZ - velocity.z)*moveBlend;
 
         // Deslizar por paredes/troncos: eixos tratados separadamente.
+        const beforeMoveX=player.position.x,beforeMoveZ=player.position.z;
         const cx = resolveCollision(player.position.x + velocity.x * dt, player.position.z, 0.46);
         const cz = resolveCollision(cx.x, player.position.z + velocity.z * dt, 0.46);
         player.position.x = cz.x;
@@ -1003,6 +1010,7 @@ function animate() {
             }
         } else player.position.y = groundY;
         player.rotation.y = playerYaw;
+        const realMovementSpeed=Math.hypot(player.position.x-beforeMoveX,player.position.z-beforeMoveZ)/Math.max(dt,1e-5);
         if(placement)updatePlacementPreview();
 
         const movingSpeed = Math.hypot(velocity.x, velocity.z);
@@ -1032,6 +1040,7 @@ function animate() {
             rightArm.rotation.z=THREE.MathUtils.lerp(rightArm.rotation.z,-.08,blend);
             torso.rotation.y=THREE.MathUtils.lerp(torso.rotation.y,0,blend);
         }
+        playerRev5.update(dt,{speed:realMovementSpeed,sprinting:runningFast,grounded:isGrounded});
         invulnerableTimer = Math.max(0, invulnerableTimer-dt);
         player.visible = invulnerableTimer<=0 || Math.floor(invulnerableTimer*12)%2 === 0;
 
@@ -1125,6 +1134,7 @@ function animate() {
 }
 
 function loseGame() {
+    playerRev5.die();
     if(placement)releasePlacement();
     gameActive = false;
     // Permitir retomar o último checkpoint após morrer.
