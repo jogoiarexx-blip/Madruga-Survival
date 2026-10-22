@@ -55,6 +55,6 @@ await test('main disponibiliza diagnóstico e invalida cache da revisão',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/window,'madrugaRev5Status'/);
  assert.match(main,/player-rev5\.js\?v=2\.2\.3-rev5-material-fix/);
- assert.match(html,/data-build="2\.2\.2-rev5-mirrors"/);
+ assert.match(html,/data-build="2\.2\.3-rev5-material-fix"/);
 });
 console.log('v2.2.2',checks,'testes aprovados');
