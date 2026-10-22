@@ -1,29 +1,36 @@
-## v2.1.5 — Apoio dos pés REV2 no solo
+## v2.2.0 — Personagem Striped Wanderer REV5 integrado
 
-- Modelo REV2 mantido, com altura base de 2,58 unidades.
-- Criado controlador de contato de pés com terreno, apoios alternados, rampas de transição e correção limitada de quadril e joelho.
-- Controlador executado apenas nos zumbis próximos ao jogador (raio de 16 unidades), preservando o fallback sem rig.
-- Ajustada cadência dos clipes de caminhada/corrida ao deslocamento real do inimigo.
-- Removidos bob vertical, pulsação de escala e inclinação artificial dos zumbis com GLB, sem alterar a colisão.
-- Regressões adicionadas em `tests/v214-zombie-scale-slide.mjs` e `tests/v215-foot-plant.mjs`.
-- Testes automatizados verificados na versão ZIP; ainda falta validação visual WebGL no site público.
+O protagonista procedural foi substituído visualmente pelo **Striped Wanderer REV5 original**, sem sobrepor dois corpos. O GLB inclui 45 ossos, 17 animações e acessórios. O objeto `player` permanece o mesmo para colisões, câmera, coordenadas e saves; se o GLB falhar, o avatar antigo reaparece como fallback. O modelo de 1,70 unidade foi dimensionado para aproximadamente 2,48 unidades, orientado para o eixo de ataque -Z. Armas do inventário são anexadas ao osso da mão esquerda e a espada extra do GLB permanece oculta para não duplicar armas. A magia do GLB só aparece no especial.
+
+Movimentos implementados: Idle, Walking, Running, Jump, SwordAttack_REV3, CastMagic, HitReact e Death. Outras animações seguem incorporadas ao GLB para evoluções futuras. O dano continua sendo calculado pelo combate do jogo, não pelo marcador demonstrativo do visualizador do modelo. O IK do REV5 está incluído, mas desligado neste primeiro port por trabalhar com solo plano e poder deformar o pé no terreno irregular do MadrugaCraft.
+
+Para validar: `npm test`, `npm run check`; abra o jogo por servidor HTTP (não `file://`). Não há comprovação de execução gráfica WebGL nesta revisão.
+
+## v2.1.5 — Apoio dos pés REV2 e redução de deslizamento
+
+- Adicionado controle de apoio de pé por ossos (`src/characters/zombie-foot-plant.js`), usando o quadril, joelho e pé esquerdo/direito originais do GLB REV2.
+- Durante a passada, os pés tentam manter um ponto de apoio no terreno. A posição da sola é consultada na altura real do terreno (inclusive encostas), e duas iterações pequenas de IK corrigem a perna sem alterar a hitbox/collider.
+- Contato alternado e transições suaves entre as pernas; desabilitado durante mordida, agarrão, dano ou morte.
+- Cadência do clipe de andar/correr aumentada para ficar mais coerente com a velocidade do zumbi no mundo.
+- Removida a oscilação vertical, pulso de escala e inclinação procedural nos zumbis com GLB: o rig original já anima o corpo.
+- Ajustes de IK restritos aos zumbis a menos de 16 unidades do jogador; fallback seguro se o GLB não expuser os ossos esperados.
+- Mantida a altura de **2,58 unidades** do zumbi normal e o GLB texturizado original, sem reprocessar a malha.
+- Testes automatizados ampliados em `tests/v215-foot-plant.mjs`. A animação ainda precisa de validação visual em um navegador WebGL real.
+
+## v2.1.4 — Zumbi REV2 maior e com menos deslizamento
+
+- Altura base do zumbi normal aumentada para 2,58 unidades.
+- Animação de caminhada/corrida agora acompanha melhor o deslocamento real no solo.
+- Quando a colisão reduz a passada, o clipe locomotor também desacelera, diminuindo o deslizamento dos pés.
 
 ## v2.1.3 — Zumbis REV2: movimento e combate sincronizados
 
-- Animação de caminhada apenas quando há deslocamento real (parando junto a obstáculos).
-- Durante mordidas e agarrões, o zumbi mantém a orientação até terminar o golpe.
-- Dano só no instante de impacto e se o alvo ainda estiver à frente, próximo e visível.
-- Zumbi tóxico aguarda os 1,85 s do agarrão antes de atacar novamente.
-- Mantidos fallback low-poly, IA, salvamentos e construção.
-- Novos testes: `tests/v213-zombie-combat.mjs`. Navegação WebGL completa ainda não validada neste ambiente.
-
-## v2.1.2 — Zumbis caminhando na direção correta
-
-- Zumbi REV2 usa frente local +Z e acompanha a direção do deslocamento real (inclusive desvios em árvores e paredes).
-- Quando para ou ataca, volta a olhar para o alvo.
-- Testes de simulação de perseguição, quatro direções e obstáculos em `tests/v212-zombie-facing.mjs`.
-- Demais tipos de inimigos, IA de combate, dano, animações e salvamentos permanecem preservados.
-- Testes automatizados executados no pacote; jogo WebGL completo ainda exige validação no navegador.
+- Movimento reproduz animação de caminhada apenas quando o inimigo realmente avança, incluindo ao desviar de obstáculos.
+- Durante mordidas, agarrões e golpes, a orientação fica travada até o fim da animação, evitando giro brusco para acertar o jogador por trás.
+- Dano só ocorre no instante de contato e se o alvo permanecer à frente, próximo e sem obstáculos.
+- Zumbi tóxico respeita os 1,85 s do agarrão antes de repetir; demais tipos aguardam suas animações.
+- O fallback low-poly continua funcional se o REV2 não carregar.
+- Verificações novas em `tests/v213-zombie-combat.mjs`. Sem sessão jogada WebGL validada neste ambiente.
 
 ## Publicação GitHub Pages do modelo REV2
 
