@@ -1,11 +1,51 @@
-// Adaptador REV4: o GLB original é carregado uma vez, clonado com SkeletonUtils,
-// e utiliza a IA/colisões/dano do MadrugaCraft sem sobrepor controladores.
+// Adaptador REV2: usa o GLB original enviado pelo usuário, preservando IA,
+// colisões e dano do MadrugaCraft. O modelo é carregado uma vez e clonado.
 import {isZombieType,ZOMBIE_TYPES} from '../gameplay/zombie-variants.js';
 
-export const ZOMBIE_GLB_URL='./assets/models/zumbi_geometrico_REV4.glb';
+export const ZOMBIE_GLB_URL='./assets/models/zumbi_animado_REV2.glb';
+// GitHub Pages pode hospedar o GLB em partes: evita limite de upload por requisição
+// preservando exatamente os bytes do modelo original. O ZIP local usa GLB direto.
+export const ZOMBIE_PARTS_MANIFEST='./assets/models/rev2-parts/manifest.json';
+export async function loadRev2Parts({GLTFLoader,fetcher=fetch,atobFn=atob,manifestUrl=ZOMBIE_PARTS_MANIFEST}){
+  const manifestResponse=await fetcher(manifestUrl);
+  if(!manifestResponse.ok)throw new Error('Manifesto de zumbi não encontrado');
+  const manifest=await manifestResponse.json();
+  if(!Number.isInteger(manifest.byteLength)||manifest.byteLength<1000000||manifest.byteLength>20000000||
+      !Array.isArray(manifest.parts)||manifest.parts.length<1||manifest.parts.length>40)
+    throw new Error('Manifesto de zumbi inválido');
+  const bytes=new Uint8Array(manifest.byteLength);
+  let cursor=0;
+  // Downloads sequenciais mantêm consumo de memória previsível em celulares.
+  for(const name of manifest.parts){
+    if(!/^part\d{2}\.b64$/.test(name))throw new Error('Nome de parte inválido');
+    const response=await fetcher(manifestUrl.replace(/manifest\.json$/,name));
+    if(!response.ok)throw new Error('Parte do zumbi ausente: '+name);
+    const base64=(await response.text()).replace(/\s+/g,'');
+    const decoded=atobFn(base64);
+    if(cursor+decoded.length>bytes.length)throw new Error('Parte excede tamanho esperado do GLB');
+    for(let i=0;i<decoded.length;i++)bytes[cursor++]=decoded.charCodeAt(i);
+  }
+  if(cursor!==bytes.length||String.fromCharCode(...bytes.subarray(0,4))!=='glTF')
+    throw new Error('GLB reconstruído incompleto');
+  if(globalThis.crypto?.subtle && /^[0-9a-f]{64}$/.test(manifest.sha256||'')){
+    const hash=await crypto.subtle.digest('SHA-256',bytes.buffer);
+    const hex=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
+    if(hex!==manifest.sha256)throw new Error('Checksum do zumbi REV2 não confere');
+  }
+  return new GLTFLoader().parseAsync(bytes.buffer,'./assets/models/');
+}
+
 export const ZOMBIE_ANIMATIONS=Object.freeze({
-  zombie:'Shuffle',zombie_runner:'Run',zombie_toxic:'LimpWalk',zombie_brute:'Walk'
+  zombie:'Andar', zombie_runner:'Correr', zombie_toxic:'Andar', zombie_brute:'Andar'
 });
+
+const SOURCE_MIN_Y=-0.95159;
+const SOURCE_HEIGHT=1.898523;
+// Mantém o zumbi base aproximadamente na mesma altura visual do personagem do jogador.
+// Jogador: aproximadamente 2,50 unidades incluindo o chapéu (topo em Y=2.505).
+const BASE_MATCH_HEIGHT=2.48;
+const BASE_SCALE=BASE_MATCH_HEIGHT/SOURCE_HEIGHT;
+const STANDARD_SIZE=ZOMBIE_TYPES.zombie.size;
 
 export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,url=ZOMBIE_GLB_URL}) {
   let asset=null, loading=null, failed=false;
@@ -16,87 +56,96 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,u
     if(asset)return Promise.resolve(true);
     if(failed)return Promise.resolve(false);
     if(loading)return loading;
-    loading=new GLTFLoader().loadAsync(url).then(gltf=>{
+    const usingGithub=typeof location!=='undefined' && /(^|\.)github\.io$/.test(location.hostname);
+    // Usa a transferência em partes apenas no GitHub Pages; no pacote local há o GLB direto.
+    const load=usingGithub?loadRev2Parts({GLTFLoader}).catch(()=>new GLTFLoader().loadAsync(url)):
+      new GLTFLoader().loadAsync(url);
+    loading=load.then(gltf=>{
       if(!gltf?.scene||!gltf.animations?.length)throw new Error('GLB sem malha ou animações');
       asset=gltf;
       for(const enemy of active) mount(enemy);
       return true;
     }).catch(error=>{
       failed=true;
-      console.warn('Modelo do zumbi REV4 indisponível; visual simplificado temporário.',error);
+      console.warn('Modelo do zumbi REV2 indisponível; visual simplificado temporário.',error);
       return false;
     });
     return loading;
   }
 
+  const hasClip=name=>!!asset?.animations?.some(clip=>clip.name===name);
+  const resolveClip=(...names)=>names.find(name=>name&&hasClip(name))||asset?.animations?.[0]?.name||null;
+  const baseScaleFor = enemy => BASE_SCALE*(enemy.size/STANDARD_SIZE);
+  const verticalOffsetFor = enemy => (-enemy.size/2) - (SOURCE_MIN_Y*baseScaleFor(enemy));
+
   function mount(enemy){
     if(!asset||!enemy||!isZombieType(enemy.type)||enemy.rev4Visual||enemy.hp<=0)return false;
     const model=cloneSkeleton(asset.scene);
     if(!model)return false;
-    // REV4 tem altura ~2.2m e base Y=0; collider existente usa seu centro.
-    const scale=(enemy.size/.92)*.77;
+    const scale=baseScaleFor(enemy);
     model.scale.setScalar(scale);
-    model.position.set(0,-enemy.size/2,0);
-    model.name='Zombie_REV4_'+enemy.type;
-    // O SkinnedMesh e suas 29 partes coloridas são compartilhados em geometria
-    // mas os materiais são próprios por zumbi para dar cor às variantes.
-    const replacements=new Map();
-    const skin=new THREE.Color(ZOMBIE_TYPES[enemy.type].skin);
-    const shirt=new THREE.Color(ZOMBIE_TYPES[enemy.type].shirt);
-    const eyes=new THREE.Color(ZOMBIE_TYPES[enemy.type].eyes);
+    model.position.set(0, verticalOffsetFor(enemy), 0);
+    model.name='Zombie_REV2_'+enemy.type;
+    // O GLB REV2 olha para +Z, assim como o mesh.lookAt() usado pela IA.
+    model.rotation.y=0;
     model.traverse(node=>{
       if(!node.isMesh)return;
       node.userData.sharedZombieGeometry=true;
       node.castShadow=true;
       node.receiveShadow=false;
-      const recolor=(mat)=>{
-        if(replacements.has(mat))return replacements.get(mat);
-        const copy=mat.clone(),name=(copy.name||'').toLowerCase();
-        if(name.includes('shirt')||name.includes('cloth'))copy.color.lerp(shirt,.48);
-        else if(name.includes('skin'))copy.color.lerp(skin,.40);
-        else if(name.includes('eye'))copy.color.lerp(eyes,.55);
-        replacements.set(mat,copy);
-        return copy;
-      };
-      node.material=Array.isArray(node.material)?node.material.map(recolor):recolor(node.material);
+      node.frustumCulled=false;
     });
     const mixer=new THREE.AnimationMixer(model);
     const actions={};
     for(const clip of asset.animations)actions[clip.name]=mixer.clipAction(clip);
+    const walk=resolveClip(ZOMBIE_ANIMATIONS[enemy.type],'Andar','Parado');
+    const idle=resolveClip('Parado',walk);
+    const hurtClip=resolveClip('Dano', 'Atacar', idle);
+    const deathClip=resolveClip('Morrer','Dano', idle);
+    const attackClip=resolveClip(
+      enemy.type==='zombie' ? 'Morder' : null,
+      enemy.type==='zombie_runner' ? 'Atacar' : null,
+      enemy.type==='zombie_toxic' ? 'Agarrar' : null,
+      enemy.type==='zombie_brute' ? 'Atacar' : null,
+      'Atacar','Morder','Agarrar',walk,idle
+    );
     const previousChildren=[...enemy.mesh.children];
     for(const child of previousChildren)child.visible=false;
     enemy.mesh.material.visible=false;
     enemy.mesh.add(model);
-    const visual={model,mixer,actions,current:null,hold:0,elapsed:0,walk:ZOMBIE_ANIMATIONS[enemy.type],
+    const visual={model,mixer,actions,current:null,hold:0,elapsed:0,walk,idle,attackClip,hurtClip,deathClip,
       play(name,once=false){
-        const next=actions[name]||actions.Idle;
-        if(!next||this.current===name && !once)return;
+        const next=actions[name]||actions[idle];
+        if(!next||(!once&&this.current===name))return;
         const prev=this.current?actions[this.current]:null;
         if(prev&&prev!==next)prev.fadeOut(.13);
         next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(.13);
         next.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,once?1:Infinity);
         next.clampWhenFinished=once;
-        next.play();this.current=name;
+        next.play();
+        this.current=name;
       },
-      attack(){this.play(enemy.type==='zombie_runner'?'LungeAttack':enemy.type==='zombie_brute'?'Flail':'Attack',true);this.hold=.65;},
-      hurt(){if(this.hold>0)return;this.play('Hurt',true);this.hold=.32;},
+      attack(){this.play(this.attackClip,true);this.hold=this.attackClip==='Agarrar'?1.85:this.attackClip==='Morder'?1.28:1.10;},
+      hurt(){if(this.hold>0)return;this.play(this.hurtClip,true);this.hold=.34;},
       update(dt,moving,near=true){
-        // Esqueleto parado e invisível fora da região útil: poupa skinning e draw calls.
         this.model.visible=!!near;
         if(!near)return;
         const step=Math.max(0,Math.min(.05,dt));
         this.hold=Math.max(0,this.hold-step);
-        const wanted=moving?this.walk:'Idle';
+        const wanted=moving?this.walk:this.idle;
         if(this.hold<=0&&this.current!==wanted)this.play(wanted);
         this.mixer.update(step);
       },
-      dispose(){this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);
-        const materials=new Set();this.model.traverse(o=>{if(!o.isMesh)return;
-          for(const m of Array.isArray(o.material)?o.material:[o.material])if(m)materials.add(m);
-        });for(const m of materials)m.dispose();this.model=null;}
+      dispose(){
+        this.mixer.stopAllAction();
+        this.mixer.uncacheRoot?.(this.model);
+        this.model.parent?.remove(this.model);
+        this.model=null;
+      }
     };
     enemy.rev4Visual=visual;
-    visual.play('Idle');
+    enemy.zombieVisual=visual;
+    visual.play(idle);
     return true;
   }
 
@@ -108,8 +157,8 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,u
   }
   function defeat(enemy){
     if(!enemy?.rev4Visual || corpses.has(enemy))return false;
-    enemy.rev4Visual.play('Death',true);
-    corpses.set(enemy,1.90);
+    enemy.rev4Visual.play(enemy.rev4Visual.deathClip,true);
+    corpses.set(enemy,2.20);
     return true;
   }
   function updateCorpses(dt,clearMesh){
@@ -127,6 +176,7 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,u
     corpses.delete(enemy);
     active.delete(enemy);
     if(enemy.rev4Visual){enemy.rev4Visual.dispose();enemy.rev4Visual=null;}
+    enemy.zombieVisual=null;
   }
   return {preload,attach,defeat,updateCorpses,dispose,get loaded(){return !!asset},get failed(){return failed},get count(){return active.size}};
 }

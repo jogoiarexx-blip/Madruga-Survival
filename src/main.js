@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v2.0 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v1.9 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -13,10 +13,10 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
-import {createZombieModelManager} from './characters/zombie-models.js?v=2.0.0-performance';
+import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.1-size-attacks';
 import { createPlayerModel } from './characters/player-model.js';
 import { createEnemySpawner } from './characters/enemy-factory.js';
-import { createEnemyAI } from './gameplay/enemy-ai.js';
+import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.1-size-attacks';
 import { createCombatSystem } from './gameplay/combat.js';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
@@ -934,7 +934,7 @@ function animate() {
     const dt = Math.min(clock.getDelta(), 0.05);
     if (document.hidden) return;
     const running = gameActive && controls.isLocked && health > 0;
-    // Pausa/menu: 4 FPS para manter cena visível sem consumir GPU a 60/144 Hz.
+    // Pausa/menu: 4 FPS para manter a cena visível sem consumir GPU a 60/144 Hz.
     // Relógio é atualizado primeiro, evitando salto de física ao retomar.
     if (!running) {
         const now=performance.now();

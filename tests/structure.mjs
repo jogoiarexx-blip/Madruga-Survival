@@ -45,7 +45,7 @@ for(const [file,symbols] of [
   `Símbolo ${symbol} não importado no main.js a partir de ${file}`);
 assert.match(html,/src=["']\.\/src\/main\.js\?v=[^"'\s]+["']/,
  'Cache busting obrigatório no carregamento principal');
-assert.ok(existsSync(resolve(root,'assets/models/zumbi_geometrico_REV4.glb')));
+assert.ok(existsSync(resolve(root,'assets/models/zumbi_animado_REV2.glb')));
 assert.match(html,/three\/addons\//);
 assert.ok(existsSync(resolve(root,'.nojekyll')));
 console.log(`OK estrutura estática, ${count} imports locais e GitHub Pages`);

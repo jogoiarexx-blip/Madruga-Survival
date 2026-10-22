@@ -1,0 +1,113 @@
+{
+  "version": "REV2",
+  "forward": "+Z",
+  "up": "+Y",
+  "jointCount": 22,
+  "skinnedMesh": "Zumbi_Meshy_Articulado",
+  "animations": [
+    {
+      "name": "Parado",
+      "duration": 2.8,
+      "loop": true,
+      "fps": 30,
+      "gameEvents": []
+    },
+    {
+      "name": "Andar",
+      "duration": 1.55,
+      "loop": true,
+      "fps": 30,
+      "gameEvents": [
+        {
+          "time": 0.16,
+          "type": "footstep",
+          "foot": "left"
+        },
+        {
+          "time": 0.94,
+          "type": "footstep",
+          "foot": "right"
+        }
+      ]
+    },
+    {
+      "name": "Correr",
+      "duration": 0.86,
+      "loop": true,
+      "fps": 30,
+      "gameEvents": [
+        {
+          "time": 0.1,
+          "type": "footstep",
+          "foot": "left"
+        },
+        {
+          "time": 0.53,
+          "type": "footstep",
+          "foot": "right"
+        }
+      ]
+    },
+    {
+      "name": "Morder",
+      "duration": 1.28,
+      "loop": false,
+      "fps": 40,
+      "gameEvents": [
+        {
+          "time": 0.56,
+          "type": "bite_hit",
+          "note": "Damage only when target inside melee cone"
+        }
+      ]
+    },
+    {
+      "name": "Agarrar",
+      "duration": 1.85,
+      "loop": false,
+      "fps": 40,
+      "gameEvents": [
+        {
+          "time": 0.85,
+          "type": "grab_attempt"
+        },
+        {
+          "time": 1.18,
+          "type": "pull_target"
+        }
+      ]
+    },
+    {
+      "name": "Atacar",
+      "duration": 1.1,
+      "loop": false,
+      "fps": 40,
+      "gameEvents": [
+        {
+          "time": 0.44,
+          "type": "attack_hit"
+        }
+      ]
+    },
+    {
+      "name": "Dano",
+      "duration": 0.87,
+      "loop": false,
+      "fps": 40,
+      "gameEvents": []
+    },
+    {
+      "name": "Morrer",
+      "duration": 2.05,
+      "loop": false,
+      "fps": 40,
+      "gameEvents": [
+        {
+          "time": 1.02,
+          "type": "body_impact"
+        }
+      ]
+    }
+  ],
+  "note": "Markers are illustrative timing suggestions for game logic; GLB contains poses, not hit detection, IK, or sound."
+}

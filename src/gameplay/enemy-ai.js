@@ -1,5 +1,6 @@
 import {ZOMBIE_TYPES,isZombieType} from './zombie-variants.js';
 import {animateEnemy} from '../characters/enemy-animation.js';
+import {queueZombieImpact,advanceZombieImpact} from './zombie-attack-events.js';
 
 // Atualização de IA independente da renderização e dos controles.
 export function createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
@@ -18,12 +19,30 @@ function update(dt,elapsed){
             const dx=targetPos.x-mesh.position.x, dz=targetPos.z-mesh.position.z;
             const dist=Math.hypot(dx,dz);
             enemy.attackTimer=Math.max(0,enemy.attackTimer-dt);
+            // REV2: confirma colisão e linha de visão no instante do impacto, nunca no início da pose.
+            const pending=advanceZombieImpact(enemy,dt);
+            if(pending){
+                const target=pending.kind==='player'?player.position:
+                    pending.kind==='guard'?getGuard():pending.target;
+                if(target){
+                    const radius=pending.kind==='building'?2.25:1.85;
+                    const distance=Math.hypot(target.x-mesh.position.x,target.z-mesh.position.z);
+                    if(distance<radius && (!hasLineOfSight||hasLineOfSight(mesh.position,target))){
+                        if(pending.kind==='building'){
+                            onRaidDamage(pending.target,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
+                            spawnParticle(mesh.position,0xdba679,3);
+                        }else if(pending.kind==='guard')onGuardDamage(enemy.damage);
+                        else if(damagePlayer(enemy.damage,mesh.position) && enemy.type==='zombie_toxic')
+                            onPoison(ZOMBIE_TYPES.zombie_toxic.poisonSeconds);
+                    }
+                }
+            }
             enemy.knockback=Math.max(0,enemy.knockback-dt);
             const shaman=enemy.type==='shaman', boss=enemy.type==='boss';
             const meleeRadius=boss?2.65:1.85;
             const visible=!hasLineOfSight||hasLineOfSight(mesh.position,targetPos);
             const wantsToMove=shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8;
-            const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0;
+            const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0 && !enemy.pendingImpact;
             if (moving) {
                 const nx=dx/(dist||1),nz=dz/(dist||1);
                 // Guardião contorna o alvo ao se aproximar: mais de uma rota.
@@ -65,8 +84,11 @@ function update(dt,elapsed){
                 }
             } else if (enemy.attackTimer===0 && dist<52) {
                 if(targetBuilding&&dist<2.25){
-                    enemy.attackTimer=shaman?2.4:1.55;enemy.rev4Visual?.attack();onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
-                    spawnParticle(mesh.position,0xdba679,3);
+                    enemy.attackTimer=shaman?2.4:1.55;enemy.rev4Visual?.attack();
+                    if(!(enemy.rev4Visual&&queueZombieImpact(enemy,'building',targetBuilding))){
+                        onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
+                        spawnParticle(mesh.position,0xdba679,3);
+                    }
                 } else if (shaman && visible && dist<28 && dist>2.1) {
                     throwProjectile(enemy);enemy.attackTimer=2.6;
                 } else if (boss && visible && dist<5.8) {
@@ -77,8 +99,10 @@ function update(dt,elapsed){
                 } else if (!targetBuilding&&!shaman && !boss && visible && dist<meleeRadius) {
                     enemy.attackTimer=1.15+(enemy.type==='fast'?-.15:enemy.type==='tank'?.45:0);
                     enemy.rev4Visual?.attack();
-                    if(targetGuard){onGuardDamage(enemy.damage);}
-                    else if(damagePlayer(enemy.damage,mesh.position) && enemy.type==='zombie_toxic')onPoison(ZOMBIE_TYPES.zombie_toxic.poisonSeconds);
+                    if(!(enemy.rev4Visual&&queueZombieImpact(enemy,targetGuard?'guard':'player',targetGuard))){
+                        if(targetGuard){onGuardDamage(enemy.damage);}
+                        else if(damagePlayer(enemy.damage,mesh.position) && enemy.type==='zombie_toxic')onPoison(ZOMBIE_TYPES.zombie_toxic.poisonSeconds);
+                    }
                 } else if (boss && visible && dist<22) {
                     // Segunda fase: salva oblíqua com espaços para esquiva.
                     if(enemy.enraged){

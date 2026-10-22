@@ -78,11 +78,11 @@ test('coelhos e javalis compartilham esferas, com alta resolução só no perfil
  assert.equal(sphere1.args[1],GEOMETRY_DETAIL.high.bushWidth);
  assert.equal(low.animals[0].group.children[0].geometry.args[1],GEOMETRY_DETAIL.low.bushWidth);
 });
-test('main integra perfis à floresta, aos recursos e à fauna sem alterar o GLB REV4',()=>{
+test('main integra perfis à floresta, aos recursos e à fauna sem alterar o GLB REV2',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const manager=readFileSync(new URL('../src/characters/zombie-models.js',import.meta.url),'utf8');
  assert.match(main,/natureAssets\.setQuality\(graphicsQuality\)/);
  assert.match(main,/resources\.generate\(worldSeed,graphicsQuality\)/);
  assert.match(main,/wildlife\.generate\(worldSeed,graphicsQuality\)/);
- assert.match(manager,/zumbi_geometrico_REV4\.glb/);
+ assert.match(manager,/zumbi_animado_REV2\.glb/);
 });

@@ -1,16 +1,28 @@
-# v2.0 — Geometria aprimorada por qualidade
+## Publicação GitHub Pages do modelo REV2
+
+O modelo original de 10,4 MB também está disponível em `assets/models/rev2-parts/` como 17 arquivos base64. No GitHub Pages o carregador remonta os bytes originais, confere o SHA-256 e passa-os ao GLTFLoader; em desenvolvimento local carrega o `.glb` diretamente. Isto contorna os limites de envio sem modificar a malha, as texturas ou o rig.
+
+## v2.1.1 — Calibração do zumbi REV2 e impacto de ataques
+
+- Modelo REV2 original (22 ossos, oito animações) mantido, com altura ajustada a aproximadamente **2,48 unidades** para aproximar o personagem jogável de aproximadamente **2,50 unidades**, incluindo o chapéu.
+- Orientação ajustada: modelo REV2 olha para +Z e acompanha o mesh.lookAt do inimigo sem girar de costas.
+- Mordida aplica dano após **0,56 s**, agarrão tóxico após **0,85 s**, golpes rápidos após **0,44 s**. IA revalida alcance e obstáculos no momento do impacto; esquiva ou morte cancela o dano tardio.
+- O agarrão representa a tentativa e o impacto visual; ainda não implementa IK/mãos prendendo fisicamente o jogador.
+- Conserva variantes, salvamentos existentes e fallback low-poly. O GLB tem cerca de 10,4 MB e poderá exigir boa GPU se vários inimigos estiverem próximos.
+
+# v2.1 — Geometria aprimorada por qualidade
 
 - **Mínimo/Médio/Alto:** geometrias de árvores, folhas, rochas, arbustos e coleta usam orçamentos de polígonos específicos em `src/render/geometry-detail.js`.
 - **Personagens:** cabeça/rosto e chapéu mais suaves; braços, pernas e roupas com cantos realmente arredondados por deformação das malhas e normais recalculadas. Aldeão guarda e inimigos procedurais seguem o mesmo padrão.
 - **Animais:** coelhos e javalis usam malhas esféricas mais densas no modo Alto, compartilhadas entre todos os indivíduos.
 - **Objetos:** minério, madeira, fibras, água, frutos, fogueiras, camas, baús e lápides receberam facetas mais detalhadas conforme o perfil gráfico; geometrias repetidas continuam em cache.
 - **Otimização:** `Mínimo` mantém contagem baixa; buffers das árvores e dos recursos só são preparados na geração do mapa; culling e salvamentos mantidos.
-- **Zumbis REV4:** o GLB original articulado (40 ossos, 29 animações, 2.504 triângulos) não foi reprocessado. A versão 1.9 melhora o restante do mundo, mantendo o original do zumbi intacto.
+- **Zumbis REV2:** o GLB original articulado (22 ossos, 8 animações e malha texturizada REV2) não foi reprocessado. A versão 1.9 melhora o restante do mundo, mantendo o original do zumbi intacto.
 - **Validação:** `npm test` + `npm run check`, incluindo seis testes novos de nível de detalhe, normais, geometrias compartilhadas e geração determinística. A execução visual WebGL ainda requer teste no navegador.
 
-# v1.8 — Zumbi geométrico REV4 integrado
+# v2.1 — Zumbi animado REV2 integrado
 
-O jogo carrega o modelo original `assets/models/zumbi_geometrico_REV4.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 40 ossos, 29 animações e 2.504 triângulos. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.
+O jogo carrega o modelo original `assets/models/zumbi_animado_REV2.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 22 ossos, 8 animações e malha texturizada REV2. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.
 
 A cena 3D completa deve ser testada em navegador com suporte a WebGL e acesso ao jsDelivr. As rotinas de IK e desmembramento adicionais do pacote original não foram ativadas por razões de desempenho e compatibilidade.
 
@@ -213,6 +225,11 @@ tests/                         Testes, incluindo base-building.mjs e storage.mjs
 Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamento.
 
 
-## v2.0 — FPS e estabilidade
+## v2.1 — Desempenho estrutural
 
-Agrupamento seguro de peças fixas por material com BufferGeometryUtils, reduzindo malhas a serem desenhadas. Não inclui portas, tampas, chamas ou vegetação animada no agrupamento. Menus/pausa renderizam no máximo 4 vezes por segundo; zumbis REV4 distantes deixam de atualizar seu rig. Sete novos testes em `tests/v20-performance.mjs`. A execução WebGL em dispositivos reais ainda precisa ser medida: pressione F3 no jogo para verificar FPS e draw calls.
+- Batching das peças rígidas (por material, usando BufferGeometryUtils) ao criar estruturas. Pivôs de portas/tampas, cultivos e chama continuam independentes. Há fallback se geometrias forem incompatíveis.
+- Redução da taxa de desenho do cenário para até 4 FPS durante menus e pausas, sem alterar os tempos da física nem comprometer a interface HTML.
+- Culling de modelos REV2 longe do jogador para evitar skinning e desenho desnecessários.
+- Testes em `tests/v20-performance.mjs`. Para medição real, use F3 e compare draw calls com 100 paredes/pisos nas mesmas condições gráficas.
+
+**Limitação:** não há benchmark WebGL real neste ambiente; FPS efetivo no hardware deve ser medido separadamente.

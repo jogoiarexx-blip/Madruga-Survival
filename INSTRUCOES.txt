@@ -1,13 +1,14 @@
-MADRUGACRAFT v2.0 — MELHORIA REAL DE GEOMETRIA E POLÍGONOS
+MADRUGACRAFT 2.1.1: REV2 calibrado à altura do jogador (2,48u vs 2,50u), mordida 0,56s, agarrão 0,85s e ataque 0,44s; dano só no impacto.
+MADRUGACRAFT v2.1 — MELHORIA REAL DE GEOMETRIA E POLÍGONOS
 
 Use ALTO para malhas mais suaves de vegetação, pedras, animais e detalhes de construções.
 Em celulares fracos, prefira MÍNIMO. Não é necessário recompilar para GitHub Pages.
-Os zumbis REV4 continuam usando o GLB original com 40 ossos e 29 animações.
+Os zumbis REV2 continuam usando o GLB original com 22 ossos e 8 animações.
 Teste: npm run check && npm test. Saves preservados no mesmo navegador.
 
-MADRUGACRAFT v1.8 — ZUMBI GEOMÉTRICO ARTICULADO REV4
+MADRUGACRAFT v2.1 — ZUMBI ANIMADO REV2
 
-Modelo original: assets/models/zumbi_geometrico_REV4.glb (40 ossos, 29 animações).
+Modelo original: assets/models/zumbi_animado_REV2.glb (22 ossos, 8 animações).
 Para jogar no GitHub Pages, envie TODOS os arquivos e pastas do projeto, inclusive o arquivo GLB binário.
 O GLB não pode ser substituído por um arquivo de texto nem pelo ZIP original do personagem.
 O sistema de variações continua ativo: comum, corredor, tóxico e gigante.
@@ -56,4 +57,4 @@ IMPORTANTE: salvar no mesmo domínio de GitHub Pages preserva sua partida.
 Verificações: npm test e npm run check. 123 testes atuais aprovados; WebGL não validado.
 
 
-NOVO V2.0: otimização automática de peças rígidas da base, cena econômica em pausa e animação de zumbis somente próximos. Pressione F3 para comparar FPS/draw calls antes e depois no mesmo dispositivo.
+V2.0 PERFORMANCE: peças fixas de construções agrupadas por material para reduzir draw calls; renderização de menus/pausa a no máximo 4 FPS; rig REV2 oculto fora do alcance visível. Pressione F3 para acompanhar FPS/draw calls.

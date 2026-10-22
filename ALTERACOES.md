@@ -1,10 +1,19 @@
-# MadrugaCraft v2.0 — desempenho estrutural (21/10/2026)
-- Peças estáticas dos módulos de construção mescladas por material quando compatíveis; portas, baús, plantações e fogo preservam animações e colisões.
-- Renderização em pausa/menu limitada a uma vez a cada 250 ms (até 4 FPS), sem alterar progresso do jogo nem a física.
-- O modelo REV4 de zumbis distantes fica invisível e suspende atualização do esqueleto até voltar à região visível.
-- Sete novos testes de desempenho, mesclagem e fallback, mais suíte anterior; 141 verificações na cópia local.
-- Mantidos arquivos GLB, save v2, perfis Mínimo/Médio/Alto e hospedagem sem build no GitHub Pages.
-- Nota: ainda não há benchmark WebGL real comprovando FPS ou tempo de renderização no hardware.
+## v2.1.1 — Calibração do zumbi REV2 e impacto de ataques
+
+- Modelo REV2 original (22 ossos, oito animações) mantido, com altura ajustada a aproximadamente **2,48 unidades** para aproximar o personagem jogável de aproximadamente **2,50 unidades**, incluindo o chapéu.
+- Orientação ajustada: modelo REV2 olha para +Z e acompanha o mesh.lookAt do inimigo sem girar de costas.
+- Mordida aplica dano após **0,56 s**, agarrão tóxico após **0,85 s**, golpes rápidos após **0,44 s**. IA revalida alcance e obstáculos no momento do impacto; esquiva ou morte cancela o dano tardio.
+- O agarrão representa a tentativa e o impacto visual; ainda não implementa IK/mãos prendendo fisicamente o jogador.
+- Conserva variantes, salvamentos existentes e fallback low-poly. O GLB tem cerca de 10,4 MB e poderá exigir boa GPU se vários inimigos estiverem próximos.
+
+# v2.1 — estabilidade e desempenho (21/10/2026)
+
+- **Estruturas:** agrupamento opcional de peças estáticas de mesmo material por estrutura com `BufferGeometryUtils.mergeGeometries`, sem alterar colisões, coordenadas ou salvamento. No teste mock de 12 peças, redução de 12 para 2 meshes estáticos sem alterar o pivô móvel.
+- **Pausa:** no máximo 4 renderizações/segundo quando o jogador não está em controle; o relógio da simulação continua atualizado, e abas ocultas não renderizam.
+- **Zumbis REV2:** o rig fica invisível e não atualiza seu esqueleto quando longe do jogador, sem remover o GLB original.
+- **Resiliência:** fallback conserva geometrias originais quando a mesclagem não puder ser efetuada.
+- **Testes:** 7 novos testes; a suíte completa tem 141 verificações. Testes estáticos e lógicos, sem FPS empírico ou partida completa verificada.
+- **Compatibilidade:** mesma chave de save e mesmos arquivos de modelo. GitHub Pages estático sem build.
 
 # v1.9 — Maior detalhamento de polígonos por perfil
 
@@ -13,11 +22,11 @@
 - Recursos: cilindros, folhas, frutos, minérios, pedras, borda do poço com facetas por qualidade; geometrias pequenas reaproveitadas em todos os nós.
 - Animais, jogador, guarda, monstros não-GLB, túmulos e mobiliário: facetas e silhuetas mais suaves.
 - Evita custo em celular: modo Mínimo mantém malhas simples; culling já existente permanece; geração e itens salvos não mudam.
-- Incluídos seis novos testes automatizados em `tests/v19-geometry.mjs`. Modelo zumbi REV4 original preservado.
+- Incluídos seis novos testes automatizados em `tests/v19-geometry.mjs`. Modelo zumbi REV2 original preservado.
 
-# v1.8 — Zumbi geométrico REV4 integrado
+# v2.1 — Zumbi animado REV2 integrado
 
-O jogo carrega o modelo original `assets/models/zumbi_geometrico_REV4.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 40 ossos, 29 animações e 2.504 triângulos. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.
+O jogo carrega o modelo original `assets/models/zumbi_animado_REV2.glb` com GLTFLoader (Three.js 0.160.0), mantendo os 22 ossos, 8 animações e malha texturizada REV2. O arquivo é baixado só uma vez e o rig é clonado para cada infectado. As variantes normal, corredor, tóxico e gigante usam o mesmo modelo, ajustando escala e paleta, e selecionando clipes de caminhada, ataque e reação ao dano. IA, dano, veneno, invasões, guarda e saves antigos seguem preservados. Sem GLB/CDN, os inimigos permanecem temporariamente no visual low-poly antigo, sem travar o jogo.
 
 A cena 3D completa deve ser testada em navegador com suporte a WebGL e acesso ao jsDelivr. As rotinas de IK e desmembramento adicionais do pacote original não foram ativadas por razões de desempenho e compatibilidade.
 
