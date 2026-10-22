@@ -4,10 +4,10 @@ import {queueZombieImpact,advanceZombieImpact,ZOMBIE_IMPACT_SECONDS} from '../sr
 import {createZombieModelManager} from '../src/characters/zombie-models.js';
 import {ZOMBIE_TYPES} from '../src/gameplay/zombie-variants.js';
 let n=0;const test=(label,fn)=>{fn();n++;console.log(`OK ajuste REV2 ${n}: ${label}`)};
-test('altura normal 2,48 aproxima personagem de 2,505 incluindo chapéu',()=>{
+test('altura normal 2,58 deixa o zumbi um pouco maior e próximo do personagem com chapéu',()=>{
  const s=readFileSync(new URL('../src/characters/zombie-models.js',import.meta.url),'utf8');
- assert.match(s,/BASE_MATCH_HEIGHT=2\.48/);assert.match(s,/model\.rotation\.y=0/);
- assert.ok(Math.abs(2.48-2.505)<.05);
+ assert.match(s,/BASE_MATCH_HEIGHT=2\.58/);assert.match(s,/model\.rotation\.y=0/);
+ assert.ok(2.58>2.505 && Math.abs(2.58-2.505)<.12);
 });
 test('dano de mordida só ocorre 0,56 s após começar a pose',()=>{
  const e={type:'zombie',hp:3};assert.equal(queueZombieImpact(e,'player'),true);
