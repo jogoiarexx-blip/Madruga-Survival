@@ -1,3 +1,13 @@
+## v2.2.4 — Correção de osso da mão do Striped Wanderer REV5
+
+- Corrigido o erro `Rig REV5 sem mixamorig:LeftHand` indicado no console.
+- `GLTFLoader` do Three.js r160 remove o caractere `:` do nome do osso, expondo `mixamorigLeftHand`.
+- Busca robusta por osso com nome normalizado, sem confundir dedos com a mão.
+- Arma do jogo é ligada à mão real; caso a mão esteja ausente, o REV5 ainda substitui o jogador e usa um encaixe visual de reserva.
+- Novo teste `tests/v224-rev5-hand.mjs` com o GLB real remontado das 17 partes e simulação de três variantes do nome.
+- Mantida a correção de material `KHR_materials_unlit` da v2.2.3 e o sistema de salvamento existente.
+- Testes locais e verificação de sintaxe aprovados; visualização WebGL real ainda depende da validação no navegador.
+
 ## v2.2.3 — Corrigido GLB REV5 que falhava no navegador
 
 - O erro real foi `Cannot read properties of undefined (reading 'getMaterialType')` após baixar 17/17 partes.
