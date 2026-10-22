@@ -1,3 +1,12 @@
+## v2.1.3 — Zumbis REV2: movimento e combate sincronizados
+
+- Animação de caminhada apenas quando há deslocamento real (parando junto a obstáculos).
+- Durante mordidas e agarrões, o zumbi mantém a orientação até terminar o golpe.
+- Dano só no instante de impacto e se o alvo ainda estiver à frente, próximo e visível.
+- Zumbi tóxico aguarda os 1,85 s do agarrão antes de atacar novamente.
+- Mantidos fallback low-poly, IA, salvamentos e construção.
+- Novos testes: `tests/v213-zombie-combat.mjs`. Navegação WebGL completa ainda não validada neste ambiente.
+
 ## v2.1.2 — Zumbis caminhando na direção correta
 
 - Zumbi REV2 usa frente local +Z e acompanha a direção do deslocamento real (inclusive desvios em árvores e paredes).
