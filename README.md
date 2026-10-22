@@ -1,3 +1,11 @@
+## v2.1.2 — Zumbis caminhando na direção correta
+
+- Zumbi REV2 usa frente local +Z e acompanha a direção do deslocamento real (inclusive desvios em árvores e paredes).
+- Quando para ou ataca, volta a olhar para o alvo.
+- Testes de simulação de perseguição, quatro direções e obstáculos em `tests/v212-zombie-facing.mjs`.
+- Demais tipos de inimigos, IA de combate, dano, animações e salvamentos permanecem preservados.
+- Testes automatizados executados no pacote; jogo WebGL completo ainda exige validação no navegador.
+
 ## Publicação GitHub Pages do modelo REV2
 
 O modelo original de 10,4 MB também está disponível em `assets/models/rev2-parts/` como 17 arquivos base64. No GitHub Pages o carregador remonta os bytes originais, confere o SHA-256 e passa-os ao GLTFLoader; em desenvolvimento local carrega o `.glb` diretamente. Isto contorna os limites de envio sem modificar a malha, as texturas ou o rig.
