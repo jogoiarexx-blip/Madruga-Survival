@@ -1,13 +1,17 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-build="2.2.0-player-rev5">
+<html lang="pt-BR" data-build="2.2.1-rev5-loading">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MadrugaCraft — Sobrevivência v2.2.0 · Jogador REV5</title>
+    <title>MadrugaCraft — Sobrevivência v2.2.1 · Jogador REV5</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <link rel="stylesheet" href="./styles/main.css?v=2.1.1-size-attacks">
 </head>
 <body>
+    <div id="player-model-status" role="status" aria-live="polite">
+      <span id="player-model-message">Carregando personagem 3D REV5…</span>
+      <button type="button" id="player-model-retry" style="display:none">Tentar novamente</button>
+    </div>
     <div id="damage-flash"></div>
     <div id="fps-display" class="hidden" aria-live="off">FPS: --</div>
     <div id="hud">
@@ -175,6 +179,6 @@
         }
     }
     </script>
-    <script type="module" src="./src/main.js?v=2.2.0-player-rev5"></script>
+    <script type="module" src="./src/main.js?v=2.2.1-rev5-loading"></script>
 </body>
 </html>
