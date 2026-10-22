@@ -3,9 +3,15 @@
 export const ZOMBIE_IMPACT_SECONDS=Object.freeze({
   zombie:.56, zombie_runner:.44, zombie_toxic:.85, zombie_brute:.44
 });
+// Durações completas dos clipes REV2. Não iniciar outro golpe no meio da animação.
+export const ZOMBIE_ATTACK_DURATION=Object.freeze({
+  zombie:1.28, zombie_runner:1.10, zombie_toxic:1.85, zombie_brute:1.10
+});
 export function queueZombieImpact(enemy,kind,target=null){
   if(!enemy||enemy.pendingImpact || !(enemy.type in ZOMBIE_IMPACT_SECONDS))return false;
-  enemy.pendingImpact={kind,target,remaining:ZOMBIE_IMPACT_SECONDS[enemy.type]};
+  const facingYaw=Number.isFinite(enemy.mesh?.rotation?.y)?enemy.mesh.rotation.y:null;
+  enemy.pendingImpact={kind,target,remaining:ZOMBIE_IMPACT_SECONDS[enemy.type],facingYaw};
+  if(facingYaw!==null)enemy.attackFacingYaw=facingYaw;
   return true;
 }
 export function advanceZombieImpact(enemy,dt){
