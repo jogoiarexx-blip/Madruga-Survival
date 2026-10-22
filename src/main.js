@@ -15,10 +15,10 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import { createPlayerModel } from './characters/player-model.js';
-import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.1-rev5-loading';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.2-rev5-mirrors';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js?v=2.2.1-rev5-loading';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.2-rev5-mirrors';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
@@ -101,6 +101,13 @@ function showPlayerModelStatus(message,state){
 const playerRev5=createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,
     onStatus:showPlayerModelStatus});
 modelRetry.addEventListener('click',()=>void playerRev5.preload());
+if(typeof window!=='undefined')Object.defineProperty(window,'madrugaRev5Status',{
+    configurable:true,get:()=>({loaded:playerRev5.loaded,failed:playerRev5.failed,
+      oldVisualVisible:playerRev5.oldVisualVisible,
+      modelVisible:playerRev5.visualVisible,
+      meshName:playerRev5.model?.name||null})
+});
+
 void playerRev5.preload();
 
 // ========== CONTROLS ==========
