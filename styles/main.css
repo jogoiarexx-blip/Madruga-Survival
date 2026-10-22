@@ -278,3 +278,11 @@ body.placing #interact-hint{display:none}
  #placement-panel .placement-adjust #placement-snap{flex:1 1 42%;font-weight:700}
  #placement-panel .placement-adjust{row-gap:5px}
 }
+
+/* Estado do GLB do personagem: nunca voltar silenciosamente ao avatar antigo. */
+#player-model-status{position:fixed;z-index:150;left:50%;transform:translateX(-50%);
+ top:12px;max-width:min(92vw,680px);background:rgba(11,19,25,.95);color:white;
+ border:1px solid #d8a65c;border-radius:9px;padding:9px 14px;
+ box-shadow:0 3px 15px #0009;font:600 13px system-ui,sans-serif;text-align:center;}
+#player-model-retry{margin-left:10px;padding:6px 11px;color:#141d18;background:#c8e0b8;
+ border:0;border-radius:6px;font-weight:700;cursor:pointer;}
