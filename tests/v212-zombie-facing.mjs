@@ -62,6 +62,6 @@ test('GLB REV2 conserva frente +Z e a IA usa alinhamento de movimento',()=>{
  const manager=readFileSync(new URL('../src/characters/zombie-models.js',import.meta.url),'utf8');
  const code=readFileSync(new URL('../src/gameplay/enemy-ai.js',import.meta.url),'utf8');
  assert.match(manager,/model\.rotation\.y=0/);
- assert.match(code,/faceZombieAlongPath\(mesh,targetPos,previousX,previousZ,moving\)/);
+ assert.match(code,/faceZombieAlongPath\(mesh,targetPos,previousX,previousZ,actualMoving\)/);
 });
 console.log('Orientação REV2:',checks,'testes aprovados.');
