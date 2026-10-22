@@ -3,10 +3,16 @@
 // All GLB animations are driven by gameplay actions, not by demo timers.
 import {WandererAnimator} from './wanderer/WandererAnimator.js';
 
-export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5.glb';
+export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5_Optimized.glb';
+export const PLAYER_REV5_ORIGINAL_URL='./assets/models/Striped_Wanderer_REV5.glb';
 // GitHub Pages hosts the unchanged binary as textual parts to avoid large uploads.
 // Local ZIP still loads the original GLB directly.
 export const PLAYER_REV5_PARTS_MANIFEST='./assets/models/rev5-parts/manifest.json';
+export const PLAYER_REV5_MIRRORS=Object.freeze([
+  PLAYER_REV5_PARTS_MANIFEST,
+  'https://raw.githubusercontent.com/jogoiarexx-blip/Madruga-Survival/main/assets/models/rev5-parts/manifest.json',
+  'https://cdn.jsdelivr.net/gh/jogoiarexx-blip/Madruga-Survival@main/assets/models/rev5-parts/manifest.json'
+]);
 // Download the published GLB parts concurrently, retrying transient failures.
 export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
   manifestUrl=PLAYER_REV5_PARTS_MANIFEST,onProgress=()=>{},parallelism=6,retries=3}={}){
@@ -58,6 +64,24 @@ export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
   }
   return new GLTFLoader().parseAsync(bytes.buffer,'./assets/models/');
 }
+// Three independent locations for the same 17 published binary fragments.
+export async function loadPlayerRev5Resilient({GLTFLoader,loadParts=loadPlayerRev5Parts,
+  manifests=PLAYER_REV5_MIRRORS,onStatus=()=>{}}={}){
+  const errors=[];
+  for(let i=0;i<manifests.length;i++){
+    const manifestUrl=manifests[i];
+    onStatus('Carregando REV5, origem '+(i+1)+'/'+manifests.length+'…','loading');
+    try{
+      return await loadParts({GLTFLoader,manifestUrl,
+        onProgress:(done,total)=>onStatus('REV5 '+(i+1)+'/'+manifests.length+': '+done+'/'+total+' partes','loading')});
+    }catch(error){
+      const description=String(error?.message||error);
+      console.warn('[REV5] Falha na fonte '+manifestUrl+': '+description);
+      errors.push('fonte '+(i+1)+': '+description);
+    }
+  }
+  throw new Error('REV5 não carregou nas '+manifests.length+' fontes: '+errors.join(' | '));
+}
 export const PLAYER_REV5_SOURCE_HEIGHT=1.70000017;
 export const PLAYER_REV5_TARGET_HEIGHT=2.48;
 export const PLAYER_REV5_SCALE=PLAYER_REV5_TARGET_HEIGHT/PLAYER_REV5_SOURCE_HEIGHT;
@@ -70,6 +94,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
   const weaponParent=weapon?.parent,weaponStartY=weapon?.position?.y ?? -1.17;
   const display=new THREE.Group();
   display.name='Player_REV5_Visual';
+  display.visible=false;
   display.rotation.y=PLAYER_REV5_YAW;
   display.scale.setScalar(PLAYER_REV5_SCALE);
   player.add(display);
@@ -99,11 +124,13 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     if(loaded)return Promise.resolve(true);
     if(promise)return promise;
     failed=false;
+    // Do not show the legacy character while fetching the replacement.
+    avatar.visible=false;
+    display.visible=false;
     onStatus('Carregando Striped Wanderer REV5…','loading');
     const github=typeof location!=='undefined' && /(^|\.)github\.io$/.test(location.hostname);
-    const load=github?loadPlayerRev5Parts({GLTFLoader,onProgress:(done,total)=>
-      onStatus('Carregando jogador REV5: '+done+'/'+total+' partes…','loading')}):
-      new GLTFLoader().loadAsync(url);
+    const load=github?loadPlayerRev5Resilient({GLTFLoader,onStatus}):
+      new GLTFLoader().loadAsync(url).catch(()=>new GLTFLoader().loadAsync(PLAYER_REV5_ORIGINAL_URL));
     promise=load.then(gltf=>{
       if(!gltf?.scene||!Array.isArray(gltf.animations))throw Error('Modelo REV5 inválido');
       for(const name of ['Idle','Walking','Running','SwordAttack_REV3','CastMagic','Jump','HitReact','Death']){
@@ -131,6 +158,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       // Parenting transfers it from the procedural right arm to this GLB hand.
       hand.add(weapon);
       display.add(meshRoot);
+      display.visible=true;
       loaded=true;
       equip(equipped);
       // Hard replacement: never render both player bodies simultaneously.
@@ -146,6 +174,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
         weapon.position.y=weaponStartY;weapon.rotation.z=-.12;
       }
       if(meshRoot?.parent===display)display.remove(meshRoot);
+      display.visible=false;
       avatar.visible=true;
       console.warn('Falha ao carregar jogador REV5; usando avatar original.',err);
       onStatus('Não foi possível carregar REV5: '+String(err?.message||err),'error');
@@ -171,10 +200,12 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     if(animator)animator.dispose();
     if(meshRoot)display.remove(meshRoot);
     avatar.visible=true;
+    display.visible=false;
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;}
     loaded=false;
   }
   return {preload,update,equip,attack,special,jump,hurt,die,dispose,
     get loaded(){return loaded},get failed(){return failed},get animator(){return animator},
-    get model(){return meshRoot}};
+    get model(){return meshRoot},get visualVisible(){return display.visible},
+    get oldVisualVisible(){return avatar.visible}};
 }
