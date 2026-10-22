@@ -1,6 +1,7 @@
 // Adaptador REV2: usa o GLB original enviado pelo usuário, preservando IA,
 // colisões e dano do MadrugaCraft. O modelo é carregado uma vez e clonado.
 import {isZombieType,ZOMBIE_TYPES} from '../gameplay/zombie-variants.js';
+import {createZombieFootPlant} from './zombie-foot-plant.js';
 
 export const ZOMBIE_GLB_URL='./assets/models/zumbi_animado_REV2.glb';
 // GitHub Pages pode hospedar o GLB em partes: evita limite de upload por requisição
@@ -43,11 +44,18 @@ const SOURCE_MIN_Y=-0.95159;
 const SOURCE_HEIGHT=1.898523;
 // Mantém o zumbi base aproximadamente na mesma altura visual do personagem do jogador.
 // Jogador: aproximadamente 2,50 unidades incluindo o chapéu (topo em Y=2.505).
-const BASE_MATCH_HEIGHT=2.48;
+const BASE_MATCH_HEIGHT=2.58;
 const BASE_SCALE=BASE_MATCH_HEIGHT/SOURCE_HEIGHT;
 const STANDARD_SIZE=ZOMBIE_TYPES.zombie.size;
 
-export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,url=ZOMBIE_GLB_URL}) {
+const LOCOMOTION_CLIP_SCALE=Object.freeze({
+  zombie:2.10,
+  zombie_runner:2.30,
+  zombie_toxic:2.05,
+  zombie_brute:1.75
+});
+
+export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,url=ZOMBIE_GLB_URL}) {
   let asset=null, loading=null, failed=false;
   const active=new Set();
   const corpses=new Map();
@@ -109,34 +117,48 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,u
       enemy.type==='zombie_brute' ? 'Atacar' : null,
       'Atacar','Morder','Agarrar',walk,idle
     );
+    const footPlant=createZombieFootPlant({THREE,model,getGroundHeight});
     const previousChildren=[...enemy.mesh.children];
     for(const child of previousChildren)child.visible=false;
     enemy.mesh.material.visible=false;
     enemy.mesh.add(model);
-    const visual={model,mixer,actions,current:null,hold:0,elapsed:0,walk,idle,attackClip,hurtClip,deathClip,
-      play(name,once=false){
+    const visual={model,mixer,actions,footPlant,current:null,hold:0,elapsed:0,walk,idle,attackClip,hurtClip,deathClip,
+      locomotionScale:LOCOMOTION_CLIP_SCALE[enemy.type]||1,
+      paceScale:1,
+      action(name){return actions[name]||null;},
+      setActionTimeScale(name,timeScale=1){
+        const action=this.action(name);
+        if(action)action.setEffectiveTimeScale(timeScale);
+      },
+      play(name,once=false,timeScale=1){
         const next=actions[name]||actions[idle];
-        if(!next||(!once&&this.current===name))return;
+        if(!next)return;
+        if(!once&&this.current===name){next.setEffectiveTimeScale(timeScale);return;}
         const prev=this.current?actions[this.current]:null;
         if(prev&&prev!==next)prev.fadeOut(.13);
-        next.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).fadeIn(.13);
+        next.reset().setEffectiveTimeScale(timeScale).setEffectiveWeight(1).fadeIn(.13);
         next.setLoop(once?THREE.LoopOnce:THREE.LoopRepeat,once?1:Infinity);
         next.clampWhenFinished=once;
         next.play();
         this.current=name;
       },
-      attack(){this.play(this.attackClip,true);this.hold=this.attackClip==='Agarrar'?1.85:this.attackClip==='Morder'?1.28:1.10;},
-      hurt(){if(this.hold>0)return;this.play(this.hurtClip,true);this.hold=.34;},
-      update(dt,moving,near=true){
+      attack(){this.play(this.attackClip,true,1);this.hold=this.attackClip==='Agarrar'?1.85:this.attackClip==='Morder'?1.28:1.10;},
+      hurt(){if(this.hold>0)return;this.play(this.hurtClip,true,1);this.hold=.34;},
+      update(dt,moving,near=true,pace=1,footIKNear=true){
         this.model.visible=!!near;
         if(!near)return;
         const step=Math.max(0,Math.min(.05,dt));
         this.hold=Math.max(0,this.hold-step);
         const wanted=moving?this.walk:this.idle;
-        if(this.hold<=0&&this.current!==wanted)this.play(wanted);
+        const locomotionPace=moving?Math.max(.82,Math.min(2.80,this.locomotionScale*Math.max(.65,Math.min(1.25,pace||1)))):1;
+        if(this.hold<=0&&this.current!==wanted)this.play(wanted,false,wanted===this.walk?locomotionPace:1);
+        else if(this.hold<=0&&this.current===wanted)this.setActionTimeScale(this.current,wanted===this.walk?locomotionPace:1);
         this.mixer.update(step);
+        if(footIKNear && this.footPlant)this.footPlant.update({dt:step,moving,clip:this.current,action:actions[this.current]});
+        else this.footPlant?.reset();
       },
       dispose(){
+        this.footPlant?.reset();
         this.mixer.stopAllAction();
         this.mixer.uncacheRoot?.(this.model);
         this.model.parent?.remove(this.model);
