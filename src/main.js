@@ -15,10 +15,10 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import { createPlayerModel } from './characters/player-model.js';
-import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.0-player-rev5';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.1-rev5-loading';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js?v=2.2.0-player-rev5';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.1-rev5-loading';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
@@ -88,8 +88,19 @@ const natureAssets = createNatureAssets(THREE);
 // ========== PERSONAGEM ==========
 const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,hammerHead,spearHead} =
     createPlayerModel(THREE,scene);
+const modelBanner=document.getElementById('player-model-status');
+const modelMessage=document.getElementById('player-model-message');
+const modelRetry=document.getElementById('player-model-retry');
+function showPlayerModelStatus(message,state){
+    console.info('[Player REV5]',state,message);
+    modelMessage.textContent=message;
+    modelBanner.style.display=state==='ready'?'none':'block';
+    modelBanner.dataset.state=state;
+    modelRetry.style.display=state==='error'?'inline-block':'none';
+}
 const playerRev5=createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,
-    onStatus:message=>console.info(message)});
+    onStatus:showPlayerModelStatus});
+modelRetry.addEventListener('click',()=>void playerRev5.preload());
 void playerRev5.preload();
 
 // ========== CONTROLS ==========
