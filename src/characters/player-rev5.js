@@ -7,30 +7,54 @@ export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5.glb';
 // GitHub Pages hosts the unchanged binary as textual parts to avoid large uploads.
 // Local ZIP still loads the original GLB directly.
 export const PLAYER_REV5_PARTS_MANIFEST='./assets/models/rev5-parts/manifest.json';
-export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,manifestUrl=PLAYER_REV5_PARTS_MANIFEST}){
+// Download the published GLB parts concurrently, retrying transient failures.
+export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
+  manifestUrl=PLAYER_REV5_PARTS_MANIFEST,onProgress=()=>{},parallelism=6,retries=3}={}){
   const response=await fetcher(manifestUrl);
-  if(!response.ok)throw Error('Manifesto REV5 indisponível');
+  if(!response.ok)throw Error('Manifesto REV5 indisponível (HTTP '+response.status+')');
   const manifest=await response.json();
   if(!Number.isInteger(manifest.byteLength)||manifest.byteLength<1_000_000||manifest.byteLength>20_000_000||
     !Array.isArray(manifest.parts)||!manifest.parts.length||manifest.parts.length>32)
     throw Error('Manifesto REV5 inválido');
+  const parts=new Array(manifest.parts.length);
+  let nextIndex=0,completed=0;
+  async function readPart(index){
+    const name=manifest.parts[index];
+    if(!/^part\d{2}\.b64$/.test(name))throw Error('Nome de parte REV5 inválido: '+name);
+    const url=manifestUrl.replace(/manifest\.json$/,name);
+    let lastError;
+    for(let attempt=0;attempt<Math.max(1,retries);attempt++){
+      try{
+        const part=await fetcher(url);
+        if(!part.ok)throw Error(name+' HTTP '+part.status);
+        const encoded=(await part.text()).replace(/\s+/g,'');
+        const decoded=atobFn(encoded);
+        if(!decoded.length)throw Error(name+' vazio');
+        return decoded;
+      }catch(error){lastError=error;}
+    }
+    throw Error('Falha ao carregar '+name+' após '+Math.max(1,retries)+' tentativas: '+String(lastError?.message||lastError));
+  }
+  async function worker(){
+    while(nextIndex<parts.length){
+      const index=nextIndex++;
+      parts[index]=await readPart(index);
+      onProgress(++completed,parts.length);
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(parts.length,Math.max(1,parallelism))},worker));
   const bytes=new Uint8Array(manifest.byteLength);
   let at=0;
-  for(const name of manifest.parts){
-    if(!/^part\d{2}\.b64$/.test(name))throw Error('Nome de parte REV5 inválido');
-    const part=await fetcher(manifestUrl.replace(/manifest\.json$/,name));
-    if(!part.ok)throw Error('Parte REV5 ausente: '+name);
-    const encoded=(await part.text()).replace(/\s+/g,'');
-    const data=atobFn(encoded);
-    if(at+data.length>bytes.length)throw Error('REV5 excedeu tamanho');
-    for(let i=0;i<data.length;i++)bytes[at++]=data.charCodeAt(i);
+  for(const part of parts){
+    if(at+part.length>bytes.length)throw Error('REV5 excedeu tamanho indicado no manifesto');
+    for(let i=0;i<part.length;i++)bytes[at++]=part.charCodeAt(i);
   }
   if(at!==bytes.length||String.fromCharCode(...bytes.subarray(0,4))!=='glTF')
-    throw Error('REV5 incompleto');
-  if(globalThis.crypto?.subtle && /^[0-9a-f]{64}$/.test(manifest.sha256||'')){
+    throw Error('REV5 reconstruído incompleto');
+  if(globalThis.crypto?.subtle&&/^[0-9a-f]{64}$/.test(manifest.sha256||'')){
     const hash=await globalThis.crypto.subtle.digest('SHA-256',bytes.buffer);
     const hex=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
-    if(hex!==manifest.sha256)throw Error('SHA-256 REV5 inválido');
+    if(hex!==manifest.sha256)throw Error('SHA-256 REV5 não confere');
   }
   return new GLTFLoader().parseAsync(bytes.buffer,'./assets/models/');
 }
@@ -74,8 +98,11 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
   function preload(){
     if(loaded)return Promise.resolve(true);
     if(promise)return promise;
+    failed=false;
+    onStatus('Carregando Striped Wanderer REV5…','loading');
     const github=typeof location!=='undefined' && /(^|\.)github\.io$/.test(location.hostname);
-    const load=github?loadPlayerRev5Parts({GLTFLoader}).catch(()=>new GLTFLoader().loadAsync(url)):
+    const load=github?loadPlayerRev5Parts({GLTFLoader,onProgress:(done,total)=>
+      onStatus('Carregando jogador REV5: '+done+'/'+total+' partes…','loading')}):
       new GLTFLoader().loadAsync(url);
     promise=load.then(gltf=>{
       if(!gltf?.scene||!Array.isArray(gltf.animations))throw Error('Modelo REV5 inválido');
@@ -108,10 +135,12 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       equip(equipped);
       // Hard replacement: never render both player bodies simultaneously.
       avatar.visible=false;
-      onStatus('Personagem REV5 carregado com 45 ossos e 17 animações.');
+      onStatus('Personagem REV5 carregado com 45 ossos e 17 animações.','ready');
       return true;
     }).catch(err=>{
       failed=true;
+      loaded=false;
+      promise=null; // permite repetir o download sem recarregar a partida
       if(weaponParent && weapon?.parent!==weaponParent){
         weaponParent.add(weapon);
         weapon.position.y=weaponStartY;weapon.rotation.z=-.12;
@@ -119,7 +148,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       if(meshRoot?.parent===display)display.remove(meshRoot);
       avatar.visible=true;
       console.warn('Falha ao carregar jogador REV5; usando avatar original.',err);
-      onStatus('Modelo REV5 indisponível; personagem original temporário.');
+      onStatus('Não foi possível carregar REV5: '+String(err?.message||err),'error');
       return false;
     });
     return promise;
