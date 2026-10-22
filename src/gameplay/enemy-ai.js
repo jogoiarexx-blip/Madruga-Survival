@@ -1,5 +1,6 @@
 import {ZOMBIE_TYPES,isZombieType} from './zombie-variants.js';
 import {animateEnemy} from '../characters/enemy-animation.js';
+import {faceZombieAlongPath} from './zombie-facing.js';
 import {queueZombieImpact,advanceZombieImpact} from './zombie-attack-events.js';
 
 // Atualização de IA independente da renderização e dos controles.
@@ -43,6 +44,7 @@ function update(dt,elapsed){
             const visible=!hasLineOfSight||hasLineOfSight(mesh.position,targetPos);
             const wantsToMove=shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8;
             const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0 && !enemy.pendingImpact;
+            const previousX=mesh.position.x, previousZ=mesh.position.z;
             if (moving) {
                 const nx=dx/(dist||1),nz=dz/(dist||1);
                 // Guardião contorna o alvo ao se aproximar: mais de uma rota.
@@ -62,7 +64,11 @@ function update(dt,elapsed){
                 (dist<52?Math.sin(elapsed*(boss?3.2:6.2)+mesh.id)*0.035:0);
             mesh.scale.y=1+Math.sin(elapsed*(boss?3.2:7.4)+mesh.id)*(boss?.024:.055);
             mesh.rotation.z=Math.sin(elapsed*(boss?2.2:4.1)+mesh.id)*(boss?.018:.048);
-            if (dist<52) mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
+            if (dist<52) {
+                // Orientação REV2 (+Z): ao caminhar, use a direção efetiva dos passos.
+                if (isZombieType(enemy.type)) faceZombieAlongPath(mesh,targetPos,previousX,previousZ,moving);
+                else mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
+            }
             animateEnemy(enemy,elapsed,moving,dt,Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48);
             if (boss && enemy.windup>0) {
                 enemy.windup=Math.max(0,enemy.windup-dt);
