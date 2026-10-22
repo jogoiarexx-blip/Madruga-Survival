@@ -18,7 +18,7 @@ import { createPlayerModel } from './characters/player-model.js';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.0-player-rev5';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.0-player-rev5';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
