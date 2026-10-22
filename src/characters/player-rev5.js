@@ -89,9 +89,31 @@ export const PLAYER_REV5_SCALE=PLAYER_REV5_TARGET_HEIGHT/PLAYER_REV5_SOURCE_HEIG
 // MadrugaCraft's attack forward axis is -Z; the model's rig forward is +Z.
 export const PLAYER_REV5_YAW=Math.PI;
 
+// GLTFLoader r160 sanitizes reserved ':' in rig names. Never confuse thumb
+// bones with the actual hand.
+export function findRev5Hand(root,side='Left') {
+  const normalized=s=>String(s||'').replace(/[^a-zA-Z0-9]/g,'').toLowerCase();
+  const target=normalized('mixamorig'+side+'Hand');
+  const direct=['mixamorig'+side+'Hand','mixamorig:'+side+'Hand',side+'Hand'];
+  for(const name of direct){
+    const match=root?.getObjectByName?.(name);
+    if(match?.isBone)return match;
+  }
+  let found=null;
+  root?.traverse?.(node=>{
+    if(!found && node.isBone && normalized(node.name)===target)found=node;
+  });
+  if(found)return found;
+  root?.traverse?.(node=>{
+    if(found || !node.isSkinnedMesh || !node.skeleton?.bones)return;
+    found=node.skeleton.bones.find(bone=>bone.isBone&&normalized(bone.name)===target)||null;
+  });
+  return found;
+}
+
 export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus=()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
-  let equipped=0,castLeft=0;
+  let equipped=0,castLeft=0,handMount=null;
   const weaponParent=weapon?.parent,weaponStartY=weapon?.position?.y ?? -1.17;
   const display=new THREE.Group();
   display.name='Player_REV5_Visual';
@@ -106,7 +128,11 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     // The gameplay weapons follow the rigged hand; never show the GLB prop
     // and the game's weapon at the same time.
     if(sword)sword.visible=false;
-    if(weapon){weapon.visible=true;weapon.position.set(0,-.43,.09);weapon.rotation.set(0,0,-.12);}
+    if(weapon){
+      weapon.visible=true;
+      weapon.position.set(...(handMount===meshRoot?[.48,1.08,.22]:[0,-.43,.09]));
+      weapon.rotation.set(0,0,-.12);
+    }
   }
   function attack(){if(!loaded)return false;
     // Shorter clip matches the existing quick melee cooldown better than the
@@ -149,15 +175,16 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       magic=meshRoot.getObjectByName('REV4_Magic_LeftHand');
       if(sword)sword.visible=false;
       if(magic)magic.visible=false;
-      // The source sword is attached to LeftHand, despite its exported name.
-      const hand=meshRoot.getObjectByName('mixamorig:LeftHand');
-      if(!hand)throw Error('Rig REV5 sem mixamorig:LeftHand');
+      // Find sanitized Three.js bone name; never reject a valid GLB just because
+      // its original rig named the bone with a colon.
+      const hand=findRev5Hand(meshRoot,'Left');
+      handMount=hand||meshRoot;
+      if(!hand)console.warn('[Player REV5] Osso da mão não encontrado; arma ancorada temporariamente ao corpo.');
       animator=new WandererAnimator(THREE,gltf,()=>{},()=>{},
         {enableFootIK:false});
       animator.play('Idle',0);
-      // Game equipment (broom/hammer/spear) remains fully functional.
-      // Parenting transfers it from the procedural right arm to this GLB hand.
-      hand.add(weapon);
+      // Gameplay equipment follows the rig hand, or visual fallback root.
+      if(weapon)handMount.add(weapon);
       display.add(meshRoot);
       display.visible=true;
       loaded=true;
@@ -175,6 +202,8 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
         weapon.position.y=weaponStartY;weapon.rotation.z=-.12;
       }
       if(meshRoot?.parent===display)display.remove(meshRoot);
+      handMount=null;
+      animator?.dispose();animator=null;
       display.visible=false;
       avatar.visible=true;
       console.warn('Falha ao carregar jogador REV5; usando avatar original.',err);
@@ -200,6 +229,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
   function dispose(){
     if(animator)animator.dispose();
     if(meshRoot)display.remove(meshRoot);
+    handMount=null;
     avatar.visible=true;
     display.visible=false;
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;}
@@ -207,6 +237,6 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
   }
   return {preload,update,equip,attack,special,jump,hurt,die,dispose,
     get loaded(){return loaded},get failed(){return failed},get animator(){return animator},
-    get model(){return meshRoot},get visualVisible(){return display.visible},
+    get model(){return meshRoot},get handMount(){return handMount},get visualVisible(){return display.visible},
     get oldVisualVisible(){return avatar.visible}};
 }
