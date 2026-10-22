@@ -11,7 +11,8 @@ export function createCombatSystem({THREE,scene,player,enemies,weaponTypes,healt
   getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
   spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
   onBossDefeated,onEnemyKilled,getLevel,getWeaponIndex,getPlayerYaw,isGameActive,isLocked,
-  getWeaponBonus=()=>0,onWeaponHit=()=>{},onSwing=()=>0}) {
+  getWeaponBonus=()=>0,onWeaponHit=()=>{},onSwing=()=>0,
+  onAttackStart=()=>{},onSpecialStart=()=>{}}) {
 let attackCooldown=0, specialCooldown=0, attackAnimTimer=0, attackAnimDuration=.2;
 const slashEffects=[];
 function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
@@ -68,6 +69,7 @@ function doAttack() {
     attackAnimDuration = attackAnimTimer = Math.min(.40,selected.cooldown*.78);
     
     sfx.attack();
+    onAttackStart();
     spawnSlashArc(selected);
     let hits = 0;
     for (const e of [...enemies]) {
@@ -85,7 +87,7 @@ function doSpecialAttack() {
     if (specialCooldown > 0 || !isGameActive() || !isLocked()) return;
     specialCooldown = Math.max(5, 9 - getLevel() * 0.35);
     attackAnimDuration = attackAnimTimer = 0.48;
-    sfx.boost(); sfx.attack();
+    sfx.boost(); sfx.attack(); onSpecialStart();
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.83, 1.0, 48), new THREE.MeshBasicMaterial({
         color: 0xffd263, transparent: true, opacity: 0.82, depthWrite: false, side: THREE.DoubleSide
     }));
