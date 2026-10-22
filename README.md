@@ -1,3 +1,11 @@
+## v2.2.2 — Correção do carregamento do jogador REV5
+
+- Durante o download o corpo procedural antigo fica oculto; só retorna com mensagem de erro se todas as fontes falharem.
+- O site tenta carregar as partes do REV5 pelo GitHub Pages, pelo GitHub Raw e pelo jsDelivr.
+- A distribuição ZIP local contém o GLB REV5 otimizado, preservando 45 ossos, 17 animações e as três malhas do original; o original também está incluído.
+- Verificação no console: `window.madrugaRev5Status` retorna `loaded`, `failed`, `oldVisualVisible` e `modelVisible`.
+- Testes automatizados cobrem carregamento de reserva e a substituição visível, porém o jogo WebGL público requer verificação real no navegador.
+
 ## v2.2.1 — Correção do carregamento do jogador REV5 no GitHub Pages
 
 - O GLB REV5 não está hospedado diretamente como arquivo binário no repositório; a versão pública usa 17 partes.
