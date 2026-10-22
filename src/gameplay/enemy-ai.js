@@ -1,7 +1,7 @@
 import {ZOMBIE_TYPES,isZombieType} from './zombie-variants.js';
 import {animateEnemy} from '../characters/enemy-animation.js';
 import {faceZombieAlongPath} from './zombie-facing.js';
-import {queueZombieImpact,advanceZombieImpact} from './zombie-attack-events.js';
+import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zombie-attack-events.js';
 
 // Atualização de IA independente da renderização e dos controles.
 export function createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
@@ -20,6 +20,7 @@ function update(dt,elapsed){
             const dx=targetPos.x-mesh.position.x, dz=targetPos.z-mesh.position.z;
             const dist=Math.hypot(dx,dz);
             enemy.attackTimer=Math.max(0,enemy.attackTimer-dt);
+            if(enemy.attackTimer===0)enemy.attackFacingYaw=null;
             // REV2: confirma colisão e linha de visão no instante do impacto, nunca no início da pose.
             const pending=advanceZombieImpact(enemy,dt);
             if(pending){
@@ -28,7 +29,10 @@ function update(dt,elapsed){
                 if(target){
                     const radius=pending.kind==='building'?2.25:1.85;
                     const distance=Math.hypot(target.x-mesh.position.x,target.z-mesh.position.z);
-                    if(distance<radius && (!hasLineOfSight||hasLineOfSight(mesh.position,target))){
+                    const aimX=target.x-mesh.position.x,aimZ=target.z-mesh.position.z;
+                    const frontDot=Number.isFinite(pending.facingYaw)&&distance>.001 ?
+                        (Math.sin(pending.facingYaw)*aimX+Math.cos(pending.facingYaw)*aimZ)/distance : 1;
+                    if(distance<radius && frontDot>.24 && (!hasLineOfSight||hasLineOfSight(mesh.position,target))){
                         if(pending.kind==='building'){
                             onRaidDamage(pending.target,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
                             spawnParticle(mesh.position,0xdba679,3);
@@ -43,7 +47,9 @@ function update(dt,elapsed){
             const meleeRadius=boss?2.65:1.85;
             const visible=!hasLineOfSight||hasLineOfSight(mesh.position,targetPos);
             const wantsToMove=shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8;
-            const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0 && !enemy.pendingImpact;
+            const finishingAttack=Number.isFinite(enemy.attackFacingYaw)&&enemy.attackTimer>0;
+            const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0 &&
+                !enemy.pendingImpact && !finishingAttack;
             const previousX=mesh.position.x, previousZ=mesh.position.z;
             if (moving) {
                 const nx=dx/(dist||1),nz=dz/(dist||1);
@@ -64,12 +70,17 @@ function update(dt,elapsed){
                 (dist<52?Math.sin(elapsed*(boss?3.2:6.2)+mesh.id)*0.035:0);
             mesh.scale.y=1+Math.sin(elapsed*(boss?3.2:7.4)+mesh.id)*(boss?.024:.055);
             mesh.rotation.z=Math.sin(elapsed*(boss?2.2:4.1)+mesh.id)*(boss?.018:.048);
+            const actualMoving=moving&&Math.hypot(mesh.position.x-previousX,mesh.position.z-previousZ)>.0001;
             if (dist<52) {
                 // Orientação REV2 (+Z): ao caminhar, use a direção efetiva dos passos.
-                if (isZombieType(enemy.type)) faceZombieAlongPath(mesh,targetPos,previousX,previousZ,moving);
-                else mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
+                if(isZombieType(enemy.type)) {
+                    if(Number.isFinite(enemy.attackFacingYaw)&&enemy.attackTimer>0){
+                        mesh.rotation.x=0;mesh.rotation.y=enemy.attackFacingYaw;
+                    } else faceZombieAlongPath(mesh,targetPos,previousX,previousZ,actualMoving);
+                } else mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
             }
-            animateEnemy(enemy,elapsed,moving,dt,Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48);
+            animateEnemy(enemy,elapsed,isZombieType(enemy.type)?actualMoving:moving,dt,
+                Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48);
             if (boss && enemy.windup>0) {
                 enemy.windup=Math.max(0,enemy.windup-dt);
                 showBossTelegraph(enemy);
@@ -90,8 +101,13 @@ function update(dt,elapsed){
                 }
             } else if (enemy.attackTimer===0 && dist<52) {
                 if(targetBuilding&&dist<2.25){
-                    enemy.attackTimer=shaman?2.4:1.55;enemy.rev4Visual?.attack();
-                    if(!(enemy.rev4Visual&&queueZombieImpact(enemy,'building',targetBuilding))){
+                    enemy.attackTimer=shaman?2.4:1.55;
+                    if(enemy.rev4Visual){
+                        if(queueZombieImpact(enemy,'building',targetBuilding)){
+                            enemy.rev4Visual.attack();
+                            enemy.attackTimer=Math.max(enemy.attackTimer,(ZOMBIE_ATTACK_DURATION[enemy.type]||0)+.10);
+                        }
+                    }else{
                         onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
                         spawnParticle(mesh.position,0xdba679,3);
                     }
@@ -104,8 +120,12 @@ function update(dt,elapsed){
                     sfx.warning();
                 } else if (!targetBuilding&&!shaman && !boss && visible && dist<meleeRadius) {
                     enemy.attackTimer=1.15+(enemy.type==='fast'?-.15:enemy.type==='tank'?.45:0);
-                    enemy.rev4Visual?.attack();
-                    if(!(enemy.rev4Visual&&queueZombieImpact(enemy,targetGuard?'guard':'player',targetGuard))){
+                    if(enemy.rev4Visual){
+                        if(queueZombieImpact(enemy,targetGuard?'guard':'player',targetGuard)){
+                            enemy.rev4Visual.attack();
+                            enemy.attackTimer=Math.max(enemy.attackTimer,(ZOMBIE_ATTACK_DURATION[enemy.type]||0)+.10);
+                        }
+                    }else{
                         if(targetGuard){onGuardDamage(enemy.damage);}
                         else if(damagePlayer(enemy.damage,mesh.position) && enemy.type==='zombie_toxic')onPoison(ZOMBIE_TYPES.zombie_toxic.poisonSeconds);
                     }
