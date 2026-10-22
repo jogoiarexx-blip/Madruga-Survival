@@ -1,7 +1,7 @@
 import {ZOMBIE_TYPES,isZombieType} from './zombie-variants.js';
 import {animateEnemy} from '../characters/enemy-animation.js';
 import {faceZombieAlongPath} from './zombie-facing.js';
-import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zombie-attack-events.js';
+import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zombie-attack-events.js?v=2.1.3-zombie-combat';
 
 // Atualização de IA independente da renderização e dos controles.
 export function createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
