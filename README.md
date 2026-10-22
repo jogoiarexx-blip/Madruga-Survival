@@ -1,3 +1,13 @@
+## v2.2.3 — Corrigido GLB REV5 que falhava no navegador
+
+- O erro real foi `Cannot read properties of undefined (reading 'getMaterialType')` após baixar 17/17 partes.
+- Causa: material de magia `Magic_Cyan` utiliza `KHR_materials_unlit`, mas o GLB exportado omitiu `extensionsUsed`.
+- Novo `src/characters/rev5-glb-compat.js` declara a extensão antes do GLTFLoader interpretar o modelo.
+- O reparo acontece depois da conferência SHA-256 e preserva geometria binária, 45 ossos e 17 animações.
+- Regressão com o GLB real e recomposto pelas 17 partes: `tests/v223-rev5-materials.mjs`.
+- Pacote local contém GLB otimizado com metadados corrigidos; arquivo original fica preservado.
+- A validação visual da partida pública ainda depende do navegador do usuário.
+
 ## v2.2.2 — Correção do carregamento do jogador REV5
 
 - Durante o download o corpo procedural antigo fica oculto; só retorna com mensagem de erro se todas as fontes falharem.
