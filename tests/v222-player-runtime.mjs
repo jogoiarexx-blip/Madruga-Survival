@@ -27,7 +27,7 @@ class Action{constructor(){this.time=0;this.playing=false}reset(){return this}se
 class Mixer{constructor(){this.timeScale=1;this.actions=new Map()}clipAction(clip){if(!this.actions.has(clip.name))this.actions.set(clip.name,new Action());return this.actions.get(clip.name)}addEventListener(){}update(){}stopAllAction(){}uncacheRoot(){}}
 const THREE={Group:Node,Vector3:class{},Quaternion:class{},AnimationMixer:Mixer,LoopOnce:1,LoopRepeat:2};
 const clips=['Idle','Walking','Running','SwordAttack_REV3','CastMagic','Jump','HitReact','Death'].map(name=>({name,duration:1}));
-function model(){const scene=new Node('scene'),hand=new Node('mixamorig:LeftHand');scene.add(hand);return {scene,animations:clips};}
+function model(){const scene=new Node('scene'),hand=new Node('mixamorigLeftHand');hand.isBone=true;scene.add(hand);return {scene,animations:clips};}
 await test('avatar antigo fica oculto durante carregamento e após sucesso',async()=>{
  let done;
  const player=new Node(),avatar=new Node('antigo'),hand=new Node(),weapon=new Node();player.add(avatar);avatar.add(hand);hand.add(weapon);
@@ -38,7 +38,7 @@ await test('avatar antigo fica oculto durante carregamento e após sucesso',asyn
  assert.equal(ctrl.visualVisible,false,'novo modelo só fica visível quando estiver pronto');
  done(model()); assert.equal(await loading,true);
  assert.equal(ctrl.loaded,true);assert.equal(avatar.visible,false);assert.equal(ctrl.visualVisible,true);
- assert.equal(ctrl.model.name,'Striped_Wanderer_REV5');assert.equal(weapon.parent.name,'mixamorig:LeftHand');
+ assert.equal(ctrl.model.name,'Striped_Wanderer_REV5');assert.equal(weapon.parent.name,'mixamorigLeftHand');
  ctrl.update(.016,{speed:4});assert.equal(ctrl.animator.activeName,'Walking');
 });
 await test('falha retorna avatar antigo e expõe motivo',async()=>{
@@ -54,7 +54,7 @@ await test('main disponibiliza diagnóstico e invalida cache da revisão',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/window,'madrugaRev5Status'/);
- assert.match(main,/player-rev5\.js\?v=2\.2\.3-rev5-material-fix/);
- assert.match(html,/data-build="2\.2\.3-rev5-material-fix"/);
+ assert.match(main,/player-rev5\.js\?v=2\.2\.4-rev5-hand-bone/);
+ assert.match(html,/data-build="2\.2\.4-rev5-hand-bone"/);
 });
 console.log('v2.2.2',checks,'testes aprovados');
