@@ -66,10 +66,14 @@ function update(dt,elapsed){
                 }
                 mesh.position.x=next.x;mesh.position.z=next.z;
             }
+            // O REV2 já anima o quadril e as pernas dentro do GLB. Não aplicar
+            // oscilação e escala procedural ao collider: isto faz os pés flutuarem
+            // e cria deslizamento mesmo que a cadência da caminhada esteja correta.
+            const skinnedZombie=isZombieType(enemy.type)&&!!enemy.rev4Visual;
             mesh.position.y=getGroundHeight(mesh.position.x,mesh.position.z)+enemy.size/2+
-                (dist<52?Math.sin(elapsed*(boss?3.2:6.2)+mesh.id)*0.035:0);
-            mesh.scale.y=1+Math.sin(elapsed*(boss?3.2:7.4)+mesh.id)*(boss?.024:.055);
-            mesh.rotation.z=Math.sin(elapsed*(boss?2.2:4.1)+mesh.id)*(boss?.018:.048);
+                (skinnedZombie?0:(dist<52?Math.sin(elapsed*(boss?3.2:6.2)+mesh.id)*0.035:0));
+            mesh.scale.y=skinnedZombie?1:1+Math.sin(elapsed*(boss?3.2:7.4)+mesh.id)*(boss?.024:.055);
+            mesh.rotation.z=skinnedZombie?0:Math.sin(elapsed*(boss?2.2:4.1)+mesh.id)*(boss?.018:.048);
             const actualMoving=moving&&Math.hypot(mesh.position.x-previousX,mesh.position.z-previousZ)>.0001;
             if (dist<52) {
                 // Orientação REV2 (+Z): ao caminhar, use a direção efetiva dos passos.
@@ -79,8 +83,11 @@ function update(dt,elapsed){
                     } else faceZombieAlongPath(mesh,targetPos,previousX,previousZ,actualMoving);
                 } else mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
             }
+            const stepDistance=Math.hypot(mesh.position.x-previousX,mesh.position.z-previousZ);
+            const locomotionPace=actualMoving ? stepDistance/Math.max(.001,enemy.speed*dt) : 0;
             animateEnemy(enemy,elapsed,isZombieType(enemy.type)?actualMoving:moving,dt,
-                Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48);
+                Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48,
+                locomotionPace, playerDistance<16);
             if (boss && enemy.windup>0) {
                 enemy.windup=Math.max(0,enemy.windup-dt);
                 showBossTelegraph(enemy);
