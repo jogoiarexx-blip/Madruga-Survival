@@ -2,6 +2,7 @@
 // Striped Wanderer. The existing player Group remains the physics/camera/save root.
 // All GLB animations are driven by gameplay actions, not by demo timers.
 import {WandererAnimator} from './wanderer/WandererAnimator.js';
+import {repairRev5GlbMetadata} from './rev5-glb-compat.js?v=2.2.3-material-fix';
 
 export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5_Optimized.glb';
 export const PLAYER_REV5_ORIGINAL_URL='./assets/models/Striped_Wanderer_REV5.glb';
@@ -62,7 +63,7 @@ export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
     const hex=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
     if(hex!==manifest.sha256)throw Error('SHA-256 REV5 não confere');
   }
-  return new GLTFLoader().parseAsync(bytes.buffer,'./assets/models/');
+  return new GLTFLoader().parseAsync(repairRev5GlbMetadata(bytes.buffer),'./assets/models/');
 }
 // Three independent locations for the same 17 published binary fragments.
 export async function loadPlayerRev5Resilient({GLTFLoader,loadParts=loadPlayerRev5Parts,
