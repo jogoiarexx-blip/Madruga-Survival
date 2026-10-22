@@ -1,3 +1,12 @@
+## v2.2.1 — Correção do carregamento do jogador REV5 no GitHub Pages
+
+- O GLB REV5 não está hospedado diretamente como arquivo binário no repositório; a versão pública usa 17 partes.
+- Novo carregador com até seis downloads simultâneos, repetição em caso de falhas e verificação de integridade.
+- Exibição de progresso e botão para repetir o carregamento se o modelo falhar.
+- O corpo antigo só é mostrado como fallback quando houver erro; a causa aparece na tela.
+- Preservados os 45 ossos, as 17 animações, as armas, os zumbis e os saves.
+- A aparência final ainda precisa ser conferida em uma partida real no GitHub Pages.
+
 ## v2.2.0 — Personagem Striped Wanderer REV5 integrado
 
 O protagonista procedural foi substituído visualmente pelo **Striped Wanderer REV5 original**, sem sobrepor dois corpos. O GLB inclui 45 ossos, 17 animações e acessórios. O objeto `player` permanece o mesmo para colisões, câmera, coordenadas e saves; se o GLB falhar, o avatar antigo reaparece como fallback. O modelo de 1,70 unidade foi dimensionado para aproximadamente 2,48 unidades, orientado para o eixo de ataque -Z. Armas do inventário são anexadas ao osso da mão esquerda e a espada extra do GLB permanece oculta para não duplicar armas. A magia do GLB só aparece no especial.
