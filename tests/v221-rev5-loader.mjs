@@ -35,9 +35,9 @@ await test('baixa partes em paralelo e reconstrói um GLB',async()=>{
  assert.deepEqual(f.progress.map(p=>p[0]).sort(),[1,2,3]);
 });
 await test('recupera falha temporária',async()=>{const f=fixture();await loadPlayerRev5Parts(f);assert.ok(f.partRetry>=2)});
-await test('avisa sobre parte ausente após tentativas',async()=>{const f=fixture({failure:true});await assert.rejects(loadPlayerRev5Parts(f),/part02\\.b64/)});
+await test('avisa sobre parte ausente após tentativas',async()=>{const f=fixture({failure:true});await assert.rejects(loadPlayerRev5Parts(f),/part02\.b64/)});
 await test('main possui banner de estado e botão retry',()=>{
  const s=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.match(s,/showPlayerModelStatus/);assert.match(s,/modelRetry\\.addEventListener\\('click'/);
+ assert.match(s,/showPlayerModelStatus/);assert.match(s,/modelRetry\.addEventListener\('click'/);
 });
 console.log('REV5 loader:',passed,'testes.');
