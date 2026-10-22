@@ -1,3 +1,13 @@
+## v2.1.5 — Apoio dos pés REV2 no solo
+
+- Modelo REV2 mantido, com altura base de 2,58 unidades.
+- Criado controlador de contato de pés com terreno, apoios alternados, rampas de transição e correção limitada de quadril e joelho.
+- Controlador executado apenas nos zumbis próximos ao jogador (raio de 16 unidades), preservando o fallback sem rig.
+- Ajustada cadência dos clipes de caminhada/corrida ao deslocamento real do inimigo.
+- Removidos bob vertical, pulsação de escala e inclinação artificial dos zumbis com GLB, sem alterar a colisão.
+- Regressões adicionadas em `tests/v214-zombie-scale-slide.mjs` e `tests/v215-foot-plant.mjs`.
+- Testes automatizados verificados na versão ZIP; ainda falta validação visual WebGL no site público.
+
 ## v2.1.1 — Calibração do zumbi REV2 e impacto de ataques
 
 - Modelo REV2 original (22 ossos, oito animações) mantido, com altura ajustada a aproximadamente **2,48 unidades** para aproximar o personagem jogável de aproximadamente **2,50 unidades**, incluindo o chapéu.
