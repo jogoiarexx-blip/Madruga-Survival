@@ -15,10 +15,11 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import { createPlayerModel } from './characters/player-model.js';
-import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.4-rev5-hand-bone';
+import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.5-player-weapons';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js?v=2.2.4-rev5-hand-bone';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.5-player-weapons';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
@@ -86,7 +87,7 @@ const cameraObstacles = [ground];
 const natureAssets = createNatureAssets(THREE);
 
 // ========== PERSONAGEM ==========
-const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,hammerHead,spearHead} =
+const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,equipWeaponVisual} =
     createPlayerModel(THREE,scene);
 const modelBanner=document.getElementById('player-model-status');
 const modelMessage=document.getElementById('player-model-message');
@@ -283,11 +284,7 @@ function equipWeapon(index) {
     if(tool&&!canUseTool(survival,tool)){showToast('⚠ Arma quebrada: repare na bancada');return false;}
     currentWeapon = index;
     const selected = weaponTypes[index];
-    weapon.scale.set(1, selected.scale, 1);
-    hammerHead.visible = index === 1;
-    spearHead.visible = index === 2;
-    weapon.material.color.setHex(selected.color);
-    weapon.position.y = playerRev5.loaded ? -.43 : -1.17;
+    equipWeaponVisual(index);
     playerRev5.equip(index);
     showToast(`⚔ ${selected.name} equipada`);
     updateHUD(); return true;
@@ -1048,15 +1045,24 @@ function animate() {
         torso.rotation.x=THREE.MathUtils.lerp(torso.rotation.x,dashTimer>0?-.20:.015*stride,blend);
         headRig.rotation.z=Math.sin(elapsed*1.2)*.027;
         combat.update(dt);
-        if(combat.isAttacking){
-            const progress=1-combat.attackAnimTimer/combat.attackAnimDuration;
-            const arc=Math.sin(progress*Math.PI);
-            rightArm.rotation.x=-.32-arc*2.05;
-            rightArm.rotation.z=-.18-arc*.32;
-            torso.rotation.y=-arc*.23;
-        } else {
+        // O esqueleto REV5 controla sua própria animação. Mover o punho
+        // procedural nesse modo desorientaria a arma presa ao osso do GLB.
+        if(!playerRev5.loaded){
+          if(combat.isAttacking){
+            const progress=THREE.MathUtils.clamp(1-combat.attackAnimTimer/combat.attackAnimDuration,0,1);
+            const pose=samplePlayerAttackPose(combat.attackWeaponIndex,progress);
+            rightArm.rotation.set(pose.armX,pose.armY,pose.armZ);
+            leftArm.rotation.x=THREE.MathUtils.lerp(leftArm.rotation.x,pose.leftArmX,.8);
+            weapon.rotation.x=pose.gripX;weapon.rotation.z=pose.gripZ;
+            torso.rotation.y=pose.torsoY;
+          }else{
+            rightArm.rotation.y=THREE.MathUtils.lerp(rightArm.rotation.y,0,blend);
             rightArm.rotation.z=THREE.MathUtils.lerp(rightArm.rotation.z,-.08,blend);
             torso.rotation.y=THREE.MathUtils.lerp(torso.rotation.y,0,blend);
+            const grip=idleGripPose(currentWeapon);
+            weapon.rotation.x=THREE.MathUtils.lerp(weapon.rotation.x,grip.x,blend);
+            weapon.rotation.z=THREE.MathUtils.lerp(weapon.rotation.z,grip.z,blend);
+          }
         }
         playerRev5.update(dt,{speed:realMovementSpeed,sprinting:runningFast,grounded:isGrounded});
         invulnerableTimer = Math.max(0, invulnerableTimer-dt);

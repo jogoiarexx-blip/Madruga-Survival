@@ -131,10 +131,12 @@ pass('combate real respeita arco, nível, recarga e limpa efeitos',()=>{
     onEnemyKilled(){defeated++},onBossDefeated(){},getLevel:()=>1,getWeaponIndex:()=>0,
     getPlayerYaw:()=>0,isGameActive:()=>true,isLocked:()=>true});
  assert.equal(isInAttackArc(rig.player.position,0,target.mesh.position,3,.2),true);
- combat.attack();assert.equal(target.hp,2);
- combat.attack();assert.equal(target.hp,2); // cooldown
- combat.update(1);combat.attack();assert.equal(target.hp,1);
- target.mesh.position.z=-2;combat.update(1);combat.attack();assert.equal(living.length,0);
+ combat.attack();assert.equal(target.hp,3); // armando
+ combat.attack();assert.equal(target.hp,3); // cooldown
+ combat.update(.17);assert.equal(target.hp,3);
+ combat.update(.03);assert.equal(target.hp,2); // contato
+ combat.update(1);combat.attack();combat.update(.20);assert.equal(target.hp,1);
+ target.mesh.position.z=-2;combat.update(1);combat.attack();combat.update(.20);assert.equal(living.length,0);
  assert.equal(defeated,1);
  combat.special();assert.ok(combat.specialCooldown>0);
  combat.tickEffects(.5); // inclui limpeza de ondas e partículas

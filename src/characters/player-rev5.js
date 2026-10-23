@@ -2,6 +2,7 @@
 // Striped Wanderer. The existing player Group remains the physics/camera/save root.
 // All GLB animations are driven by gameplay actions, not by demo timers.
 import {WandererAnimator} from './wanderer/WandererAnimator.js';
+import {PLAYER_ATTACK_DURATIONS} from './player-attack-pose.js';
 import {repairRev5GlbMetadata} from './rev5-glb-compat.js?v=2.2.3-material-fix';
 
 export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5_Optimized.glb';
@@ -125,19 +126,36 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
   function equip(index){
     equipped=index;
     if(!loaded)return;
-    // The gameplay weapons follow the rigged hand; never show the GLB prop
-    // and the game's weapon at the same time.
     if(sword)sword.visible=false;
-    if(weapon){
-      weapon.visible=true;
-      weapon.position.set(...(handMount===meshRoot?[.48,1.08,.22]:[0,-.43,.09]));
+    if(!weapon)return;
+    weapon.visible=true;
+    if(handMount===meshRoot){
+      weapon.position.set(.48,1.08,.22);
       weapon.rotation.set(0,0,-.12);
+    }else{
+      // The GLB sword prop is *actually* a child of LeftHand despite its name.
+      // Reuse the authored position/quaternion rather than inventing a -0.43 offset.
+      const pos=sword?.position;
+      weapon.position.set(pos?.x??.01406238,pos?.y??-.01078378,pos?.z??.07972427);
+      if(sword?.quaternion && weapon.quaternion?.copy)weapon.quaternion.copy(sword.quaternion);
+      else weapon.rotation.set(0,0,-.12);
     }
+    // The player GLB has a separate scene scale of 1.459x.
+    // Cancel that scale for the procedural weapon geometry (and grip radius).
+    weapon.scale.setScalar(1/PLAYER_REV5_SCALE);
   }
   function attack(){if(!loaded)return false;
-    // Shorter clip matches the existing quick melee cooldown better than the
-    // ~2.8s refined showcase; weapon hitboxes remain owned by combat.js.
-    animator.play('SwordAttack_REV3',.10);return true;
+    const name='SwordAttack_REV3';
+    if(animator.activeName===name && animator.current?.isRunning())animator.current.stop();
+    const started=animator.play(name,.08);
+    if(started){
+      const duration=animator.clips.get(name)?.duration;
+      if(duration>0){
+        const target=PLAYER_ATTACK_DURATIONS[equipped]??.34;
+        animator.actions.get(name)?.setEffectiveTimeScale(duration/target);
+      }
+    }
+    return started;
   }
   function special(){if(!loaded)return false;
     castLeft=1.55;
@@ -199,7 +217,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       promise=null; // permite repetir o download sem recarregar a partida
       if(weaponParent && weapon?.parent!==weaponParent){
         weaponParent.add(weapon);
-        weapon.position.y=weaponStartY;weapon.rotation.z=-.12;
+        weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);
       }
       if(meshRoot?.parent===display)display.remove(meshRoot);
       handMount=null;
@@ -232,7 +250,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     handMount=null;
     avatar.visible=true;
     display.visible=false;
-    if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;}
+    if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);}
     loaded=false;
   }
   return {preload,update,equip,attack,special,jump,hurt,die,dispose,

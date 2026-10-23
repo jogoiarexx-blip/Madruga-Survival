@@ -1,4 +1,5 @@
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
+import {createPlayerWeaponRig} from './player-weapons.js';
 // Modelo procedural articulado. As malhas e pivôs pertencem ao mesmo avatar.
 export function createPlayerModel(THREE, scene) {
 // ========== PERSONAGEM ARTICULADO ==========
@@ -71,19 +72,9 @@ function makeArm(x){
     return pivot;
 }
 const leftArm=makeArm(-.47),rightArm=makeArm(.47);
-const weapon = new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,1.15,12),
-    new THREE.MeshStandardMaterial({color:0x8B4513,roughness:.78}));
-weapon.position.set(0,-1.17,.17);
-weapon.rotation.z=-.12;
-rightArm.add(weapon);
-const hammerHead = new THREE.Mesh(new THREE.BoxGeometry(.57,.27,.27),
-    new THREE.MeshStandardMaterial({color:0xc2d0d8,roughness:.52,metalness:.65}));
-hammerHead.position.y=-.55;hammerHead.visible=false;weapon.add(hammerHead);
-const spearHead = new THREE.Mesh(new THREE.ConeGeometry(.13,.42,12),
-    new THREE.MeshStandardMaterial({color:0xe7dfc5,roughness:.38,metalness:.72}));
-spearHead.rotation.z=Math.PI;spearHead.position.y=-.76;spearHead.visible=false;weapon.add(spearHead);
+const weaponRig=createPlayerWeaponRig(THREE,rightArm);
 player.position.set(0,0,0);
 scene.add(player);
 
-return {player, avatar, torso, headRig, leftLeg, rightLeg, leftArm, rightArm, weapon, hammerHead, spearHead};
+return {player, avatar, torso, headRig, leftLeg, rightLeg, leftArm, rightArm, ...weaponRig};
 }

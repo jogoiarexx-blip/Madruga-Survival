@@ -36,7 +36,7 @@ await test('modelo REV5 substitui visual antigo e ancora arma na mão do rig',as
  assert.equal(ctrl.model.getObjectByName('REV4_Sword_RightHand').visible,false);
  assert.equal(ctrl.model.getObjectByName('REV4_Magic_LeftHand').visible,false);
  assert.equal(f.player.children.length,2,'o modelo antigo permanece oculto só como fallback');
- ctrl.equip(2);assert.equal(f.weapon.position.y,-.43);
+ ctrl.equip(2);assert.ok(Math.abs(f.weapon.position.y)<.11);
  ctrl.update(.016,{speed:3,sprinting:false,grounded:true});assert.equal(ctrl.animator.activeName,'Walking');
  ctrl.update(.016,{speed:7,sprinting:true,grounded:true});assert.equal(ctrl.animator.activeName,'Running');
  ctrl.attack();assert.equal(ctrl.animator.activeName,'SwordAttack_REV3');

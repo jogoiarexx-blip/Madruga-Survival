@@ -1,3 +1,4 @@
+import {PLAYER_HIT_PHASES,PLAYER_ATTACK_DURATIONS} from '../characters/player-attack-pose.js';
 // Combate corpo a corpo, especial, dano em inimigos e efeitos temporários.
 export function isInAttackArc(playerPosition, playerYaw, target, radius, cosineThreshold) {
     const dx = target.x - playerPosition.x;
@@ -13,7 +14,8 @@ export function createCombatSystem({THREE,scene,player,enemies,weaponTypes,healt
   onBossDefeated,onEnemyKilled,getLevel,getWeaponIndex,getPlayerYaw,isGameActive,isLocked,
   getWeaponBonus=()=>0,onWeaponHit=()=>{},onSwing=()=>0,
   onAttackStart=()=>{},onSpecialStart=()=>{}}) {
-let attackCooldown=0, specialCooldown=0, attackAnimTimer=0, attackAnimDuration=.2;
+let attackCooldown=0, specialCooldown=0, attackAnimTimer=0, attackAnimDuration=.34;
+let pendingAttack=null;
 const slashEffects=[];
 function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
     if (!enemies.includes(enemy)) return;
@@ -50,42 +52,50 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
     }
     updateHUD();
 }
-function spawnSlashArc(selected){
-    const halfAngle=Math.PI*selected.arc;
-    const effect=new THREE.Group();
+function spawnSlashArc(selected,index){
+    const halfAngle=Math.PI*selected.arc,effect=new THREE.Group();
     effect.rotation.y=getPlayerYaw();
-    effect.position.set(player.position.x,getGroundHeight(player.position.x,player.position.z)+.21,player.position.z);
-    const mesh=new THREE.Mesh(new THREE.RingGeometry(selected.range*.72,selected.range*.82,
+    effect.position.set(player.position.x,getGroundHeight(player.position.x,player.position.z)+1.13,player.position.z);
+    const mesh=new THREE.Mesh(new THREE.RingGeometry(selected.range*.44,selected.range*.49,
         28,1,Math.PI*.5-halfAngle,halfAngle*2),
-        new THREE.MeshBasicMaterial({color:getWeaponIndex()===2?0x9efae8:0xffdf88,
-            transparent:true,opacity:.78,side:THREE.DoubleSide,depthWrite:false}));
-    mesh.rotation.x=-Math.PI/2;effect.add(mesh);scene.add(effect);
-    slashEffects.push({effect,mesh,life:.24});
+        new THREE.MeshBasicMaterial({color:index===2?0x9efae8:0xffdf88,
+            transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
+    mesh.position.z=-.68;effect.add(mesh);scene.add(effect);
+    slashEffects.push({effect,mesh,life:.18});
 }
-function doAttack() {
-    if (attackCooldown > 0 || !isGameActive() || !isLocked()) return;
-    const selected=weaponTypes[getWeaponIndex()];
-    attackCooldown = Math.max(0.22, selected.cooldown - (getLevel()-1)*0.012);
-    attackAnimDuration = attackAnimTimer = Math.min(.40,selected.cooldown*.78);
-    
-    sfx.attack();
-    onAttackStart();
-    spawnSlashArc(selected);
-    let hits = 0;
-    for (const e of [...enemies]) {
-        if (isInAttackArc(player.position, getPlayerYaw(),e.mesh.position, selected.range + e.size * 0.2, Math.cos(Math.PI * selected.arc)) &&
-            Math.abs(e.mesh.position.y - player.position.y) < 2.6) {
-            damageEnemy(e, selected.damage + getWeaponBonus() + Math.floor((getLevel() - 1) / 3)); hits++;
-        }
+function resolveWeaponHit(attack){
+    if(!isGameActive()||!isLocked())return;
+    const {selected,index}=attack;
+    const damage=selected.damage+getWeaponBonus()+Math.floor((getLevel()-1)/3);
+    spawnSlashArc(selected,index);
+    let hits=0;
+    for(const e of [...enemies]){
+      if(isInAttackArc(player.position,getPlayerYaw(),e.mesh.position,
+        selected.range+e.size*.2,Math.cos(Math.PI*selected.arc)) &&
+        Math.abs(e.mesh.position.y-player.position.y)<2.6){
+        damageEnemy(e,damage);hits++;
+      }
     }
-    hits+=onSwing(selected.range,selected.arc,selected.damage+getWeaponBonus()+Math.floor((getLevel()-1)/3),getPlayerYaw())||0;
+    hits+=onSwing(selected.range,selected.arc,damage,getPlayerYaw())||0;
     if(hits)onWeaponHit();
-    if (hits) spawnParticle(player.position.clone().add(new THREE.Vector3(0,1,0)),0xffd07b,5);
+    if(hits)spawnParticle(player.position.clone().add(new THREE.Vector3(0,1,0)),0xffd07b,5);
+}
+function doAttack(){
+    if(attackCooldown>0||!isGameActive()||!isLocked())return false;
+    const index=getWeaponIndex(),selected=weaponTypes[index];
+    if(!selected)return false;
+    attackCooldown=Math.max(.22,selected.cooldown-(getLevel()-1)*.012);
+    attackAnimDuration=PLAYER_ATTACK_DURATIONS[index]??.34;
+    attackAnimTimer=attackAnimDuration;
+    pendingAttack={selected,index,elapsed:0,hitAt:attackAnimDuration*(PLAYER_HIT_PHASES[index]??.55)};
+    sfx.attack();onAttackStart();
+    return true;
 }
 const shockwaves = [];
 function doSpecialAttack() {
     if (specialCooldown > 0 || !isGameActive() || !isLocked()) return;
     specialCooldown = Math.max(5, 9 - getLevel() * 0.35);
+    pendingAttack=null;
     attackAnimDuration = attackAnimTimer = 0.48;
     sfx.boost(); sfx.attack(); onSpecialStart();
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.83, 1.0, 48), new THREE.MeshBasicMaterial({
@@ -107,12 +117,21 @@ function update(dt){
     attackCooldown=Math.max(0,attackCooldown-dt);
     specialCooldown=Math.max(0,specialCooldown-dt);
     attackAnimTimer=Math.max(0,attackAnimTimer-dt);
+    if(pendingAttack){
+      if(getWeaponIndex()!==pendingAttack.index||!isGameActive())pendingAttack=null;
+      else{
+        pendingAttack.elapsed+=Math.max(0,dt);
+        if(pendingAttack.elapsed+1e-8>=pendingAttack.hitAt){
+          const attack=pendingAttack;pendingAttack=null;resolveWeaponHit(attack);
+        }
+      }
+    }
 }
 function tickEffects(dt){
         for(let i=slashEffects.length-1;i>=0;i--){
             const f=slashEffects[i];f.life-=dt;
-            f.mesh.material.opacity=Math.max(0,f.life/.24)*.78;
-            f.effect.scale.setScalar(1+(1-f.life/.24)*.12);
+            f.mesh.material.opacity=Math.max(0,f.life/.18)*.78;
+            f.effect.scale.setScalar(1+(1-f.life/.18)*.12);
             if(f.life<=0){removeMesh(f.effect);slashEffects.splice(i,1);}
         }
         // Partículas e ondas paradas ao abrir o menu de pausa.
@@ -137,5 +156,7 @@ return {attack:doAttack,special:doSpecialAttack,damageEnemy,update,tickEffects,
     get specialCooldown(){return specialCooldown},
     get attackAnimTimer(){return attackAnimTimer},
     get attackAnimDuration(){return attackAnimDuration},
-    get isAttacking(){return attackAnimTimer>0}};
+    get isAttacking(){return attackAnimTimer>0},
+    get attackWeaponIndex(){return pendingAttack?.index??getWeaponIndex()},
+    cancelAttack(){pendingAttack=null;attackAnimTimer=0}};
 }
