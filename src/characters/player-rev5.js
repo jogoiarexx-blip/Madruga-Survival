@@ -178,7 +178,9 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       new GLTFLoader().loadAsync(url)
         .catch(()=>new GLTFLoader().loadAsync(PLAYER_REV5_ORIGINAL_URL))
         // Clones do repositório podem conter apenas as 17 partes do GLB.
-        .catch(()=>loadPlayerRev5Resilient({GLTFLoader,onStatus,manifests:[PLAYER_REV5_PARTS_MANIFEST]}));
+        .catch(originalError=>loadPlayerRev5Resilient({GLTFLoader,onStatus,manifests:[PLAYER_REV5_PARTS_MANIFEST]})
+          .catch(partsError=>{throw Error('REV5 local: '+String(originalError?.message||originalError)+
+            ' | partes: '+String(partsError?.message||partsError));}));
     promise=load.then(gltf=>{
       if(!gltf?.scene||!Array.isArray(gltf.animations))throw Error('Modelo REV5 inválido');
       for(const name of ['Idle','Walking','Running','SwordAttack_REV3','CastMagic','Jump','HitReact','Death']){
