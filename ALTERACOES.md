@@ -1,3 +1,15 @@
+
+## v2.2.6 — Oficina, combate e progressão (2026-10-23)
+- Aba de fabricação com busca textual, categorias, requisitos visíveis e lotes de 1/5/máximo (até 20).
+- Bancada necessária para reparos e melhorias; fogueira necessária para cozinhar.
+- Bandagem criada com fibra e água: cura 25 pontos de vida, sem permitir gastar com saúde cheia.
+- Marreta de ferro (+2 de dano), lança reforçada (+3 existente) e empunhadura (+50% de duração contra desgaste por acertos).
+- As peças de ferro e o trançado são exibidos no modelo, sem duplicar equipamento.
+- Animações REV5 alternam clips reais específicos por arma; impacto só depois da janela de ataque.
+- Save v2 preservado, com migração de novos campos e receitas; crafting puramente transacional.
+- Testes adicionais para estação, lotes, progressão, migração, visuais e 30/60/144 FPS simulados.
+- QA automatizado pelo GitHub Actions; não substitui inspeção visual WebGL em navegador.
+
 ## v2.2.0 — Player Striped Wanderer REV5
 
 Modelo GLB original carregado com GLTFLoader, bonecos procedurais ocultos ao carregar, ações de jogo ligadas a clipes do rig, armas da campanha anexadas à mão do esqueleto. Preservadas colisões, salvamentos, zumbis REV2, construção e combate. Fallback do jogador em caso de indisponibilidade do GLB.

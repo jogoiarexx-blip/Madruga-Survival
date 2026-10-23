@@ -11,7 +11,7 @@ add(n){this.children.push(n)}traverse(fn){fn(this);this.children.forEach(c=>c.tr
 getObjectByName(n){let hit=null;this.traverse(o=>{if(o.name===n)hit=o});return hit}}
 class Mesh extends Node{constructor(g,m){super();this.geometry=g;this.material=m}}
 class Shape{constructor(...args){this.args=args}}
-const THREE={Group:Node,Mesh,MeshStandardMaterial:Shape,CylinderGeometry:Shape,ConeGeometry:Shape,BoxGeometry:Shape};
+const THREE={Group:Node,Mesh,MeshStandardMaterial:Shape,CylinderGeometry:Shape,ConeGeometry:Shape,BoxGeometry:Shape,TorusGeometry:Shape};
 test('pivô da arma coincide com a palma',()=>{
  const arm=new Node(),rig=createPlayerWeaponRig(THREE,arm);
  assert.equal(rig.weapon.parent,undefined);assert.equal(arm.children[0],rig.weapon);

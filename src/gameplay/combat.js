@@ -73,7 +73,7 @@ function resolveWeaponHit(attack){
       if(isInAttackArc(player.position,getPlayerYaw(),e.mesh.position,
         selected.range+e.size*.2,Math.cos(Math.PI*selected.arc)) &&
         Math.abs(e.mesh.position.y-player.position.y)<2.6){
-        damageEnemy(e,damage);hits++;
+        damageEnemy(e,damage,index===1?.65:index===2?.25:.35);hits++;
       }
     }
     hits+=onSwing(selected.range,selected.arc,damage,getPlayerYaw())||0;

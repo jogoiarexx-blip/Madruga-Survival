@@ -7,7 +7,7 @@ export const RESOURCES = Object.freeze({
   cooked:{label:'Carne assada',icon:'🍖'}, iron:{label:'Minério de ferro',icon:'⛏️'},
   seeds:{label:'Sementes',icon:'🌱'},vegetables:{label:'Legumes',icon:'🥕'},
   fish:{label:'Peixe cru',icon:'🐟'},grilledFish:{label:'Peixe assado',icon:'🍤'},
-  stew:{label:'Ensopado de legumes',icon:'🍲'}
+  stew:{label:'Ensopado de legumes',icon:'🍲'},bandage:{label:'Bandagem',icon:'🩹'}
 });
 export const RECIPES = Object.freeze({
   campfire:{label:'Fogueira',cost:{wood:4,stone:4},hint:'Aquece e permite cozinhar'},
@@ -24,7 +24,10 @@ export const RECIPES = Object.freeze({
   hammer:{label:'Marreta',cost:{wood:3,stone:4},hint:'Arma mais forte'},
   spear:{label:'Lança',cost:{wood:4,stone:2,fiber:2},hint:'Ataque de maior alcance'},
   pickaxe:{label:'Picareta de pedra',cost:{wood:3,stone:5},hint:'Exige bancada; minera ferro'},
-  ironSpear:{label:'Reforçar lança com ferro',cost:{iron:6,wood:2},hint:'Exige bancada; +3 dano à lança'},
+  ironSpear:{label:'Reforçar lança com ferro',cost:{iron:6,wood:2},hint:'Bancada · +3 de dano e ponta de ferro'},
+  ironHammer:{label:'Cabeça de marreta de ferro',cost:{iron:5,stone:3,wood:2},hint:'Bancada · +2 de dano e acabamento metálico'},
+  reinforcedGrip:{label:'Empunhadura reforçada',cost:{fiber:6,wood:2,iron:2},hint:'Bancada · aumenta a durabilidade de marreta e lança'},
+  bandage:{label:'Fabricar bandagem',cost:{fiber:3,water:1},hint:'Recupera 25 de vida, pode fabricar várias'},
   repairPickaxe:{label:'Reparar picareta',cost:{wood:1,stone:2},hint:'Exige bancada; restaura durabilidade'},
   repairHammer:{label:'Reparar marreta',cost:{stone:2,wood:1},hint:'Exige bancada; restaura durabilidade'},
   repairSpear:{label:'Reparar lança',cost:{wood:2,iron:1},hint:'Exige bancada; restaura durabilidade'},
@@ -36,8 +39,8 @@ export const DAY_SECONDS = 480;
 export const clamp = n => Math.max(0,Math.min(100,n));
 export function createSurvival() {
   return {hunger:85,thirst:80,stamina:100,warmth:100,days:1,time:DAY_SECONDS*.34,
-    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0},
-    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,skills:createSkills()};
+    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0,bandage:0},
+    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
 }
 export function isNight(state) {
   const t=(state.time%DAY_SECONDS)/DAY_SECONDS;
@@ -105,11 +108,16 @@ export function restoreSurvival(data){
   if(!['pickaxe','ironSpear','fishingRod'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
   if(!Number.isFinite(obj.fishReadyAt)||obj.fishReadyAt<0||obj.fishReadyAt>1e7)return null;
   if(obj.crafted.ironSpear&&!obj.crafted.spear)return null;
+  if(obj.crafted.ironHammer&&!obj.crafted.hammer)return null;
+  if(obj.crafted.reinforcedGrip&&(!obj.crafted.spear||!obj.crafted.hammer))return null;
+  if(!['ironHammer','reinforcedGrip'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
   if(!Object.entries({pickaxe:80,hammer:100,spear:90}).every(([k,max])=>Number.isInteger(obj.durability[k])&&obj.durability[k]>=0&&obj.durability[k]<=max&&(!obj.durability[k]||obj.crafted[k])))return null;
   if(!Number.isInteger(obj.firesBuilt)||obj.firesBuilt<0||obj.firesBuilt>100)return null;
   if(!Number.isInteger(obj.sheltersBuilt)||obj.sheltersBuilt<0||obj.sheltersBuilt>100)return null;
+  obj.gripStrikes=data.gripStrikes??0;
+  if(!Number.isInteger(obj.gripStrikes)||obj.gripStrikes<0||obj.gripStrikes>1)return null;
   const skills=restoreSkills(data.skills);if(!skills)return null;
   return {hunger:obj.hunger,thirst:obj.thirst,stamina:obj.stamina,warmth:obj.warmth,
     time:obj.time,days:obj.days,inventory:Object.fromEntries(Object.keys(RESOURCES).map(k=>[k,obj.inventory[k]])),
-    crafted:{...obj.crafted},fishReadyAt:obj.fishReadyAt,durability:{...obj.durability},firesBuilt:obj.firesBuilt,sheltersBuilt:obj.sheltersBuilt,skills};
+    crafted:{...obj.crafted},fishReadyAt:obj.fishReadyAt,durability:{...obj.durability},gripStrikes:obj.gripStrikes,firesBuilt:obj.firesBuilt,sheltersBuilt:obj.sheltersBuilt,skills};
 }

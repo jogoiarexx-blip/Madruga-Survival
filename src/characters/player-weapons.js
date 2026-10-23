@@ -28,6 +28,31 @@ export function createPlayerWeaponRig(THREE,rightArm){
   part(spear,new THREE.CylinderGeometry(.075,.09,.12,12),metal,0,1.61,0);
   const spearHead=part(spear,new THREE.ConeGeometry(.16,.50,12),tip,0,1.91,0);
   part(spear,new THREE.BoxGeometry(.32,.055,.06),metal,0,1.68,0);
+  // Peças adicionais acionadas pelo craft, sem duplicar os modelos das armas.
+  const iron=new THREE.MeshStandardMaterial({color:0xcad2d7,roughness:.38,metalness:.75});
+  const weave=new THREE.MeshStandardMaterial({color:0x8a7855,roughness:.95});
+  const hammerIron=new THREE.Group();hammerIron.name='Marreta - cabeça de ferro';hammer.add(hammerIron);
+  for(const side of [-1,1]){
+    part(hammerIron,new THREE.BoxGeometry(.16,.35,.35),iron,side*.30,.95,0);
+  }
+  const spearIron=new THREE.Group();spearIron.name='Lança - ponta de ferro';spear.add(spearIron);
+  part(spearIron,new THREE.ConeGeometry(.17,.56,12),iron,0,1.91,0);
+  const grips=[];
+  for(const model of [hammer,spear]){
+    const bands=new THREE.Group();bands.name='Trançado reforçado';model.add(bands);
+    for(let i=0;i<5;i++){
+      const ring=part(bands,new THREE.TorusGeometry(.062,.012,5,12),weave,0,.045+i*.07,0);
+      ring.rotation.x=Math.PI/2;
+    }
+    grips.push(bands);
+  }
+  function setWeaponUpgrades(crafted={}){
+    hammerIron.visible=!!crafted.ironHammer;
+    spearIron.visible=!!crafted.ironSpear;
+    spearHead.visible=!crafted.ironSpear;
+    grips.forEach(group=>{group.visible=!!crafted.reinforcedGrip});
+  }
+  setWeaponUpgrades();
   const models=[broom,hammer,spear];let activeIndex=0;
   function equipWeaponVisual(index){
     if(!Number.isInteger(index)||index<0||index>=models.length)return false;
@@ -36,5 +61,5 @@ export function createPlayerWeaponRig(THREE,rightArm){
     return true;
   }
   equipWeaponVisual(0);
-  return {weapon,hammerHead,spearHead,weaponModels:models,equipWeaponVisual,get activeWeaponIndex(){return activeIndex}};
+  return {weapon,hammerHead,spearHead,weaponModels:models,equipWeaponVisual,setWeaponUpgrades,get activeWeaponIndex(){return activeIndex}};
 }

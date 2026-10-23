@@ -1,6 +1,6 @@
 import {IDLE_GRIP_POSES} from './player-weapons.js';
 export const PLAYER_HIT_PHASES=Object.freeze([.55,.57,.48]);
-export const PLAYER_ATTACK_DURATIONS=Object.freeze([.34,.48,.37]);
+export const PLAYER_ATTACK_DURATIONS=Object.freeze([.36,.53,.40]);
 const BASE={armX:-.20,armY:0,armZ:-.08,gripX:.24,gripZ:-.56,torsoY:0,leftArmX:-.05};
 const CLIPS=[
  [[0,{...BASE}],[.22,{armX:-2.15,armY:-.24,armZ:-.42,gripX:.22,gripZ:-.30,torsoY:.34,leftArmX:-.45}],

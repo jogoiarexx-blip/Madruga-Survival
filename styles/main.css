@@ -286,3 +286,18 @@ body.placing #interact-hint{display:none}
  box-shadow:0 3px 15px #0009;font:600 13px system-ui,sans-serif;text-align:center;}
 #player-model-retry{margin-left:10px;padding:6px 11px;color:#141d18;background:#c8e0b8;
  border:0;border-radius:6px;font-weight:700;cursor:pointer;}
+
+/* v2.2.6: oficina pesquisável, custo legível e cartões de fabricação */
+.craft-toolbar{display:grid;grid-template-columns:minmax(150px,2fr) minmax(120px,1fr) minmax(110px,1fr);gap:9px;margin:14px 0}
+.craft-toolbar input,.craft-toolbar select{min-width:0;width:100%;color:#f4f4ec;background:#1a302f;border:1px solid #507b73;border-radius:8px;padding:10px;font:inherit}
+.craft-toolbar input:focus-visible,.craft-toolbar select:focus-visible{outline:2px solid #e4bd75;outline-offset:2px}
+.craft-count{font-size:12px;color:#c9d8d1;margin:8px 0 12px}
+.craft-section{margin:10px 0 16px}
+.craft-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr));gap:10px}
+.craft-card{width:100%;display:flex;flex-direction:column;text-align:left;gap:5px;min-height:115px;border:1px solid #456354}
+.craft-card .craft-requirements{display:block;font-size:11px;line-height:1.4;color:#ffc895}
+.craft-card.craft-available{border-color:#79a66a}
+.craft-card.craft-available .craft-requirements{color:#a8e6a9}
+.craft-card:disabled{opacity:.70;cursor:not-allowed}
+.craft-card[hidden],.craft-section[hidden]{display:none!important}
+@media(max-width:620px){.craft-toolbar{grid-template-columns:1fr 1fr}.craft-search{grid-column:1 / -1}.craft-grid{grid-template-columns:1fr}}

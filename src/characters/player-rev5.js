@@ -114,7 +114,7 @@ export function findRev5Hand(root,side='Left') {
 
 export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus=()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
-  let equipped=0,castLeft=0,handMount=null;
+  let equipped=0,castLeft=0,handMount=null,swingIndex=0;
   const weaponParent=weapon?.parent,weaponStartY=weapon?.position?.y ?? -1.17;
   const display=new THREE.Group();
   display.name='Player_REV5_Visual';
@@ -145,15 +145,17 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     weapon.scale.setScalar(1/PLAYER_REV5_SCALE);
   }
   function attack(){if(!loaded)return false;
-    const name='SwordAttack_REV3';
-    if(animator.activeName===name && animator.current?.isRunning())animator.current.stop();
-    const started=animator.play(name,.08);
+    // Cada arma utiliza clips reais diferentes do GLB REV5.
+    const names=equipped===0?['Attack','SwordAttack_REV3']:
+      equipped===1?['SwordAttack_Refined','SwordAttack_REV3']:
+                   ['SwordAttack_REV3','SwordAttack_Refined'];
+    const name=names[swingIndex++%names.length];
+    if(animator.activeName===name&&animator.current?.isRunning())animator.current.stop();
+    const started=animator.play(name,.07);
     if(started){
       const duration=animator.clips.get(name)?.duration;
-      if(duration>0){
-        const target=PLAYER_ATTACK_DURATIONS[equipped]??.34;
-        animator.actions.get(name)?.setEffectiveTimeScale(duration/target);
-      }
+      const target=PLAYER_ATTACK_DURATIONS[equipped]??.36;
+      if(duration>0&&target>0)animator.actions.get(name)?.setEffectiveTimeScale(duration/target);
     }
     return started;
   }

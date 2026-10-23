@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v2.2.0 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v2.2.6 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -14,12 +14,12 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import { createPlayerModel } from './characters/player-model.js?v=2.2.5-player-weapons';
+import { createPlayerModel } from './characters/player-model.js?v=2.2.6-craft-combat';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js';
-import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.5-player-weapons';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.6-craft-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js?v=2.2.5-player-weapons';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.6-craft-combat';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
@@ -33,6 +33,7 @@ import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
+import {craftAvailability,craftItem} from './gameplay/crafting.js?v=2.2.6-craft';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
@@ -87,7 +88,7 @@ const cameraObstacles = [ground];
 const natureAssets = createNatureAssets(THREE);
 
 // ========== PERSONAGEM ==========
-const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,equipWeaponVisual} =
+const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,equipWeaponVisual,setWeaponUpgrades} =
     createPlayerModel(THREE,scene);
 const modelBanner=document.getElementById('player-model-status');
 const modelMessage=document.getElementById('player-model-message');
@@ -285,6 +286,7 @@ function equipWeapon(index) {
     currentWeapon = index;
     const selected = weaponTypes[index];
     equipWeaponVisual(index);
+    setWeaponUpgrades(survival.crafted);
     playerRev5.equip(index);
     showToast(`⚔ ${selected.name} equipada`);
     updateHUD(); return true;
@@ -636,11 +638,19 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
     onEnemyKilled:(type)=>{kills++;if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
-    getWeaponBonus:()=>currentWeapon===2&&survival.crafted.ironSpear?3:0,
+    getWeaponBonus:()=>currentWeapon===2&&survival.crafted.ironSpear?3:
+       currentWeapon===1&&survival.crafted.ironHammer?2:0,
     onSwing:(range,arc,damage,yaw)=>wildlife.attack(player.position,yaw,range,arc,damage),
     onAttackStart:()=>playerRev5.attack(),onSpecialStart:()=>playerRev5.special(),
     onWeaponHit:()=>{const tool=currentWeapon===1?'hammer':currentWeapon===2?'spear':null;
-        if(tool&&useTool(survival,tool,1)&&!canUseTool(survival,tool)){equipWeapon(0);showToast('⚠ Arma quebrada! Repare na bancada.');}},
+        if(!tool)return;
+        if(survival.crafted.reinforcedGrip){
+          survival.gripStrikes=(survival.gripStrikes+1)%2;
+          if(survival.gripStrikes===1)return;
+        }
+        if(useTool(survival,tool,1)&&!canUseTool(survival,tool)){
+          equipWeapon(0);showToast('⚠ Arma quebrada! Repare na bancada.');
+        }},
     getLevel:()=>level,getWeaponIndex:()=>currentWeapon,getPlayerYaw:()=>playerYaw,
     isGameActive:()=>gameActive,isLocked:()=>controls.isLocked});
 
@@ -753,6 +763,7 @@ const skillsUI=createSkillsUI({getState:()=>survival,onClose:closeSkills});
 const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume:consume,
     onClose:closeInventory,onRotate:rotateBuild,onDismantle:deconstructNear,onRepair:repairNear,onFish:fishNearby,
     getRotation:()=>rotationOffset*90,getCanCraft:canCraftAtPosition,
+    getCraftStatus:(id,cost)=>craftingStatus(id,cost),
     getRecipeCost:id=>recipeCost(id,RECIPES[id]?.cost,survival.skills)});
 const storageUI=createStorageUI({getInventory:()=>survival.inventory,onTransfer:(chest,key,direction,amount)=>{
     if(!gameActive||!buildings.structures.includes(chest))return;
@@ -855,48 +866,53 @@ function fishNearby(){
     return result.ok;
 }
 function consume(type){
-    if(!gameActive)return false;
-    if(!useConsumable(survival,type)){
-        showToast('Você não tem este alimento ou água na mochila');return false;
-    }
-    if(type==='water')poisonTimer=Math.max(0,poisonTimer-3);
-    sfx.heal();showToast(type==='water'?'💧 Sede recuperada!':'🍖 Fome recuperada!');updateHUD();return true;
+  if(!gameActive)return false;
+  if(type==='bandage'){
+    if((survival.inventory.bandage||0)<1){showToast('🩹 Sem bandagens na mochila');return false}
+    if(health>=maxHealth){showToast('❤️ Vida já está no máximo');return false}
+    survival.inventory.bandage--;
+    health=Math.min(maxHealth,health+25);
+    sfx.heal();showToast('🩹 Bandagem aplicada: +25 de vida');updateHUD();saveProgress();return true;
+  }
+  if(!useConsumable(survival,type)){
+      showToast('Você não tem este alimento ou água na mochila');return false;
+  }
+  if(type==='water')poisonTimer=Math.max(0,poisonTimer-3);
+  sfx.heal();showToast(type==='water'?'💧 Sede recuperada!':'🍖 Fome recuperada!');
+  updateHUD();saveProgress();return true;
 }
-function canCraftAtPosition(recipe){
-    if(recipe==='hammer'||recipe==='spear')return !survival.crafted[recipe]&&(recipe!=='spear'||survival.crafted.hammer);
-    if(['cooked','grilledFish','stew'].includes(recipe))return buildings.near('campfire',player.position,6);
-    if(recipe==='fishingRod')return !survival.crafted.fishingRod;
-    if(['pickaxe','ironSpear','repairPickaxe','repairHammer','repairSpear'].includes(recipe)){
-        if(!buildings.near('workbench',player.position,6))return false;
-        if(recipe==='pickaxe')return !survival.crafted.pickaxe;
-        if(recipe==='ironSpear')return survival.crafted.spear&&!survival.crafted.ironSpear;
-        const tool=recipe.slice('repair'.length).toLowerCase();
-        return !!survival.crafted[tool]&&survival.durability[tool]<TOOL_MAX[tool];
-    }
-    return true;
+function craftingStatus(recipe,cost=recipeCost(recipe,RECIPES[recipe]?.cost,survival.skills)){
+  if(!gameActive)return {ok:false,reason:'Inicie o jogo para fabricar',maxBatch:0,missing:[]};
+  return craftAvailability(survival,recipe,{
+    cost,workbench:buildings.near('workbench',player.position,6),
+    campfire:buildings.near('campfire',player.position,6),
+    yieldCount:['cooked','grilledFish','stew'].includes(recipe)?cookedYield(skillLevel(survival,'crafting')):1
+  });
 }
-function craft(recipe){
-    if(!gameActive||!RECIPES[recipe])return false;
-    if(!canCraftAtPosition(recipe)){
-        showToast('Precisa da bancada/fogueira ou o equipamento já foi produzido.');return false;
-    }
-    if(isStructureRecipe(recipe))return startPlacement(recipe);
-    const cost=recipeCost(recipe,RECIPES[recipe].cost,survival.skills);
-    if(!canAfford(survival,recipe,cost)){showToast('Faltam recursos! Confira os custos da mochila.');return false;}
-    if(!spendRecipe(survival,recipe,cost))return false;
-    if(recipe==='fishingRod')survival.crafted.fishingRod=true;
-    if(['hammer','spear','pickaxe'].includes(recipe)){
-        makeTool(survival,recipe);
-        if(recipe==='hammer'){unlockedWeaponCount=Math.max(2,unlockedWeaponCount);equipWeapon(1);}
-        if(recipe==='spear'){unlockedWeaponCount=3;equipWeapon(2);}
-    }
-    if(recipe==='ironSpear')survival.crafted.ironSpear=true;
-    if(recipe.startsWith('repair'))restoreTool(survival,recipe.slice(6).toLowerCase());
-    const cooking=['cooked','grilledFish','stew'].includes(recipe);
-    if(cooking)addResource(survival,recipe,cookedYield(skillLevel(survival,'crafting')));
-    earnSkill('crafting',cooking?14:22);
-    sfx.boost();showToast(`🔨 ${RECIPES[recipe].label} — fabricado!`);
-    updateHUD();saveProgress();return true;
+function canCraftAtPosition(recipe){return craftingStatus(recipe).ok}
+function craft(recipe,quantity=1){
+  if(!gameActive||!RECIPES[recipe])return false;
+  if(isStructureRecipe(recipe)){
+    if(quantity!==1)return false;
+    return startPlacement(recipe);
+  }
+  const cost=recipeCost(recipe,RECIPES[recipe].cost,survival.skills);
+  const status=craftingStatus(recipe,cost);
+  if(!status.ok){showToast('⚠ '+status.reason);return false}
+  const result=craftItem(survival,recipe,quantity,{
+    cost,workbench:buildings.near('workbench',player.position,6),
+    campfire:buildings.near('campfire',player.position,6),
+    yieldCount:['cooked','grilledFish','stew'].includes(recipe)?cookedYield(skillLevel(survival,'crafting')):1
+  });
+  if(!result.ok){showToast('⚠ '+result.reason);return false}
+  if(recipe==='hammer'){unlockedWeaponCount=Math.max(2,unlockedWeaponCount);equipWeapon(1)}
+  if(recipe==='spear'){unlockedWeaponCount=3;equipWeapon(2)}
+  if(['ironSpear','ironHammer','reinforcedGrip'].includes(recipe))setWeaponUpgrades(survival.crafted);
+  const cooking=['cooked','grilledFish','stew'].includes(recipe);
+  earnSkill('crafting',Math.min(300,(cooking?14:22)*quantity));
+  sfx.boost();
+  showToast('🔨 '+RECIPES[recipe].label+' · '+(result.produced>1?'+'+result.produced:'fabricado')+'!');
+  updateHUD();saveProgress();return true;
 }
 function openInventory(){
     if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen)return;
