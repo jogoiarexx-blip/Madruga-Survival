@@ -14,7 +14,7 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import { createPlayerModel } from './characters/player-model.js';
+import { createPlayerModel } from './characters/player-model.js?v=2.2.5-player-weapons';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.5-player-weapons';
 import { createEnemySpawner } from './characters/enemy-factory.js';
