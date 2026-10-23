@@ -104,6 +104,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
     c.status.textContent=available.reason?
       (available.missing?.length?missingCostLabel(available.missing,RESOURCES)+' · ':'')+available.reason:
       isStructureRecipe(id)?'Prévia gratuita · pagamento na confirmação':
+      available.fromChests?'✓ Usando mochila + baús próximos':
       available.station==='workbench'?'✓ Bancada disponível':
       available.station==='campfire'?'✓ Fogueira próxima':'✓ Pronto para fabricar';
     c.item.disabled=!available.ok||(!isStructureRecipe(id)&&count>available.maxBatch)||count<1;

@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v2.2.6 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v2.2.7 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -14,26 +14,26 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import { createPlayerModel } from './characters/player-model.js?v=2.2.6-craft-combat';
+import { createPlayerModel } from './characters/player-model.js?v=2.2.7-chest-craft';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js';
-import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.6-craft-combat';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.7-chest-craft';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js?v=2.2.6-craft-combat';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.7-chest-craft';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,addResource,useConsumable,spendRecipe,canAfford,RECIPES} from './gameplay/survival.js';
 import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.2.7-chest-craft';
 import {createTouchControls} from './input/touch-controls.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
-import {craftAvailability,craftItem} from './gameplay/crafting.js?v=2.2.6-craft';
+import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.2.7-chest-craft';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
@@ -696,11 +696,21 @@ function movePlacement(axis,delta){
     if(!placement)return;
     nudgePlacement(placement,axis,delta);updatePlacementPreview();
 }
+function nearbyCraftChests(){
+    return buildings.structures.filter(b=>b.type==='chest' && b.items &&
+      Math.hypot(b.x-player.position.x,b.z-player.position.z)<=6);
+}
+function constructionCost(type){
+    return recipeCost(type,RECIPES[type].cost,survival.skills);
+}
+function hasConstructionMaterials(type,cost=constructionCost(type)){
+    return craftAvailability(survival,type,{cost,chests:nearbyCraftChests()}).ok;
+}
 function updatePlacementPreview(){
     if(!placement||!placementGhost)return;
     const status=placementStatus(placement,player.position,playerYaw,
        (...args)=>buildings.canPlace(...args),
-       type=>canAfford(survival,type,recipeCost(type,RECIPES[type].cost,survival.skills)),
+       type=>hasConstructionMaterials(type),
        buildings.structures);
     placementInfo=status;
     const c=status.candidate;
@@ -716,7 +726,7 @@ function updatePlacementPreview(){
 function startPlacement(recipe){
     if(!gameActive||!isStructureRecipe(recipe)||!RECIPES[recipe])return false;
     const cost=recipeCost(recipe,RECIPES[recipe].cost,survival.skills);
-    if(!canAfford(survival,recipe,cost)){showToast('Materiais insuficientes para construir.');return false;}
+    if(!hasConstructionMaterials(recipe,cost)){showToast('Materiais insuficientes na mochila e nos baús próximos.');return false;}
     if(buildings.structures.length>=MAX_STRUCTURES){showToast('Limite de construções atingido.');return false;}
     // A construção real só acontece na confirmação; o holograma não salva nem colide.
     releasePlacement();
@@ -735,13 +745,14 @@ function confirmPlacement(){
     if(!gameActive||!placement)return false;
     // Revalida com a localização atual e confirma como uma transação única.
     const cost=recipeCost(placement.type,RECIPES[placement.type].cost,survival.skills);
+    let reservation=null;
     const result=commitPlacement({
       plan:placement,position:player.position,yaw:playerYaw,structures:buildings.structures,
       canPlace:(...args)=>buildings.canPlace(...args),
-      canAfford:type=>canAfford(survival,type,cost),
-      spend:type=>spendRecipe(survival,type,cost),
+      canAfford:type=>hasConstructionMaterials(type,cost),
+      spend:()=>{reservation=reserveCraftMaterials(survival,cost,nearbyCraftChests());return reservation.ok;},
       place:c=>buildings.place(placement.type,c.x,c.z,c.rotation||0,{preserveCoordinates:!!c.snapped}),
-      refund:()=>{for(const [id,count] of Object.entries(cost))addResource(survival,id,count);}
+      refund:()=>reservation?.refund(),
     });
     if(!result.ok){updatePlacementPreview();showToast(result.reason);return false;}
     const type=placement.type;
@@ -884,7 +895,7 @@ function consume(type){
 function craftingStatus(recipe,cost=recipeCost(recipe,RECIPES[recipe]?.cost,survival.skills)){
   if(!gameActive)return {ok:false,reason:'Inicie o jogo para fabricar',maxBatch:0,missing:[]};
   return craftAvailability(survival,recipe,{
-    cost,workbench:buildings.near('workbench',player.position,6),
+    cost,chests:nearbyCraftChests(),workbench:buildings.near('workbench',player.position,6),
     campfire:buildings.near('campfire',player.position,6),
     yieldCount:['cooked','grilledFish','stew'].includes(recipe)?cookedYield(skillLevel(survival,'crafting')):1
   });
@@ -900,7 +911,7 @@ function craft(recipe,quantity=1){
   const status=craftingStatus(recipe,cost);
   if(!status.ok){showToast('⚠ '+status.reason);return false}
   const result=craftItem(survival,recipe,quantity,{
-    cost,workbench:buildings.near('workbench',player.position,6),
+    cost,chests:nearbyCraftChests(),workbench:buildings.near('workbench',player.position,6),
     campfire:buildings.near('campfire',player.position,6),
     yieldCount:['cooked','grilledFish','stew'].includes(recipe)?cookedYield(skillLevel(survival,'crafting')):1
   });

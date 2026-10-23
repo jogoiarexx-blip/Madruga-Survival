@@ -1,9 +1,58 @@
 // Craft integrado: regras puras, feedback de requisitos e transação atômica.
 // Estruturas continuam usando commitPlacement, com prévia antes do pagamento.
-import {RECIPES,canAfford,spendRecipe,addResource} from './survival.js';
+import {RECIPES,RESOURCES,addResource} from './survival.js';
+import {validChestItems} from './storage.js';
 import {isStructureRecipe} from './placement.js';
 import {TOOL_MAX,makeTool,restoreTool} from './tools.js';
 export const CRAFT_BATCH_LIMIT=20;
+// Lista validada e deduplicada: um mesmo baú não pode ser contabilizado duas vezes.
+export function eligibleCraftChests(chests=[]){
+ if(!Array.isArray(chests))return [];
+ const seen=new Set(),available=[];
+ for(const chest of chests){
+   if(!chest?.items||!validChestItems(chest.items)||seen.has(chest.items))continue;
+   seen.add(chest.items);available.push(chest);
+ }
+ return available;
+}
+export function materialStock(state,key,chests=[]){
+ if(!Object.hasOwn(RESOURCES,key))return 0;
+ return (state?.inventory?.[key]||0)+eligibleCraftChests(chests).reduce((n,c)=>n+(c.items[key]||0),0);
+}
+// Reserva transacional reutilizável: mochila primeiro, depois baús próximos.
+// O token de reembolso só pode ser usado uma vez e devolve a cada origem.
+export function reserveCraftMaterials(state,cost,chests=[]){
+ if(!state?.inventory||!cost||typeof cost!=='object'||Array.isArray(cost))
+    return {ok:false,reason:'Materiais inválidos'};
+ const entries=Object.entries(cost);
+ if(!entries.length||entries.some(([id,n])=>!Object.hasOwn(RESOURCES,id)||!Number.isInteger(n)||n<=0))
+    return {ok:false,reason:'Custo inválido'};
+ const supplies=[{items:state.inventory,fromChest:false},
+   ...eligibleCraftChests(chests).filter(c=>c.items!==state.inventory)
+    .map(c=>({items:c.items,fromChest:true}))];
+ const allocations=[];
+ for(const [key,needed] of entries){
+   let remaining=needed;
+   for(const source of supplies){
+     const available=source.items[key]||0;
+     if(!Number.isInteger(available)||available<0) return {ok:false,reason:'Estoque inválido'};
+     const used=Math.min(available,remaining);
+     if(used>0){allocations.push({items:source.items,key,used,fromChest:source.fromChest});remaining-=used;}
+     if(!remaining)break;
+   }
+   if(remaining)return {ok:false,reason:'Materiais insuficientes'};
+ }
+ for(const a of allocations)a.items[a.key]-=a.used;
+ let refunded=false;
+ return {ok:true,fromChests:allocations.some(a=>a.fromChest),
+   refund(){
+     if(refunded)return false;
+     for(const a of allocations)a.items[a.key]+=a.used;
+     refunded=true;return true;
+   }
+ };
+}
+
 const COOKING=new Set(['cooked','grilledFish','stew']);
 const REPAIRS={repairHammer:'hammer',repairSpear:'spear',repairPickaxe:'pickaxe'};
 const UPGRADES={ironSpear:'spear',ironHammer:'hammer',reinforcedGrip:'spear'};
@@ -35,21 +84,21 @@ function requirement(state,id){
  }
  return '';
 }
-export function craftAvailability(state,id,{cost=RECIPES[id]?.cost,workbench=false,campfire=false,yieldCount=1}={}){
+export function craftAvailability(state,id,{cost=RECIPES[id]?.cost,workbench=false,campfire=false,yieldCount=1,chests=[]}={}){
  const recipe=RECIPES[id];
  if(!recipe||!state?.inventory||!cost)return {ok:false,reason:'Receita inexistente',maxBatch:0,missing:[]};
  const station=CRAFT_STATIONS[id]||'hand';
  const cap=batchable(id)?CRAFT_BATCH_LIMIT:1;
  const missing=Object.entries(cost).filter(([resource,num])=>
-    !Number.isInteger(num)||num<1||(state.inventory[resource]||0)<num)
-   .map(([resource,num])=>({resource,need:num,have:state.inventory[resource]||0}));
+    !Object.hasOwn(RESOURCES,resource)||!Number.isInteger(num)||num<1||materialStock(state,resource,chests)<num)
+   .map(([resource,num])=>({resource,need:num,have:materialStock(state,resource,chests)}));
  const blocked=requirement(state,id);
  const stationBlocked=station==='workbench'&&!workbench?'Aproxime-se de uma bancada':
     station==='campfire'&&!campfire?'Aproxime-se de uma fogueira':'';
  let max=cap;
  for(const [resource,amount] of Object.entries(cost)){
    if(!Number.isInteger(amount)||amount<1){max=0;break;}
-   max=Math.min(max,Math.floor((state.inventory[resource]||0)/amount));
+   max=Math.min(max,Math.floor(materialStock(state,resource,chests)/amount));
  }
  if(batchable(id)){
    const resultId=id,per=Math.max(1,Math.floor(yieldCount));
@@ -57,7 +106,8 @@ export function craftAvailability(state,id,{cost=RECIPES[id]?.cost,workbench=fal
  }
  const reason=blocked||stationBlocked||(max===0?
     missing.length?'Materiais insuficientes':'Mochila cheia':'');
- return {ok:!reason,maxBatch:reason?0:max,missing,reason,station,cost,category:craftCategory(id)};
+ return {ok:!reason,maxBatch:reason?0:max,missing,reason,station,cost,category:craftCategory(id),
+  fromChests:eligibleCraftChests(chests).some(c=>Object.keys(cost).some(key=>(c.items[key]||0)>0))};
 }
 export function craftItem(state,id,quantity=1,options={}){
  if(isStructureRecipe(id))return {ok:false,reason:'Construções exigem posicionamento'};
@@ -68,18 +118,23 @@ export function craftItem(state,id,quantity=1,options={}){
  if(quantity>status.maxBatch)return {ok:false,reason:'Sem materiais ou espaço para essa quantidade'};
  if(!batchable(id)&&quantity!==1)return {ok:false,reason:'Equipamentos são fabricados uma vez'};
  const cost=Object.fromEntries(Object.entries(status.cost).map(([k,v])=>[k,v*quantity]));
- if(!canAfford(state,id,cost)||!spendRecipe(state,id,cost))
-  return {ok:false,reason:'Materiais mudaram durante a fabricação'};
+ const reserved=reserveCraftMaterials(state,cost,options.chests||[]);
+ if(!reserved.ok)return {ok:false,reason:reserved.reason};
  let produced=quantity;
- if(id==='fishingRod')state.crafted.fishingRod=true;
- else if(['hammer','spear','pickaxe'].includes(id))makeTool(state,id);
- else if(Object.hasOwn(UPGRADES,id))state.crafted[id]=true;
- else if(Object.hasOwn(REPAIRS,id))restoreTool(state,REPAIRS[id]);
- else if(batchable(id)){
-  produced=quantity*Math.max(1,Math.floor(options.yieldCount||1));
-  addResource(state,id,produced);
+ try{
+   if(id==='fishingRod')state.crafted.fishingRod=true;
+   else if(['hammer','spear','pickaxe'].includes(id))makeTool(state,id);
+   else if(Object.hasOwn(UPGRADES,id))state.crafted[id]=true;
+   else if(Object.hasOwn(REPAIRS,id))restoreTool(state,REPAIRS[id]);
+   else if(batchable(id)){
+     produced=quantity*Math.max(1,Math.floor(options.yieldCount||1));
+     if(!addResource(state,id,produced))throw Error('Não foi possível adicionar o resultado');
+   }
+ }catch(_){
+   reserved.refund();
+   return {ok:false,reason:'Falha ao produzir; materiais devolvidos'};
  }
- return {ok:true,produced,recipe:id,quantity};
+ return {ok:true,produced,recipe:id,quantity,fromChests:reserved.fromChests};
 }
 export function missingCostLabel(missing,resources){
  return missing.map(({resource,need,have})=>
