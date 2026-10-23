@@ -67,7 +67,8 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,g
     const usingGithub=typeof location!=='undefined' && /(^|\.)github\.io$/.test(location.hostname);
     // Usa a transferência em partes apenas no GitHub Pages; no pacote local há o GLB direto.
     const load=usingGithub?loadRev2Parts({GLTFLoader}).catch(()=>new GLTFLoader().loadAsync(url)):
-      new GLTFLoader().loadAsync(url);
+      // Também habilitar o rig original quando o clone local guarda só as partes.
+      new GLTFLoader().loadAsync(url).catch(()=>loadRev2Parts({GLTFLoader}));
     loading=load.then(gltf=>{
       if(!gltf?.scene||!gltf.animations?.length)throw new Error('GLB sem malha ou animações');
       asset=gltf;
