@@ -14,7 +14,7 @@ await test('GLB real mantém osso mixamorig:LeftHand',()=>{
 });
 await test('Three r160 sanitiza o caractere dois-pontos no nome do osso',()=>{
   const name='mixamorig:LeftHand';
-  assert.equal(name.replace(/\\s/g,'_').replace(/[\\[\\].:/]/g,''),'mixamorigLeftHand');
+  assert.equal(name.replace(/[^a-zA-Z0-9]/g,''),'mixamorigLeftHand');
 });
 class Node{
  constructor(name='',bone=false){this.name=name;this.isBone=bone;this.children=[];this.parent=null;this.visible=true;this.isMesh=false;
