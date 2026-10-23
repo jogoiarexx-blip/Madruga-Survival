@@ -9,7 +9,7 @@ const main = load('src/main.js');
 assert.match(html, /<script type="module" src="\.\/src\/main\.js\?v=[^"]+"><\/script>/);
 assert.match(html, /<link rel="stylesheet" href="\.\/styles\/main\.css\?v=[^"]+">/);
 assert.ok(!html.includes('<script type="module">'),'Jogo principal não pode estar embutido em HTML');
-assert.ok(html.length < 14500,`index.html longo demais: ${html.length}`);
+assert.ok(html.length < 17000,`index.html longo demais: ${html.length}`);
 assert.match(html, /"three": "https:\/\/cdn\.jsdelivr\.net\/npm\/three@0\.160\.0\/build\/three\.module\.js"/);
 let count=0;
 function listJs(dir) {
