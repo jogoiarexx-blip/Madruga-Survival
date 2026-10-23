@@ -58,7 +58,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
    recipeCards[id]={item,heading,costs,info,status,categoryId};
  }
  function getStatus(id){
-  const state=getState(),cost=getRecipeCost(id)||RECIPES[id].cost;
+  const state=getState(),key=id,cost=getRecipeCost(key)||RECIPES[key].cost;
   const fallback={ok:!!getCanCraft(id),reason:'Precisa desbloquear ou aproximar-se da estação',maxBatch:1,missing:[]};
   return getCraftStatus?getCraftStatus(id,cost):fallback;
  }
