@@ -4,7 +4,7 @@ import {readFileSync,existsSync,writeFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {join,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
-const root=dirname(fileURLToPath(new URL('../',import.meta.url)));
+const root=fileURLToPath(new URL('../',import.meta.url));
 function materialize(folder,filename){
   const base=join(root,'assets','models'),parts=join(base,folder);
   const manifest=JSON.parse(readFileSync(join(parts,'manifest.json'),'utf8'));
