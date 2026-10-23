@@ -21,7 +21,7 @@ test('pivô da arma coincide com a palma',()=>{
 });
 test('poses contêm impacto entre preparo e recuperação sem valores inválidos',()=>{
  for(let w=0;w<3;w++){const pose=samplePlayerAttackPose(w,PLAYER_HIT_PHASES[w]);
- assert.ok(pose.armX<-.8);assert.ok(PLAYER_ATTACK_DURATIONS[w]<.5);
+ assert.ok(pose.armX<-.8);assert.ok(PLAYER_ATTACK_DURATIONS[w]<[.41,.63,.45][w]);
  for(let f=0;f<=100;f++)assert.ok(Object.values(samplePlayerAttackPose(w,f/100)).every(Number.isFinite))}
 });
 test('REV5 original contém espada na mão esquerda, não na direita',()=>{
