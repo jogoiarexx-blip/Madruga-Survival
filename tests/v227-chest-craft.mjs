@@ -61,7 +61,7 @@ test('falha de posicionamento retorna materiais para baú e mochila',()=>{
  assert.equal(JSON.stringify([s.inventory,c.items]),old);
 });
 test('baú distante não é usado e melhoria exige bancada',()=>{
- const s=createSurvival(),c=chest({wood:40,stone:40,iron:40});
+ const s=createSurvival(),c=chest({wood:20,stone:20,iron:20});
  assert.equal(craftAvailability(s,'hammer').ok,false);
  assert.equal(craftAvailability(s,'pickaxe',{chests:[c]}).ok,false);
  assert.equal(craftAvailability(s,'pickaxe',{chests:[c],workbench:true}).ok,true);
