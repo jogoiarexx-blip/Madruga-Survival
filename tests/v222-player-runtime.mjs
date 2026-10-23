@@ -54,7 +54,7 @@ await test('main disponibiliza diagnóstico e invalida cache da revisão',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/window,'madrugaRev5Status'/);
- assert.match(main,/player-rev5\.js\?v=2\.2\.6-craft-combat/);
+ assert.match(main,/player-rev5\.js\?v=2\.2\.7-chest-craft/);
  assert.match(html,/data-build="2\.2\.6-craft-combat"/);
 });
 console.log('v2.2.2',checks,'testes aprovados');
