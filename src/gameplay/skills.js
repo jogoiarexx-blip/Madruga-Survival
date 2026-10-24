@@ -47,7 +47,7 @@ export function resourceBonus(type,level){
  return 0;
 }
 const BUILD_RECIPES=new Set(['campfire','shelter','floor','wall','door','bed','chest','workbench','roof','farmPlot']);
-const CRAFT_RECIPES=new Set(['fishingRod','hammer','spear','pickaxe','ironSpear','repairPickaxe','repairHammer','repairSpear','ironHammer','reinforcedGrip','bandage','cooked','grilledFish','stew']);
+const CRAFT_RECIPES=new Set(['fishingRod','hammer','spear','pickaxe','ironSpear','repairPickaxe','repairHammer','repairSpear','ironHammer','reinforcedGrip','hardenedSpear','spikedHammer','armoredBroom','bandage','cooked','grilledFish','stew']);
 export function recipeCost(recipeId,baseCost,skills){
  if(!baseCost)return null;
  const level=BUILD_RECIPES.has(recipeId)?skillLevel({skills},'building'):CRAFT_RECIPES.has(recipeId)?skillLevel({skills},'crafting'):1;

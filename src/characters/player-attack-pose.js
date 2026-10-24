@@ -25,3 +25,17 @@ export function samplePlayerAttackPose(index,progress){
  return out;
 }
 export function idleGripPose(index){return IDLE_GRIP_POSES[index]??IDLE_GRIP_POSES[0];}
+
+// Deslocamento secundário aditivo da arma no osso da mão REV5.
+// Não move os ossos nem as malhas do personagem e retorna sempre à pose de descanso.
+export function sampleRiggedWeaponMotion(index,progress,walking=0,elapsed=0){
+ const t=Math.max(0,Math.min(1,Number.isFinite(progress)?progress:0));
+ const moving=Math.max(0,Math.min(1,Number.isFinite(walking)?walking:0));
+ const strike=Math.sin(Math.PI*Math.pow(t,.75));
+ const breathe=Math.sin((Number.isFinite(elapsed)?elapsed:0)*2.4)*.008;
+ const sway=Math.sin((Number.isFinite(elapsed)?elapsed:0)*8.3)*moving;
+ const power=[.08,.15,.055][index]??.08;
+ return {x:power*strike, y:-.045*strike-.009*Math.abs(sway),z:-.045*strike+.012*sway,
+   pitch:([-.21,-.34,-.09][index]??-.21)*strike+breathe,
+   roll:([-.1,-.16,-.045][index]??-.1)*strike+.02*sway};
+}

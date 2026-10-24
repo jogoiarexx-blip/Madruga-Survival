@@ -2,7 +2,7 @@
 // Striped Wanderer. The existing player Group remains the physics/camera/save root.
 // All GLB animations are driven by gameplay actions, not by demo timers.
 import {WandererAnimator} from './wanderer/WandererAnimator.js';
-import {PLAYER_ATTACK_DURATIONS} from './player-attack-pose.js';
+import {PLAYER_ATTACK_DURATIONS,sampleRiggedWeaponMotion} from './player-attack-pose.js?v=2.2.8-weapons-craft';
 import {repairRev5GlbMetadata} from './rev5-glb-compat.js?v=2.2.3-material-fix';
 
 export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5_Optimized.glb';
@@ -114,7 +114,8 @@ export function findRev5Hand(root,side='Left') {
 
 export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus=()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
-  let equipped=0,castLeft=0,handMount=null,swingIndex=0;
+  let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0;
+  let restingGrip=null;
   const weaponParent=weapon?.parent,weaponStartY=weapon?.position?.y ?? -1.17;
   const display=new THREE.Group();
   display.name='Player_REV5_Visual';
@@ -140,6 +141,9 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       if(sword?.quaternion && weapon.quaternion?.copy)weapon.quaternion.copy(sword.quaternion);
       else weapon.rotation.set(0,0,-.12);
     }
+    // Guarda apenas a transformação local do acessório para animação aditiva.
+    restingGrip={position:{x:weapon.position.x||0,y:weapon.position.y||0,z:weapon.position.z||0},
+      rotation:{x:weapon.rotation.x||0,y:weapon.rotation.y||0,z:weapon.rotation.z||0}};
     // The player GLB has a separate scene scale of 1.459x.
     // Cancel that scale for the procedural weapon geometry (and grip radius).
     weapon.scale.setScalar(1/PLAYER_REV5_SCALE);
@@ -149,7 +153,9 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     const names=equipped===0?['Attack','SwordAttack_REV3']:
       equipped===1?['SwordAttack_Refined','SwordAttack_REV3']:
                    ['SwordAttack_REV3','SwordAttack_Refined'];
+    if(comboWindow<=0)swingIndex=0;
     const name=names[swingIndex++%names.length];
+    comboWindow=.76;
     if(animator.activeName===name&&animator.current?.isRunning())animator.current.stop();
     const started=animator.play(name,.07);
     if(started){
@@ -157,7 +163,8 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       const target=PLAYER_ATTACK_DURATIONS[equipped]??.36;
       if(duration>0&&target>0)animator.actions.get(name)?.setEffectiveTimeScale(duration/target);
     }
-    return started;
+    // O dano da jogabilidade deve ocorrer no instante real do contato do clip.
+    return started?{hitPhase:name==='SwordAttack_REV3'?.54:.34,clip:name}:false;
   }
   function special(){if(!loaded)return false;
     castLeft=1.55;
@@ -237,8 +244,9 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     });
     return promise;
   }
-  function update(dt,{speed=0,sprinting=false,grounded=true}={}){
+  function update(dt,{speed=0,sprinting=false,grounded=true,attackProgress=null}={}){
     if(!loaded)return;
+    comboWindow=Math.max(0,comboWindow-dt);weaponTime+=dt;
     const move=speed>.28;
     const wanted=!grounded?'Idle':!move?'Idle':sprinting?'Running':'Walking';
     animator.locomotion(wanted);
@@ -250,11 +258,17 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     } else if(animator.speed!==1)animator.setSpeed(1);
     if(castLeft>0){castLeft=Math.max(0,castLeft-dt);if(castLeft===0&&magic)magic.visible=false;}
     animator.update(dt);
+    if(weapon&&restingGrip){
+      const motion=sampleRiggedWeaponMotion(equipped,attackProgress===null?0:attackProgress,
+        Math.min(1,speed/5),weaponTime);
+      weapon.position.set(restingGrip.position.x+motion.x,restingGrip.position.y+motion.y,restingGrip.position.z+motion.z);
+      weapon.rotation.set(restingGrip.rotation.x+motion.pitch,restingGrip.rotation.y,restingGrip.rotation.z+motion.roll);
+    }
   }
   function dispose(){
     if(animator)animator.dispose();
     if(meshRoot)display.remove(meshRoot);
-    handMount=null;
+    handMount=null;restingGrip=null;
     avatar.visible=true;
     display.visible=false;
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);}

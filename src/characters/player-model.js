@@ -1,5 +1,5 @@
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
-import {createPlayerWeaponRig} from './player-weapons.js';
+import {createPlayerWeaponRig} from './player-weapons.js?v=2.2.8-weapons-craft';
 // Modelo procedural articulado. As malhas e pivôs pertencem ao mesmo avatar.
 export function createPlayerModel(THREE, scene) {
 // ========== PERSONAGEM ARTICULADO ==========

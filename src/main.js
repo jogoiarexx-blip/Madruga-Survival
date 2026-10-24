@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v2.2.7 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v2.2.8 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -14,26 +14,26 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import { createPlayerModel } from './characters/player-model.js?v=2.2.7-chest-craft';
-import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js';
-import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.7-chest-craft';
+import { createPlayerModel } from './characters/player-model.js?v=2.2.8-weapons-craft';
+import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.2.8-weapons-craft';
+import {createPlayerRev5} from './characters/player-rev5.js?v=2.2.8-weapons-craft';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.1.5-foot-plant';
-import { createCombatSystem } from './gameplay/combat.js?v=2.2.7-chest-craft';
+import { createCombatSystem } from './gameplay/combat.js?v=2.2.8-weapons-craft';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
-import {createSurvival,advanceSurvival,addResource,useConsumable,spendRecipe,canAfford,RECIPES} from './gameplay/survival.js';
+import {createSurvival,advanceSurvival,addResource,useConsumable,spendRecipe,canAfford,RECIPES} from './gameplay/survival.js?v=2.2.8-weapons-craft';
 import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js?v=2.2.7-chest-craft';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.2.8-weapons-craft';
 import {createTouchControls} from './input/touch-controls.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
-import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.2.7-chest-craft';
+import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.2.8-weapons-craft';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
@@ -44,7 +44,7 @@ import {createVillagerGuard} from './characters/villager-guard.js';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
 import {SKILLS,awardSkill,skillLevel,fishingBonus,farmingBonus,huntingBonus,
-    resourceBonus,recipeCost,cookedYield} from './gameplay/skills.js';
+    resourceBonus,recipeCost,cookedYield} from './gameplay/skills.js?v=2.2.8-weapons-craft';
 
 
 // ========== SCENE ==========
@@ -638,8 +638,9 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
     onEnemyKilled:(type)=>{kills++;if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
-    getWeaponBonus:()=>currentWeapon===2&&survival.crafted.ironSpear?3:
-       currentWeapon===1&&survival.crafted.ironHammer?2:0,
+    getWeaponBonus:()=>currentWeapon===2?(survival.crafted.ironSpear?3:0)+(survival.crafted.hardenedSpear?2:0):
+       currentWeapon===1?(survival.crafted.ironHammer?2:0)+(survival.crafted.spikedHammer?2:0):
+       survival.crafted.armoredBroom?1:0,
     onSwing:(range,arc,damage,yaw)=>wildlife.attack(player.position,yaw,range,arc,damage),
     onAttackStart:()=>playerRev5.attack(),onSpecialStart:()=>playerRev5.special(),
     onWeaponHit:()=>{const tool=currentWeapon===1?'hammer':currentWeapon===2?'spear':null;
@@ -918,7 +919,7 @@ function craft(recipe,quantity=1){
   if(!result.ok){showToast('⚠ '+result.reason);return false}
   if(recipe==='hammer'){unlockedWeaponCount=Math.max(2,unlockedWeaponCount);equipWeapon(1)}
   if(recipe==='spear'){unlockedWeaponCount=3;equipWeapon(2)}
-  if(['ironSpear','ironHammer','reinforcedGrip'].includes(recipe))setWeaponUpgrades(survival.crafted);
+  if(['ironSpear','ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom'].includes(recipe))setWeaponUpgrades(survival.crafted);
   const cooking=['cooked','grilledFish','stew'].includes(recipe);
   earnSkill('crafting',Math.min(300,(cooking?14:22)*quantity));
   sfx.boost();
@@ -1091,7 +1092,8 @@ function animate() {
             weapon.rotation.z=THREE.MathUtils.lerp(weapon.rotation.z,grip.z,blend);
           }
         }
-        playerRev5.update(dt,{speed:realMovementSpeed,sprinting:runningFast,grounded:isGrounded});
+        playerRev5.update(dt,{speed:realMovementSpeed,sprinting:runningFast,grounded:isGrounded,
+          attackProgress:combat.isAttacking?THREE.MathUtils.clamp(1-combat.attackAnimTimer/combat.attackAnimDuration,0,1):null});
         invulnerableTimer = Math.max(0, invulnerableTimer-dt);
         player.visible = invulnerableTimer<=0 || Math.floor(invulnerableTimer*12)%2 === 0;
 

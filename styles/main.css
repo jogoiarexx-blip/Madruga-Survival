@@ -301,3 +301,12 @@ body.placing #interact-hint{display:none}
 .craft-card:disabled{opacity:.70;cursor:not-allowed}
 .craft-card[hidden],.craft-section[hidden]{display:none!important}
 @media(max-width:620px){.craft-toolbar{grid-template-columns:1fr 1fr}.craft-search{grid-column:1 / -1}.craft-grid{grid-template-columns:1fr}}
+
+/* Craft REV2.2.8: filtros acessíveis e quantidades reais no lote. */
+.craft-ready-filter{display:flex;align-items:center;justify-content:center;gap:7px;
+ border:1px solid #517b72;background:#19332e;border-radius:8px;padding:8px;
+ color:#e2efdf;cursor:pointer;font-size:12px;min-height:42px}
+.craft-toolbar .craft-ready-checkbox{width:18px;height:18px;min-width:18px;margin:0;accent-color:#a5c978}
+.craft-stock-info{border-top:1px solid #365c4e;padding-top:5px;color:#acd1c4;font-size:11px}
+.craft-card:focus-visible,.craft-ready-filter:focus-within{outline:2px solid #ffd18c;outline-offset:2px}
+@media(max-width:620px){.craft-ready-filter{grid-column:1/-1}}

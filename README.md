@@ -1,3 +1,7 @@
+## v2.2.8 — Melhoria das armas, animações REV5 e craft
+
+Veja `RELATORIO-REV228.md` para alterações e testes desta versão.
+
 ## v2.2.4 — Correção de osso da mão do Striped Wanderer REV5
 
 - Corrigido o erro `Rig REV5 sem mixamorig:LeftHand` indicado no console.

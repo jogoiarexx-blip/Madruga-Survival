@@ -19,10 +19,26 @@ export function createPlayerWeaponRig(THREE,rightArm){
   function wrap(root,y){return part(root,new THREE.CylinderGeometry(.068,.068,.095,12),grip,0,y,0);}
   const broom=new THREE.Group();broom.name='Cabo de vassoura';weapon.add(broom);
   shaft(broom,.047,.042,1.51,.62);part(broom,new THREE.CylinderGeometry(.052,.052,.07,12),dark,0,1.39,0);wrap(broom,.035);
+  // Fibras/braçadeira formam uma vassoura reconhecível, mesmo em modo low-poly.
+  part(broom,new THREE.CylinderGeometry(.10,.048,.14,12),metal,0,1.44,0);
+  for(let i=0;i<9;i++){
+    const a=i*Math.PI*2/9,r=.075;
+    part(broom,new THREE.CylinderGeometry(.008,.015,.31,5),i%2?wood:dark,
+      Math.cos(a)*r,1.655,Math.sin(a)*r);
+  }
+  const broomArmor=new THREE.Group();broomArmor.name='Cabo - proteção de ferro';broom.add(broomArmor);
+  for(let i=0;i<4;i++){
+    const collar=part(broomArmor,new THREE.CylinderGeometry(.061,.061,.045,10),metal,0,.08+i*.16,0);
+    collar.rotation.y=i*.2;
+  }
+  part(broomArmor,new THREE.BoxGeometry(.095,.18,.06),metal,0,1.31,.015);
   const hammer=new THREE.Group();hammer.name='Marreta reforçada';weapon.add(hammer);
   shaft(hammer,.06,.053,1.08,.36,dark);wrap(hammer,.04);wrap(hammer,.22);
   const hammerHead=part(hammer,new THREE.BoxGeometry(.72,.28,.31),metal,0,.95,0);
   for(const side of [-1,1])part(hammer,new THREE.BoxGeometry(.06,.30,.33),tip,side*.365,.95,0);
+  // Faces laterais reforçadas, com rebites discretos.
+  for(const z of [-.16,.16])for(const x of [-.22,.22])
+    part(hammer,new THREE.CylinderGeometry(.035,.035,.018,8),dark,x,.95,z);
   const spear=new THREE.Group();spear.name='Lança da floresta';weapon.add(spear);
   shaft(spear,.043,.033,1.74,.73);wrap(spear,.025);wrap(spear,.18);
   part(spear,new THREE.CylinderGeometry(.075,.09,.12,12),metal,0,1.61,0);
@@ -37,6 +53,16 @@ export function createPlayerWeaponRig(THREE,rightArm){
   }
   const spearIron=new THREE.Group();spearIron.name='Lança - ponta de ferro';spear.add(spearIron);
   part(spearIron,new THREE.ConeGeometry(.17,.56,12),iron,0,1.91,0);
+  const spearTempered=new THREE.Group();spearTempered.name='Lança - lâmina temperada';spear.add(spearTempered);
+  for(const side of [-1,1]){
+    const tooth=part(spearTempered,new THREE.ConeGeometry(.06,.21,5),tip,side*.15,1.71,0);
+    tooth.rotation.z=side*-.65;
+  }
+  const hammerSpikes=new THREE.Group();hammerSpikes.name='Marreta - cravos';hammer.add(hammerSpikes);
+  for(const side of [-1,1])for(const z of [-.10,.10]){
+    const spike=part(hammerSpikes,new THREE.ConeGeometry(.08,.23,7),tip,side*.40,.95,z);
+    spike.rotation.z=side*-.5*Math.PI;
+  }
   const grips=[];
   for(const model of [hammer,spear]){
     const bands=new THREE.Group();bands.name='Trançado reforçado';model.add(bands);
@@ -47,6 +73,9 @@ export function createPlayerWeaponRig(THREE,rightArm){
     grips.push(bands);
   }
   function setWeaponUpgrades(crafted={}){
+    broomArmor.visible=!!crafted.armoredBroom;
+    hammerSpikes.visible=!!crafted.spikedHammer;
+    spearTempered.visible=!!crafted.hardenedSpear;
     hammerIron.visible=!!crafted.ironHammer;
     spearIron.visible=!!crafted.ironSpear;
     spearHead.visible=!crafted.ironSpear;

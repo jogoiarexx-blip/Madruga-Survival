@@ -88,7 +88,14 @@ function doAttack(){
     attackAnimDuration=PLAYER_ATTACK_DURATIONS[index]??.34;
     attackAnimTimer=attackAnimDuration;
     pendingAttack={selected,index,elapsed:0,hitAt:attackAnimDuration*(PLAYER_HIT_PHASES[index]??.55)};
-    sfx.attack();onAttackStart();
+    sfx.attack();
+    const visual=onAttackStart();
+    // REV5 indica o quadro do impacto de cada animação; a pose antiga mantém
+    // o tempo padrão quando o GLB ainda não foi carregado.
+    if(visual&&typeof visual==='object'&&Number.isFinite(visual.hitPhase)&&
+       visual.hitPhase>=.1&&visual.hitPhase<=.9){
+      pendingAttack.hitAt=attackAnimDuration*visual.hitPhase;
+    }
     return true;
 }
 const shockwaves = [];

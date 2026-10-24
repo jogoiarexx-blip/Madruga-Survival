@@ -1,3 +1,7 @@
+## v2.2.8 — Melhoria das armas, animações REV5 e craft
+
+Veja `RELATORIO-REV228.md` para alterações e testes desta versão.
+
 
 ## v2.2.6 — Oficina, combate e progressão (2026-10-23)
 - Aba de fabricação com busca textual, categorias, requisitos visíveis e lotes de 1/5/máximo (até 20).

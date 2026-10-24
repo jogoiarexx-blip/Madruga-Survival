@@ -96,7 +96,7 @@ check('UI, craft e combate estão conectados',()=>{
  const rev=readFileSync(new URL('../src/characters/player-rev5.js',import.meta.url),'utf8');
  for(const item of ['craftItem(survival','craftingStatus(','setWeaponUpgrades(survival.crafted)','reinforcedGrip','getCraftStatus'])
   assert.ok(main.includes(item),item);
- for(const item of ['use-bandage','recipe-list','2.2.7-chest-craft'])assert.ok(html.includes(item),item);
+ for(const item of ['use-bandage','recipe-list','2.2.8-weapons-craft'])assert.ok(html.includes(item),item);
  assert.match(rev,/SwordAttack_Refined/);assert.match(rev,/swingIndex/);
 });
 console.log('v2.2.6: '+done+' grupos de regressão aprovados');
