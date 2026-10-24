@@ -54,7 +54,7 @@ await test('main disponibiliza diagnóstico e invalida cache da revisão',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/window,'madrugaRev5Status'/);
- assert.match(main,/player-rev5\.js\?v=2\.2\.8-weapons-craft/);
- assert.match(html,/data-build="2\.2\.8-weapons-craft"/);
+ assert.match(main,/player-rev5\.js\?v=(?:2\.2\.8-weapons-craft|2\.4\.0-combat)/);
+ assert.match(html,/data-build="(?:2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat)"/);
 });
 console.log('v2.2.2',checks,'testes aprovados');

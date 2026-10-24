@@ -310,3 +310,13 @@ body.placing #interact-hint{display:none}
 .craft-stock-info{border-top:1px solid #365c4e;padding-top:5px;color:#acd1c4;font-size:11px}
 .craft-card:focus-visible,.craft-ready-filter:focus-within{outline:2px solid #ffd18c;outline-offset:2px}
 @media(max-width:620px){.craft-ready-filter{grid-column:1/-1}}
+
+/* v2.3: discrição informada sem obstruir o HUD. */
+#stealth-status{font-size:12px;margin-top:5px;max-width:245px;color:#bfead3;text-shadow:0 1px 2px #111;}
+#stealth-status[data-alert="danger"]{color:#ff8f82;font-weight:700;}
+#stealth-status[data-alert="caution"]{color:#ffe3a1;}
+#stealth-status[data-alert="quiet"]{color:#97edc0;}
+
+/* REV240: combo discreto, sem sobrepor controles nas telas pequenas. */
+#combat-combo-status{max-width:270px;font-size:12px;line-height:1.35;color:#ffe5ac;text-shadow:1px 1px 3px #000;text-align:right}
+@media(max-width:700px){#combat-combo-status{max-width:140px;font-size:10px}}

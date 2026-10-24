@@ -1,3 +1,14 @@
+## v2.3.0 — Zumbis com percepção, furtividade e exploração mais equilibrada
+
+- Zumbis comuns usam estados de patrulha, investigação, perseguição e busca em vez de rastrear o jogador constantemente.
+- Passos (correndo, andando ou em modo furtivo), ataques, salto e interação emitem ruídos com alcances diferentes. Sons atrás de estruturas são atenuados.
+- C alterna furtividade fora do modo construção; dentro da construção, C continua controlando o ímã. O celular agora tem um botão próprio.
+- As informações de detecção são mostradas no HUD, sem interferir com o crafting ou os saves existentes.
+- Invasores, alvos de guarda e chefes preservam comportamento próprio. Spawn ambiente é mais espaçado de dia.
+- Novo módulo independente `src/gameplay/zombie-perception.js`; 20 testes de percepção, 248 verificações automatizadas totais.
+- `npm test` e `npm run check` aprovados. Teste de navegação WebGL não foi possível: o navegador da sandbox bloqueou o endereço local.
+- Ver `RELATORIO-REV230.md` para limites e validações.
+
 ## v2.2.8 — Melhoria das armas, animações REV5 e craft
 
 Veja `RELATORIO-REV228.md` para alterações e testes desta versão.

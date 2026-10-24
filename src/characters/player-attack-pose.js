@@ -16,26 +16,32 @@ const CLIPS=[
   [1,{...BASE,gripX:.29,gripZ:-.71}]]
 ];
 const smooth=t=>{const n=Math.max(0,Math.min(1,t));return n*n*(3-2*n);};
-export function samplePlayerAttackPose(index,progress){
+export function samplePlayerAttackPose(index,progress,step=0){
  const clip=CLIPS[index]??CLIPS[0],t=Math.max(0,Math.min(1,Number.isFinite(progress)?progress:0));
  let a=clip[0],b=clip[clip.length-1];
  for(let i=1;i<clip.length;i++)if(t<=clip[i][0]){a=clip[i-1];b=clip[i];break;}
  const blend=smooth((t-a[0])/Math.max(1e-5,b[0]-a[0])),out={};
  for(const key of Object.keys(a[1]))out[key]=a[1][key]+(b[1][key]-a[1][key])*blend;
+ // Subtle alternative follow-through for the second hit; strong overhead third.
+ const swing=Math.sin(Math.PI*t);
+ if(step===1){out.armY+=.27*swing;out.armZ+=.13*swing;out.torsoY+=.28*swing;}
+ if(step===2){out.armX-=.33*swing;out.armZ-=.16*swing;out.leftArmX-=.14*swing;out.torsoY-=.19*swing;}
  return out;
 }
 export function idleGripPose(index){return IDLE_GRIP_POSES[index]??IDLE_GRIP_POSES[0];}
 
 // Deslocamento secundário aditivo da arma no osso da mão REV5.
 // Não move os ossos nem as malhas do personagem e retorna sempre à pose de descanso.
-export function sampleRiggedWeaponMotion(index,progress,walking=0,elapsed=0){
+export function sampleRiggedWeaponMotion(index,progress,walking=0,elapsed=0,step=0){
  const t=Math.max(0,Math.min(1,Number.isFinite(progress)?progress:0));
  const moving=Math.max(0,Math.min(1,Number.isFinite(walking)?walking:0));
  const strike=Math.sin(Math.PI*Math.pow(t,.75));
  const breathe=Math.sin((Number.isFinite(elapsed)?elapsed:0)*2.4)*.008;
  const sway=Math.sin((Number.isFinite(elapsed)?elapsed:0)*8.3)*moving;
  const power=[.08,.15,.055][index]??.08;
- return {x:power*strike, y:-.045*strike-.009*Math.abs(sway),z:-.045*strike+.012*sway,
-   pitch:([-.21,-.34,-.09][index]??-.21)*strike+breathe,
-   roll:([-.1,-.16,-.045][index]??-.1)*strike+.02*sway};
+ const stepScale=step===2?1.28:step===1?1.10:1;
+ const alternate=step===1?-.025*strike:step===2?.023*strike:0;
+ return {x:power*strike*stepScale, y:-.045*strike*stepScale-.009*Math.abs(sway),z:-.045*strike+.012*sway,
+   pitch:([-.21,-.34,-.09][index]??-.21)*strike*stepScale+breathe,
+   roll:([-.1,-.16,-.045][index]??-.1)*strike*stepScale+alternate+.02*sway};
 }

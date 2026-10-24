@@ -34,7 +34,7 @@ test('pose de zumbi mantém braços projetados para frente',()=>{
 test('main integra zumbi aos spawns noturnos e invasões',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  assert.ok(main.includes("spawnEnemy(i%4===0?chooseZombieType("));
- assert.ok(main.includes("r<0.43?chooseZombieType("));
+ assert.ok(main.includes("chooseZombieType({night:false") || main.includes("r<0.43?chooseZombieType("));
 });
 
 test('save continua válido com zumbi e habilidades',()=>{

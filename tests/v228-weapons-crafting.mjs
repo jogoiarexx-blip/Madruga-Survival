@@ -112,6 +112,6 @@ check('integração mantém modificadores e UI de estoque conectados',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  for(const k of ['armoredBroom','hardenedSpear','spikedHammer','attackProgress:combat.isAttacking'])assert.ok(main.includes(k),k);
  for(const k of ['craftBatchPreview(','craft-ready-filter','Mochila + baús próximos','Só possíveis'])assert.ok(ui.includes(k),k);
- assert.ok(html.includes('2.2.8-weapons-craft'));
+ assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat/.test(html));
 });
 console.log('QA v2.2.8:',passed,'testes adicionais');

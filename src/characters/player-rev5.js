@@ -114,7 +114,7 @@ export function findRev5Hand(root,side='Left') {
 
 export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus=()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
-  let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0;
+  let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0,queuedComboStep=null;
   let restingGrip=null;
   const weaponParent=weapon?.parent,weaponStartY=weapon?.position?.y ?? -1.17;
   const display=new THREE.Group();
@@ -148,23 +148,30 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     // Cancel that scale for the procedural weapon geometry (and grip radius).
     weapon.scale.setScalar(1/PLAYER_REV5_SCALE);
   }
+  function setComboStep(step){queuedComboStep=Number.isInteger(step)?Math.max(0,Math.min(2,step)):0;}
   function attack(){if(!loaded)return false;
-    // Cada arma utiliza clips reais diferentes do GLB REV5.
-    const names=equipped===0?['Attack','SwordAttack_REV3']:
-      equipped===1?['SwordAttack_Refined','SwordAttack_REV3']:
-                   ['SwordAttack_REV3','SwordAttack_Refined'];
+    // Only use authored single-hit clips: multi-hit combo clips would create
+    // visually misleading hits that do not exist in the collision system.
+    const names=equipped===0?['Attack','SwordAttack_REV3','SwordAttack_Refined']:
+      equipped===1?['SwordAttack_Refined','Attack','SwordAttack_REV3']:
+                   ['SwordAttack_REV3','SwordAttack_Refined','Attack'];
     if(comboWindow<=0)swingIndex=0;
-    const name=names[swingIndex++%names.length];
-    comboWindow=.76;
+    const stage=queuedComboStep===null?swingIndex%3:queuedComboStep;
+    queuedComboStep=null;
+    const preferred=names[stage];
+    const name=animator.actions.has(preferred)?preferred:
+      (animator.actions.has(names[0])?names[0]:'SwordAttack_REV3');
+    swingIndex=stage+1;
+    comboWindow=.92;
     if(animator.activeName===name&&animator.current?.isRunning())animator.current.stop();
     const started=animator.play(name,.07);
     if(started){
       const duration=animator.clips.get(name)?.duration;
-      const target=PLAYER_ATTACK_DURATIONS[equipped]??.36;
+      const target=(PLAYER_ATTACK_DURATIONS[equipped]??.36)*(stage===2?1.12:stage===1?.94:1);
       if(duration>0&&target>0)animator.actions.get(name)?.setEffectiveTimeScale(duration/target);
     }
     // O dano da jogabilidade deve ocorrer no instante real do contato do clip.
-    return started?{hitPhase:name==='SwordAttack_REV3'?.54:.34,clip:name}:false;
+    return started?{hitPhase:name==='SwordAttack_REV3'?.54:name==='Attack'?.55:.34,clip:name}:false;
   }
   function special(){if(!loaded)return false;
     castLeft=1.55;
@@ -244,7 +251,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     });
     return promise;
   }
-  function update(dt,{speed=0,sprinting=false,grounded=true,attackProgress=null}={}){
+  function update(dt,{speed=0,sprinting=false,grounded=true,attackProgress=null,attackStep=0}={}){
     if(!loaded)return;
     comboWindow=Math.max(0,comboWindow-dt);weaponTime+=dt;
     const move=speed>.28;
@@ -260,7 +267,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     animator.update(dt);
     if(weapon&&restingGrip){
       const motion=sampleRiggedWeaponMotion(equipped,attackProgress===null?0:attackProgress,
-        Math.min(1,speed/5),weaponTime);
+        Math.min(1,speed/5),weaponTime,attackStep);
       weapon.position.set(restingGrip.position.x+motion.x,restingGrip.position.y+motion.y,restingGrip.position.z+motion.z);
       weapon.rotation.set(restingGrip.rotation.x+motion.pitch,restingGrip.rotation.y,restingGrip.rotation.z+motion.roll);
     }
@@ -274,7 +281,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);}
     loaded=false;
   }
-  return {preload,update,equip,attack,special,jump,hurt,die,dispose,
+  return {preload,update,equip,attack,setComboStep,special,jump,hurt,die,dispose,
     get loaded(){return loaded},get failed(){return failed},get animator(){return animator},
     get model(){return meshRoot},get handMount(){return handMount},get visualVisible(){return display.visible},
     get oldVisualVisible(){return avatar.visible}};

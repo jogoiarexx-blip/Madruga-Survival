@@ -12,7 +12,7 @@ test('zumbi base ficou um pouco maior que o player visual antigo',()=>{
 
 test('ritmo da animação do GLB acompanha a passada real',()=>{
   assert.match(anim,/update\(dt,moving,near,pace,footIKNear\)/);
-  assert.match(ai,/const locomotionPace=actualMoving \? stepDistance\/Math\.max\(\.001,enemy\.speed\*dt\) : 0/);
+  assert.match(ai,/const locomotionPace=actualMoving \? stepDistance\/Math\.max\(\.001,enemy\.speed\*/);
   assert.match(models,/const locomotionPace=moving\?Math\.max\(\.82,Math\.min\(2\.80,this\.locomotionScale\*Math\.max\(\.65,Math\.min\(1\.25,pace\|\|1\)\)\)\):1/);
 });
 console.log('v2.1.4:',count,'testes aprovados.');

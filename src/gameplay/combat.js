@@ -1,4 +1,5 @@
 import {PLAYER_HIT_PHASES,PLAYER_ATTACK_DURATIONS} from '../characters/player-attack-pose.js';
+import {nextComboStep,comboProfile,COMBO_WINDOW,ATTACK_BUFFER_WINDOW} from './combo-system.js?v=2.4.0-combat';
 // Combate corpo a corpo, especial, dano em inimigos e efeitos temporários.
 export function isInAttackArc(playerPosition, playerYaw, target, radius, cosineThreshold) {
     const dx = target.x - playerPosition.x;
@@ -12,15 +13,18 @@ export function createCombatSystem({THREE,scene,player,enemies,weaponTypes,healt
   getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
   spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
   onBossDefeated,onEnemyKilled,getLevel,getWeaponIndex,getPlayerYaw,isGameActive,isLocked,
-  getWeaponBonus=()=>0,onWeaponHit=()=>{},onSwing=()=>0,
-  onAttackStart=()=>{},onSpecialStart=()=>{}}) {
+  getWeaponBonus=()=>0,onWeaponHit=()=>{},onSwing=()=>0,onEnemyDamaged=()=>{},
+  onAttackStart=()=>{},onSpecialStart=()=>{},onHitFeedback=()=>{}}) {
 let attackCooldown=0, specialCooldown=0, attackAnimTimer=0, attackAnimDuration=.34;
-let pendingAttack=null;
+let pendingAttack=null,queuedAttack=false,combatClock=0,lastAttackAt=-Infinity,lastWeapon=-1,lastStep=0,comboStep=0;
 const slashEffects=[];
-function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
+function damageEnemy(enemy, amount, knockback = 0.35, credited = true, impactStrength = 1) {
     if (!enemies.includes(enemy)) return;
     enemy.hp -= amount;
-    enemy.knockback = 0.17;
+    onEnemyDamaged(enemy);
+    // Short hit-stun only: bosses resist staggering and ongoing attacks aren't cancelled.
+    const stagger=enemy.type==='boss'?.12:Math.min(.36,.17*Math.max(.5,Math.min(2,impactStrength)));
+    enemy.knockback = Math.max(enemy.knockback||0,stagger);
     if(enemy.hp>0)enemy.rev4Visual?.hurt();
     if(enemy.type==='boss' && enemy.hp>0 && enemy.hp<=enemy.maxHp*.5 && !enemy.enraged){
         enemy.enraged=true;enemy.speed*=1.28;
@@ -52,57 +56,76 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true) {
     }
     updateHUD();
 }
-function spawnSlashArc(selected,index){
-    const halfAngle=Math.PI*selected.arc,effect=new THREE.Group();
+function spawnSlashArc(selected,index,profile){
+    const halfAngle=Math.PI*selected.arc*profile.arc,effect=new THREE.Group();
     effect.rotation.y=getPlayerYaw();
     effect.position.set(player.position.x,getGroundHeight(player.position.x,player.position.z)+1.13,player.position.z);
     const mesh=new THREE.Mesh(new THREE.RingGeometry(selected.range*.44,selected.range*.49,
         28,1,Math.PI*.5-halfAngle,halfAngle*2),
-        new THREE.MeshBasicMaterial({color:index===2?0x9efae8:0xffdf88,
+        new THREE.MeshBasicMaterial({color:profile.step===2?0xfff6b4:index===2?0x9efae8:0xffdf88,
             transparent:true,opacity:.68,side:THREE.DoubleSide,depthWrite:false}));
     mesh.position.z=-.68;effect.add(mesh);scene.add(effect);
     slashEffects.push({effect,mesh,life:.18});
 }
 function resolveWeaponHit(attack){
     if(!isGameActive()||!isLocked())return;
-    const {selected,index}=attack;
-    const damage=selected.damage+getWeaponBonus()+Math.floor((getLevel()-1)/3);
-    spawnSlashArc(selected,index);
+    const {selected,index,profile}=attack;
+    const damage=selected.damage+getWeaponBonus()+Math.floor((getLevel()-1)/3)+profile.damageBonus;
+    spawnSlashArc(selected,index,profile);
     let hits=0;
     for(const e of [...enemies]){
       if(isInAttackArc(player.position,getPlayerYaw(),e.mesh.position,
-        selected.range+e.size*.2,Math.cos(Math.PI*selected.arc)) &&
+        selected.range*profile.reach+e.size*.2,Math.cos(Math.PI*selected.arc*profile.arc)) &&
         Math.abs(e.mesh.position.y-player.position.y)<2.6){
-        damageEnemy(e,damage,index===1?.65:index===2?.25:.35);hits++;
+        damageEnemy(e,damage,(index===1?.65:index===2?.25:.35)*profile.knockback,true,profile.knockback);hits++;
       }
     }
-    hits+=onSwing(selected.range,selected.arc,damage,getPlayerYaw())||0;
+    hits+=onSwing(selected.range*profile.reach,Math.min(1,selected.arc*profile.arc),damage,getPlayerYaw())||0;
     if(hits)onWeaponHit();
-    if(hits)spawnParticle(player.position.clone().add(new THREE.Vector3(0,1,0)),0xffd07b,5);
+    if(hits){
+      spawnParticle(player.position.clone().add(new THREE.Vector3(0,1,0)),profile.step===2?0xffe4a0:0xffd07b,profile.step===2?8:5);
+      onHitFeedback({hits,step:profile.step,weapon:index,damage});
+    }
 }
-function doAttack(){
-    if(attackCooldown>0||!isGameActive()||!isLocked())return false;
+function startAttack(){
     const index=getWeaponIndex(),selected=weaponTypes[index];
     if(!selected)return false;
-    attackCooldown=Math.max(.22,selected.cooldown-(getLevel()-1)*.012);
-    attackAnimDuration=PLAYER_ATTACK_DURATIONS[index]??.34;
+    comboStep=nextComboStep({lastWeapon,weapon:index,lastStep,elapsed:combatClock-lastAttackAt});
+    const profile=comboProfile(index,comboStep);
+    lastStep=comboStep;lastWeapon=index;lastAttackAt=combatClock;
+    queuedAttack=false;
+    attackCooldown=Math.max(.22,selected.cooldown-(getLevel()-1)*.012)*(comboStep===2?1.10:1);
+    attackAnimDuration=(PLAYER_ATTACK_DURATIONS[index]??.34)*profile.duration;
     attackAnimTimer=attackAnimDuration;
-    pendingAttack={selected,index,elapsed:0,hitAt:attackAnimDuration*(PLAYER_HIT_PHASES[index]??.55)};
+    pendingAttack={selected,index,profile,elapsed:0,hitAt:attackAnimDuration*profile.hitPhase};
     sfx.attack();
     const visual=onAttackStart();
-    // REV5 indica o quadro do impacto de cada animação; a pose antiga mantém
-    // o tempo padrão quando o GLB ainda não foi carregado.
+    // REV5 clips report their authored contact phase; hit resolves only once.
     if(visual&&typeof visual==='object'&&Number.isFinite(visual.hitPhase)&&
        visual.hitPhase>=.1&&visual.hitPhase<=.9){
       pendingAttack.hitAt=attackAnimDuration*visual.hitPhase;
     }
+    updateHUD();
     return true;
+}
+function doAttack(){
+    if(!isGameActive()||!isLocked())return false;
+    if(attackCooldown>0){
+      // Buffer only near the end of recovery; repeated early clicks do not
+      // generate phantom queued hits or bypass the weapon's cooldown.
+      if(attackCooldown<=ATTACK_BUFFER_WINDOW && lastWeapon===getWeaponIndex() &&
+         combatClock-lastAttackAt<=COMBO_WINDOW && lastStep<2){
+        queuedAttack=true;return true;
+      }
+      return false;
+    }
+    return startAttack();
 }
 const shockwaves = [];
 function doSpecialAttack() {
     if (specialCooldown > 0 || !isGameActive() || !isLocked()) return;
     specialCooldown = Math.max(5, 9 - getLevel() * 0.35);
-    pendingAttack=null;
+    pendingAttack=null;queuedAttack=false;lastWeapon=-1;lastAttackAt=-Infinity;comboStep=0;
     attackAnimDuration = attackAnimTimer = 0.48;
     sfx.boost(); sfx.attack(); onSpecialStart();
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.83, 1.0, 48), new THREE.MeshBasicMaterial({
@@ -121,17 +144,25 @@ function doSpecialAttack() {
 }
 
 function update(dt){
+    if(!Number.isFinite(dt)||dt<=0)return;
+    dt=Math.min(dt,2);combatClock+=dt;
     attackCooldown=Math.max(0,attackCooldown-dt);
     specialCooldown=Math.max(0,specialCooldown-dt);
     attackAnimTimer=Math.max(0,attackAnimTimer-dt);
     if(pendingAttack){
-      if(getWeaponIndex()!==pendingAttack.index||!isGameActive())pendingAttack=null;
+      if(getWeaponIndex()!==pendingAttack.index||!isGameActive()){
+        pendingAttack=null;queuedAttack=false;lastWeapon=-1;
+      }
       else{
         pendingAttack.elapsed+=Math.max(0,dt);
         if(pendingAttack.elapsed+1e-8>=pendingAttack.hitAt){
           const attack=pendingAttack;pendingAttack=null;resolveWeaponHit(attack);
         }
       }
+    }
+    if(queuedAttack){
+      if(getWeaponIndex()!==lastWeapon || !isGameActive() || !isLocked() || combatClock-lastAttackAt>COMBO_WINDOW){queuedAttack=false;}
+      else if(attackCooldown===0 && attackAnimTimer===0 && !pendingAttack)startAttack();
     }
 }
 function tickEffects(dt){
@@ -165,5 +196,8 @@ return {attack:doAttack,special:doSpecialAttack,damageEnemy,update,tickEffects,
     get attackAnimDuration(){return attackAnimDuration},
     get isAttacking(){return attackAnimTimer>0},
     get attackWeaponIndex(){return pendingAttack?.index??getWeaponIndex()},
-    cancelAttack(){pendingAttack=null;attackAnimTimer=0}};
+    get comboStep(){return comboStep},
+    get comboActive(){return combatClock-lastAttackAt<=COMBO_WINDOW && lastStep<2 && lastWeapon===getWeaponIndex()},
+    get attackBuffered(){return queuedAttack},
+    cancelAttack(){pendingAttack=null;queuedAttack=false;attackAnimTimer=0;lastWeapon=-1;lastAttackAt=-Infinity;comboStep=0}};
 }
