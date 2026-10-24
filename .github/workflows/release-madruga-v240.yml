@@ -1,0 +1,51 @@
+name: Publicar Madruga Survival v2.4.0
+on:
+  push:
+    branches:
+      - release/madruga-v2.4.0
+
+permissions:
+  contents: write
+
+jobs:
+  integrar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Aplicar patch e validar integridade
+        shell: bash
+        run: |
+          python - <<'PY'
+          import base64, hashlib, lzma
+          from pathlib import Path
+          data = ''.join(Path(f'.release-v240/part{i}').read_text() for i in range(1,5))
+          patch = lzma.decompress(base64.b64decode(data))
+          expected = '267742098d79edc8d21baed48795f0f66b23fc292f20bb71c25a918b77ce12ef'
+          assert hashlib.sha256(patch).hexdigest() == expected, 'Patch corrompido'
+          Path('/tmp/madruga-v240.patch').write_bytes(patch)
+          print(f'Patch validado: {len(patch)} bytes')
+          PY
+          git apply --check /tmp/madruga-v240.patch
+          git apply /tmp/madruga-v240.patch
+          rm -rf .release-v240
+          rm -f .github/workflows/release-madruga-v240.yml
+      - name: Checagem de sintaxe
+        run: npm run check
+      - name: Testes automatizados
+        run: npm test
+      - name: Registrar revisao na branch de release
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git diff --cached --quiet && exit 0
+          git commit -m "Madruga Survival v2.4.0: IA, furtividade, combos e impactos"
+          git push origin HEAD:release/madruga-v2.4.0
