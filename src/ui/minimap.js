@@ -5,7 +5,7 @@ export function createMinimap(canvas, getState) {
     minimap.width = 140; minimap.height = 140;
     if (!mmCtx) return () => {};
     return function drawMinimap() {
-        const {player,treeColliders,rockColliders,collectibles,healthPacks,speedBoosts,enemies,shrinePosition,playerYaw,resources=[],structures=[],cemeteryPosition=null,guardPosition=null} = getState();
+        const {player,treeColliders,rockColliders,collectibles,healthPacks,speedBoosts,enemies,shrinePosition,playerYaw,resources=[],structures=[],explorationSites=[],cemeteryPosition=null,guardPosition=null} = getState();
         const w = minimap.width, center = w / 2, scale = 1.2;
         mmCtx.clearRect(0, 0, w, w);
         mmCtx.fillStyle = '#173522'; mmCtx.fillRect(0, 0, w, w);
@@ -18,6 +18,11 @@ export function createMinimap(canvas, getState) {
         for(const n of resources)if(n.cooldown<=0)dot(n.x,n.z,
           n.type==='water'?'#58bced':n.type==='berries'?'#fa679e':n.type==='wood'?'#c58a54':n.type==='stone'?'#b1b4b5':'#94e06f',2.5);
         for(const s of structures)dot(s.x,s.z,s.type==='campfire'?'#ff9c3b':'#eef6a2',4);
+        for(const site of explorationSites){
+          if(!site.discovered&&Math.hypot(site.x-player.position.x,site.z-player.position.z)>25)continue;
+          const searched=site.containers.every(c=>c.opened);
+          dot(site.x,site.z,searched?'#87918a':site.threat?'#f1a36a':'#ffe08b',5);
+        }
         treeColliders.forEach(t => dot(t.x,t.z,'#315536',2));
         rockColliders.forEach(t => dot(t.x,t.z,'#617065',2));
         collectibles.forEach(c => dot(c.position.x,c.position.z,'#ffd46d',3));

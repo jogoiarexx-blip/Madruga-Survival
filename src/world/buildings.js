@@ -3,7 +3,7 @@ import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
 import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
   resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js';
-import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding} from '../gameplay/base-defense.js';
+import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding,repairBuildingWithKit} from '../gameplay/base-defense.js';
 import {validChestItems} from '../gameplay/storage.js';
 import {makeCrop,advanceCrop,validCrop} from '../gameplay/farming.js';
 export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium',mergeGeometries=null}) {
@@ -167,6 +167,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    return result;
  }
  function repair(s,state){if(!structures.includes(s)||!repairBuilding(s,state))return false;updateCondition(s);return true;}
+ function repairKit(s,state){if(!structures.includes(s)||!repairBuildingWithKit(s,state))return false;updateCondition(s);return true;}
  function updateCondition(s){if(!s?.group)return;
    if(!s.damageMarker){const mat=new THREE.MeshBasicMaterial({color:0xf14b3c,depthTest:false});
       s.damageMarker=new THREE.Mesh(new THREE.BoxGeometry(1.4,.08,.10),mat);s.damageMarker.position.set(0,2.92,0);s.group.add(s.damageMarker);}
@@ -200,6 +201,6 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  function resolveCollision(x,z,r=.46){return resolveStructureCollision(structures,x,z,r);}
  function isBlocked(x,z,r=.46){return positionBlocked(structures,x,z,r);}
  function blocksLine(from,to){return structureBlocksLine(structures,from,to);}
- return {structures,place,createPreview,canPlace,near,covered,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,update,
+ return {structures,place,createPreview,canPlace,near,covered,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,repairKit,update,
    resolveCollision,isBlocked,blocksLine,serialize,restore};
 }

@@ -15,15 +15,20 @@ function spawnEnemy(type = 'normal') {
         size = 1.3; color = 0x8b0000; speed = 2.0; hp = 4; damage = 20;
     } else if (type === 'shaman') {
         size = 0.93; color = 0x6839b1; speed = 2.65; hp = 3; damage = 11;
+    } else if (type === 'spider') {
+        size=1.55;color=0x251828;skinColor=color;clothColor=color;speed=3.6;hp=6;damage=10;
     } else if (type === 'boss') {
         size = 2.9; color = 0xa41c35; speed = 2.5; hp = 24; damage = 25;
     }
+    if (type === 'spider') {eyeColor=0xbf68ff;accentColor=0x412459;}
     if (type === 'fast') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     } else if (type === 'tank') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     } else if (type === 'shaman') {
         skinColor = color; clothColor = color; accentColor = 0x311d67; eyeColor = 0x66eaff;
+    } else if (type === 'spider') {
+        size=1.55;color=0x251828;skinColor=color;clothColor=color;speed=3.6;hp=6;damage=10;
     } else if (type === 'boss') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     }

@@ -1,3 +1,18 @@
+## Aranha Sombria — v2.7.0
+
+O modelo original enviado pelo usuário foi integrado como inimigo 3D com 72 ossos e as animações Idle, Walk, Jump, Attack e WebShot. A movimentação usa o controlador de colisão do mundo e a animação tem blend de 170 ms. A teia provoca dano leve e lentidão temporária. O GLB local otimizado ocupa 6,6 MB; no GitHub Pages ele é carregado das partes gzip em `assets/models/aranha-parts/`. Diagnóstico no console: `window.madrugaSpiderStatus`. O modelo original enviado pelo usuário não foi alterado.
+
+## Novidades v2.6.0 — Craft e equipamentos de sobrevivência
+
+- Tecido e sucata são encontrados em ruínas com recompensa determinística; não há novas dependências online.
+- Nova progressão: colete (reduz dano recebido em 20%), botas (reduzem o consumo de energia ao correr), kit médico (+65 de vida e remove veneno) e kit de manutenção (recupera até 95 HP de uma estrutura).
+- Bancada e materiais raros são requisitos reais. Equipamentos únicos não podem ser fabricados repetidamente.
+- Save v2 retrocompatível e novos testes em `tests/v260-advanced-crafting.mjs`.
+
+## Novidades v2.5.0 — Exploração
+
+Procure quatro locais abandonados na floresta (cabana, posto médico, oficina e depósito). O HUD exibe direção e distância do próximo ponto para explorar. Ao entrar em cada ruína, aproxime-se dos móveis e pressione **F** (também no celular) para vasculhar. São 12 móveis com recompensas únicas, que ajudam a fabricar armas, ferramentas, curativos e construções. Nas áreas mais perigosas você pode encontrar zumbis. Progresso, descobertas e caixas vasculhadas permanecem no save anterior, sem apagar partidas v2.4. Para testar execute `npm run check` e `npm test`.
+
 ## v2.3.0 — Zumbis com percepção, furtividade e exploração mais equilibrada
 
 - Zumbis comuns usam estados de patrulha, investigação, perseguição e busca em vez de rastrear o jogador constantemente.

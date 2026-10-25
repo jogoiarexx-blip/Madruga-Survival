@@ -6,11 +6,12 @@ import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zo
 
 // Atualização de IA independente da renderização e dos controles.
 export function createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
-  showBossTelegraph,hideBossTelegraph,damagePlayer,spawnParticle,throwProjectile,sfx,isGameActive,hasLineOfSight,getRaidTarget=()=>null,onRaidDamage=()=>{},getGuard=()=>null,onGuardDamage=()=>{},onPoison=()=>{},getPlayerPerception=null}) {
+  showBossTelegraph,hideBossTelegraph,damagePlayer,spawnParticle,throwProjectile,sfx,isGameActive,hasLineOfSight,getRaidTarget=()=>null,onRaidDamage=()=>{},getGuard=()=>null,onGuardDamage=()=>{},onPoison=()=>{},getPlayerPerception=null,spiderAI=null}) {
 function update(dt,elapsed){
         // IA por tipo: melee perseguidor, xamã de longo alcance e chefe com aviso de ataque.
         for (const enemy of enemies) {
             if (!isGameActive()) break;
+            if(enemy.type==='spider'&&spiderAI){spiderAI.update(enemy,dt,elapsed);continue;}
             const mesh=enemy.mesh;
             const targetBuilding=enemy.raider?getRaidTarget(mesh.position):null;
             const ally=!targetBuilding&&isZombieType(enemy.type)?getGuard():null;

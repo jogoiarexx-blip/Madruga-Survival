@@ -16,6 +16,11 @@ export function repairBuilding(item,state){
  state.inventory[key]--;item.hp=Math.min(maxBuildingHP(item.type),item.hp+45);
  return true;
 }
+export function repairBuildingWithKit(item,state){
+ if(!item||!maxBuildingHP(item.type)||!Number.isInteger(item.hp)||item.hp<1||item.hp>=maxBuildingHP(item.type)||
+   !Number.isInteger(state?.inventory?.repairKit)||state.inventory.repairKit<1)return false;
+ state.inventory.repairKit--;item.hp=Math.min(maxBuildingHP(item.type),item.hp+95);return true;
+}
 export function raidTarget(structures,enemyPosition,playerPosition){
  // Inimigos não destroem baús para evitar perda silenciosa do conteúdo.
  const valid=structures.filter(s=>s.hp>0&&!['floor','chest','bed','farmPlot'].includes(s.type)&&

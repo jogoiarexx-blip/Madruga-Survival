@@ -25,7 +25,7 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true, impactStr
     // Short hit-stun only: bosses resist staggering and ongoing attacks aren't cancelled.
     const stagger=enemy.type==='boss'?.12:Math.min(.36,.17*Math.max(.5,Math.min(2,impactStrength)));
     enemy.knockback = Math.max(enemy.knockback||0,stagger);
-    if(enemy.hp>0)enemy.rev4Visual?.hurt();
+    if(enemy.hp>0){enemy.rev4Visual?.hurt();enemy.spiderVisual?.hurt();}
     if(enemy.type==='boss' && enemy.hp>0 && enemy.hp<=enemy.maxHp*.5 && !enemy.enraged){
         enemy.enraged=true;enemy.speed*=1.28;
         enemy.mesh.material.color.setHex(0xe24629);

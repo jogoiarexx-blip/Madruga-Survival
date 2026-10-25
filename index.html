@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-build="2.4.0-combat">
+<html lang="pt-BR" data-build="2.7.0-spider">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MadrugaCraft — Sobrevivência v2.4.0 · Combate REV5</title>
+    <title>Madruga Survival v2.7.0 · Aranha Sombria</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-    <link rel="stylesheet" href="./styles/main.css?v=2.4.0-combat">
+    <link rel="stylesheet" href="./styles/main.css?v=2.7.0-spider">
 </head>
 <body>
     <div id="player-model-status" role="status" aria-live="polite">
@@ -38,6 +38,7 @@
         <h3>Acampamento · Sobrevivência</h3>
         <div id="mission-title">Explore, colete e construa</div>
         <div id="mission-goal">Construa uma fogueira antes de anoitecer</div>
+        <div id="exploration-status" aria-live="off">🧭 Explore os locais abandonados e encontre suprimentos</div>
         <div id="cemetery-status" aria-live="off"></div>
         <div id="equipment-display">Armas podem ser fabricadas na mochila</div>
         <div id="target-hint">Pontos coloridos: recursos</div>
@@ -46,6 +47,7 @@
         <div id="boss-bar-outer"><div id="boss-bar"></div></div>
     </div>
     <div id="instructions">
+        <span>🔩 Novidade v2.6: vasculhe oficinas, depósito e posto médico por tecido e sucata; equipe colete e botas, fabrique kits e cuide da base.</span> · 
         <strong>WASD</strong> mover · <strong>F</strong> coletar/plantar · <strong>I</strong> mochila/crafting · <strong>B</strong> fogueira · <strong>H</strong> abrigo · <strong>V/M/N/K/L</strong> escolher construção · <strong>F/Enter</strong> confirmar · <strong>Esc</strong> cancelar · <strong>G</strong> girar · <strong>C</strong> encaixe · <strong>X</strong> desmontar · <strong>T</strong> reparar · <strong>Y</strong> pescar · <strong>4/5/6</strong> comer/beber · <strong>Shift</strong> correr · <strong>C</strong> furtividade (fora do modo construção) · <strong>Clique/J</strong> atacar · <strong>E</strong> especial · <strong>Q</strong> esquiva · <strong>U</strong> habilidades · <strong>P</strong> salvar
     </div>
     <canvas id="minimap" aria-label="Minimapa da floresta"></canvas>
@@ -89,10 +91,10 @@
     <section id="inventory-panel" class="hidden" aria-hidden="true" aria-label="Mochila e fabricação">
       <div class="inventory-dialog">
         <header><h2>🎒 Mochila e fabricação</h2><button id="inventory-close" type="button" aria-label="Fechar mochila">✕</button></header>
-        <p>Explore a floresta e aperte F perto de recursos. Os itens reaparecem depois de um tempo.</p>
+        <p>Explore a floresta e aperte F perto de recursos. Os itens reaparecem depois de um tempo. Casas abandonadas têm suprimentos únicos e materiais raros (tecido e sucata) para equipamentos avançados; o progresso fica salvo.</p>
         <div id="inventory-items"></div>
         <h3>Consumir</h3>
-        <div class="recipe-actions"><button id="use-berries">🫐 Frutas [4]</button><button id="use-water">💧 Água [5]</button><button id="use-cooked">🍖 Carne [6]</button><button id="use-vegetables">🥕 Legumes</button><button id="use-grilledFish">🍤 Peixe</button><button id="use-stew">🍲 Ensopado</button><button id="use-bandage">🩹 Usar bandagem (+25 vida)</button></div>
+        <div class="recipe-actions"><button id="use-berries">🫐 Frutas [4]</button><button id="use-water">💧 Água [5]</button><button id="use-cooked">🍖 Carne [6]</button><button id="use-vegetables">🥕 Legumes</button><button id="use-grilledFish">🍤 Peixe</button><button id="use-stew">🍲 Ensopado</button><button id="use-bandage">🩹 Usar bandagem (+25 vida)</button><button id="use-medicalKit">🧰 Kit médico (+65 vida e cura veneno)</button></div>
         <div class="recipe-actions"><button id="fish-now" type="button">🎣 Pescar próximo à água [Y]</button></div>
         <div class="recipe-actions"><button id="open-skills-inventory" type="button">⭐ Ver evolução das habilidades</button></div>
         <h3>Construir e fabricar</h3>
@@ -103,7 +105,7 @@
           <button id="rotate-build" type="button">↻ Girar próxima peça</button>
           <span id="rotation-indicator">Rotação adicional: 0°</span>
           <button id="remove-build" type="button">♻ Desmontar peça próxima</button>
-          <button id="repair-build" type="button">🛠 Reparar peça próxima (T)</button>
+          <button id="repair-build" type="button">🛠 Reparar peça próxima (T)</button><button id="repair-kit-build" type="button">🔩 Usar kit de manutenção (+95)</button>
         </div>
         <p class="build-tip">🧱 <strong>Montagem:</strong> escolha uma receita de construção, mova a prévia pelo mundo e confirme antes de gastar. Use G para girar ou Esc para cancelar. Telhados, pisos e paredes encaixam automaticamente nas peças existentes, inclusive nas bordas. C ativa/desativa o ímã.</p>
         <p class="inventory-help">Crie pisos, paredes, telhados, canteiros, portas, camas, baús e bancadas. G alterna a orientação. F abre portas, usa camas e baús. X desmonta peças vazias.</p>
@@ -128,8 +130,8 @@
     </section>
     <div id="pause-menu" class="hidden"><h2>Jogo pausado</h2><p>Sua sobrevivência fica pausada.</p><button id="resume-btn">Voltar ao acampamento</button><button id="save-btn" class="secondary-btn">💾 Salvar progresso</button><p>Esc libera o mouse e pausa o jogo</p></div>
     <div id="overlay">
-        <h1>🌲 MadrugaCraft 3D</h1><p style="color:#aef2d9;font-size:13px;letter-spacing:.12em;">SOBREVIVÊNCIA · EDIÇÃO v2.4.0 · COMBATE E COMBOS</p>
-        <p>Novidade v2.4: três golpes por arma com contato sincronizado, terceiro golpe reforçado e entradas antecipadas. Use J/clique para atacar e C para furtividade; as melhorias de craft e a IA da v2.3 continuam ativas.</p>
+        <h1>🌲 MadrugaCraft 3D</h1><p style="color:#aef2d9;font-size:13px;letter-spacing:.12em;">SOBREVIVÊNCIA · EDIÇÃO v2.6.0 · EQUIPAMENTO E OFICINA</p>
+        <p>Novidade v2.6: encontre tecido e sucata nos locais abandonados e use a bancada para fabricar colete, botas, kit médico e kit de manutenção. Os combos e a furtividade continuam disponíveis.</p>
         <p>Seu Madruga está perdido numa floresta hostil. Colete recursos, encontre água, fabrique ferramentas e construa uma base com paredes, telhados, portas, canteiros, cama e baús!</p>
         <p>Sobreviva aos dias e noites: fome, sede, energia e frio importam. <strong>F</strong> coleta; <strong>I</strong> abre a mochila; <strong>B</strong> constrói fogueira; <strong>H</strong> constrói abrigo. Cace coelhos e javalis com seus ataques, use F para plantar ou regar canteiros e Y para pescar junto à água. Abra a mochila para construir e cozinhar. Encontre o aldeão perto do início e pressione F para recrutar; a área do cemitério fica a noroeste. Envenenamento pode ser aliviado ao beber água.</p>
         <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; pointer-events: auto;">
@@ -182,6 +184,6 @@
         }
     }
     </script>
-    <script type="module" src="./src/main.js?v=2.4.0-combat"></script>
+    <script type="module" src="./src/main.js?v=2.7.0-spider"></script>
 </body>
 </html>

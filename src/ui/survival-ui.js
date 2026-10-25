@@ -1,10 +1,10 @@
-import {RESOURCES,RECIPES,cycleClock,isNight} from '../gameplay/survival.js?v=2.2.8-weapons-craft';
+import {RESOURCES,RECIPES,cycleClock,isNight} from '../gameplay/survival.js?v=2.6.0-crafting';
 import {isStructureRecipe} from '../gameplay/placement.js';
-import {craftCategory,batchable,missingCostLabel,craftBatchPreview} from '../gameplay/crafting.js?v=2.2.8-weapons-craft';
+import {craftCategory,batchable,missingCostLabel,craftBatchPreview} from '../gameplay/crafting.js?v=2.6.0-crafting';
 
 const CATEGORY_OPTIONS=[['all','Todas'],['build','Construções'],['gear','Equipamentos'],
  ['upgrade','Melhorias e reparos'],['food','Culinária'],['healing','Saúde']];
-export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,onDismantle,onRepair,onFish=()=>{},getRotation,
+export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,onDismantle,onRepair,onRepairKit=()=>{},onFish=()=>{},getRotation,
   getCanCraft=()=>true,getRecipeCost=id=>RECIPES[id]?.cost,getCraftStatus=null}){
  const el=id=>document.getElementById(id);
  const panel=el('inventory-panel'),inventory=el('inventory-items'),recipes=el('recipe-list');
@@ -70,7 +70,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
  filter.addEventListener('change',()=>{category=filter.value;update(true);});
  quantity.addEventListener('change',()=>{batchMode=quantity.value;update(true);});
  readyCheckbox.addEventListener('change',()=>{readyOnly=readyCheckbox.checked;update(true);});
- for(const key of ['berries','water','cooked','vegetables','grilledFish','stew','bandage']){
+ for(const key of ['berries','water','cooked','vegetables','grilledFish','stew','bandage','medicalKit']){
    const button=el('use-'+key);if(button)button.addEventListener('click',()=>{onConsume(key);update(true);});
  }
  el('fish-now').onclick=()=>{onFish();update(true);};
@@ -78,6 +78,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
  el('rotate-build').onclick=()=>{onRotate();update(true);};
  el('remove-build').onclick=()=>{onDismantle();update(true);};
  el('repair-build').onclick=()=>{onRepair();update(true);};
+ el('repair-kit-build').onclick=()=>{onRepairKit();update(true);};
  function update(forcePanel=false){
   const state=getState();
   for(const key of ['hunger','thirst','stamina','warmth']){
@@ -89,7 +90,8 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
     '/100 · 🗡 '+state.durability.spear+'/90'+(state.crafted.ironSpear?' · Lança de ferro':'')+
     (state.crafted.ironHammer?' · Marreta de ferro':'')+(state.crafted.reinforcedGrip?' · Empunhadura reforçada':'')+
     (state.crafted.spikedHammer?' · Marreta cravada':'')+(state.crafted.hardenedSpear?' · Lança temperada':'')+
-    (state.crafted.armoredBroom?' · Vassoura reforçada':'');
+    (state.crafted.armoredBroom?' · Vassoura reforçada':'')+
+    (state.crafted.reinforcedVest?' · Colete equipado':'')+(state.crafted.trailBoots?' · Botas equipadas':'');
   el('survival-goal').textContent='Fogueiras '+state.firesBuilt+' · Abrigos '+state.sheltersBuilt+' · Sobreviveu '+state.days+' '+(state.days===1?'dia':'dias');
   el('survival-hint').textContent=state.thirst<20?'⚠ Procure água':state.hunger<20?'⚠ Precisa comer':
    state.warmth<25?'❄ Precisa de abrigo/fogo':state.stamina<15?'⚡ Descanse um pouco':
@@ -132,7 +134,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
   }
   countInfo.textContent=shown+' receitas exibidas · '+ready+' fabricáveis com a quantidade selecionada';
   stockInfo.textContent='💡 Quantidades exibidas: disponível (mochila + baús próximos) / necessário. '+'O craft não retira itens dos baús distantes.';
-  for(const key of ['berries','water','cooked','vegetables','grilledFish','stew','bandage']){
+  for(const key of ['berries','water','cooked','vegetables','grilledFish','stew','bandage','medicalKit']){
     const button=el('use-'+key);if(button)button.disabled=(state.inventory[key]||0)<=0;
   }
  }

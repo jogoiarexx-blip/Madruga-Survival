@@ -7,7 +7,9 @@ export const RESOURCES = Object.freeze({
   cooked:{label:'Carne assada',icon:'🍖'}, iron:{label:'Minério de ferro',icon:'⛏️'},
   seeds:{label:'Sementes',icon:'🌱'},vegetables:{label:'Legumes',icon:'🥕'},
   fish:{label:'Peixe cru',icon:'🐟'},grilledFish:{label:'Peixe assado',icon:'🍤'},
-  stew:{label:'Ensopado de legumes',icon:'🍲'},bandage:{label:'Bandagem',icon:'🩹'}
+  stew:{label:'Ensopado de legumes',icon:'🍲'},bandage:{label:'Bandagem',icon:'🩹'},
+  scrap:{label:'Sucata metálica',icon:'🔩'},cloth:{label:'Tecido reaproveitado',icon:'🧵'},
+  medicalKit:{label:'Kit médico',icon:'🧰'},repairKit:{label:'Kit de manutenção',icon:'🛠️'}
 });
 export const RECIPES = Object.freeze({
   campfire:{label:'Fogueira',cost:{wood:4,stone:4},hint:'Aquece e permite cozinhar'},
@@ -30,6 +32,10 @@ export const RECIPES = Object.freeze({
   spikedHammer:{label:'Marreta cravada',cost:{iron:7,stone:4,fiber:2},hint:'Bancada · exige marreta de ferro; +2 de dano e cravos metálicos'},
   armoredBroom:{label:'Cabo de vassoura reforçado',cost:{iron:3,wood:4,fiber:4},hint:'Bancada · +1 de dano no cabo de vassoura'},
   reinforcedGrip:{label:'Empunhadura reforçada',cost:{fiber:6,wood:2,iron:2},hint:'Bancada · aumenta a durabilidade de marreta e lança'},
+  reinforcedVest:{label:'Colete de proteção',cost:{scrap:7,cloth:5,iron:4},hint:'Bancada · reduz 20% dos golpes recebidos'},
+  trailBoots:{label:'Botas de caminhada',cost:{cloth:5,scrap:4,fiber:5},hint:'Bancada · reduz consumo de energia na corrida'},
+  medicalKit:{label:'Kit médico de emergência',cost:{bandage:2,cloth:2,water:2},hint:'Bancada · recupera 65 de vida e elimina veneno'},
+  repairKit:{label:'Kit de manutenção da base',cost:{scrap:2,iron:1,wood:2},hint:'Bancada · recupera até 95 de vida estrutural'},
   bandage:{label:'Fabricar bandagem',cost:{fiber:3,water:1},hint:'Recupera 25 de vida, pode fabricar várias'},
   repairPickaxe:{label:'Reparar picareta',cost:{wood:1,stone:2},hint:'Exige bancada; restaura durabilidade'},
   repairHammer:{label:'Reparar marreta',cost:{stone:2,wood:1},hint:'Exige bancada; restaura durabilidade'},
@@ -42,8 +48,8 @@ export const DAY_SECONDS = 480;
 export const clamp = n => Math.max(0,Math.min(100,n));
 export function createSurvival() {
   return {hunger:85,thirst:80,stamina:100,warmth:100,days:1,time:DAY_SECONDS*.34,
-    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0,bandage:0},
-    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,hardenedSpear:false,spikedHammer:false,armoredBroom:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
+    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0,bandage:0,scrap:0,cloth:0,medicalKit:0,repairKit:0},
+    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,hardenedSpear:false,spikedHammer:false,armoredBroom:false,reinforcedVest:false,trailBoots:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
 }
 export function isNight(state) {
   const t=(state.time%DAY_SECONDS)/DAY_SECONDS;
@@ -54,7 +60,7 @@ export function cycleClock(state) {
   const hour=Math.floor(t*24),minute=Math.floor((t*24-hour)*60);
   return `${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
 }
-export function advanceSurvival(state,dt,{sprinting=false,moving=false,nearFire=false,sheltered=false,survivalLevel=1}={}) {
+export function advanceSurvival(state,dt,{sprinting=false,moving=false,nearFire=false,sheltered=false,survivalLevel=1,trailBoots=false}={}) {
   const d=Math.max(0,Math.min(dt,.1));
   state.time += d;
   state.days=1+Math.floor(state.time/DAY_SECONDS);
@@ -62,7 +68,7 @@ export function advanceSurvival(state,dt,{sprinting=false,moving=false,nearFire=
   state.hunger=clamp(state.hunger-d*(moving?.055:.038)*drain);
   state.thirst=clamp(state.thirst-d*(sprinting?.135:.080)*drain);
   const canRun=state.stamina>4 && state.hunger>5 && state.thirst>5;
-  state.stamina=clamp(state.stamina+d*(sprinting&&canRun?-19:moving?10:18));
+  state.stamina=clamp(state.stamina+d*(sprinting&&canRun?(trailBoots?-15:-19):moving?10:18));
   const exposed=isNight(state)&&!nearFire&&!sheltered;
   state.warmth=clamp(state.warmth+d*(exposed?-3.2:nearFire?9:sheltered?5:3));
   const starving=state.hunger<=0||state.thirst<=0;
@@ -115,7 +121,7 @@ export function restoreSurvival(data){
   if(obj.crafted.spikedHammer&&!obj.crafted.ironHammer)return null;
   if(obj.crafted.hardenedSpear&&!obj.crafted.ironSpear)return null;
   if(obj.crafted.reinforcedGrip&&(!obj.crafted.spear||!obj.crafted.hammer))return null;
-  if(!['ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
+  if(!['ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom','reinforcedVest','trailBoots'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
   if(!Object.entries({pickaxe:80,hammer:100,spear:90}).every(([k,max])=>Number.isInteger(obj.durability[k])&&obj.durability[k]>=0&&obj.durability[k]<=max&&(!obj.durability[k]||obj.crafted[k])))return null;
   if(!Number.isInteger(obj.firesBuilt)||obj.firesBuilt<0||obj.firesBuilt>100)return null;
   if(!Number.isInteger(obj.sheltersBuilt)||obj.sheltersBuilt<0||obj.sheltersBuilt>100)return null;

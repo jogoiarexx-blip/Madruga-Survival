@@ -1,4 +1,4 @@
-// MadrugaCraft Sobrevivência v2.4.0 — mundo modular e publicação estática.
+// MadrugaCraft Sobrevivência v2.5.0 — mundo modular e publicação estática.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -14,8 +14,10 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
+import {createSpiderModelManager} from './characters/spider-model.js?v=2.7.0-spider';
+import {createSpiderAI} from './gameplay/spider-ai.js?v=2.7.0-spider';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
-import { createPlayerModel } from './characters/player-model.js?v=2.2.8-weapons-craft';
+import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.4.0-combat';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
@@ -24,17 +26,18 @@ import { createCombatSystem } from './gameplay/combat.js?v=2.4.0-combat';
 import { createProjectileSystem } from './gameplay/projectiles.js';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
-import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES} from './gameplay/survival.js?v=2.2.8-weapons-craft';
+import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.6.0-crafting';
 import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
+import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js?v=2.2.8-weapons-craft';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.6.0-crafting';
 import {createTouchControls} from './input/touch-controls.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
-import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.2.8-weapons-craft';
+import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.6.0-crafting';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
@@ -45,7 +48,7 @@ import {createVillagerGuard} from './characters/villager-guard.js';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
 import {SKILLS,awardSkill,skillLevel,fishingBonus,farmingBonus,huntingBonus,
-    resourceBonus,recipeCost,cookedYield} from './gameplay/skills.js?v=2.2.8-weapons-craft';
+    resourceBonus,recipeCost,cookedYield} from './gameplay/skills.js?v=2.6.0-crafting';
 
 
 // ========== SCENE ==========
@@ -150,7 +153,7 @@ const dashDirection = new THREE.Vector3();
 const xpRequired = () => 4 + level * 3;
 let invulnerableTimer = 0, elapsed = 0;
 let spawnTimer = 15;
-let sneaking=false,runningFastNow=false,footstepTimer=0;
+let sneaking=false,runningFastNow=false,footstepTimer=0,webSlowTimer=0;
 const zombieSenses=createZombieSenses();
 const playerNoise=(radius,kind)=>zombieSenses.emit(player.position,radius,elapsed,kind);
 let mousePitch = 0.18;
@@ -175,6 +178,9 @@ const jumpForce = 8.5;
 
 const enemies = [];
 const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight});
+const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton});
+if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
+  get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length})});
 const healthPacks = [];
 const speedBoosts = [];
 const trees = [];
@@ -185,6 +191,9 @@ const forest = createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosi
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
 const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),findSpawnPoint:(min,max,r)=>findSpawnPoint(min,max,r)});
+const exploration=createExplorationWorld({THREE,scene,getGroundHeight,
+    isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),
+    addCollider:collider=>collisionWorld.add(collider)});
 const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality,mergeGeometries});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
@@ -228,8 +237,13 @@ function updateHUD() {
       investigating?`👂 ${investigating} zumbi(s) investigando a área`:
       sneaking?'🤫 Furtividade ativa · ruído reduzido':'👣 Passos normais · C para andar silenciosamente';
     stealthStatus.dataset.alert=following?'danger':investigating?'caution':sneaking?'quiet':'normal';
-    document.getElementById('boost-display').textContent = speedBoostTimer > 0 ? `⚡ Velocidade: ${speedBoostTimer.toFixed(1)}s` : '';
+    document.getElementById('boost-display').textContent = webSlowTimer>0?`🕸 Teia: ${webSlowTimer.toFixed(1)}s`:speedBoostTimer > 0 ? `⚡ Velocidade: ${speedBoostTimer.toFixed(1)}s` : '';
     document.getElementById('dodge-display').textContent = dashCooldown > 0 ? `Q · Esquiva: ${dashCooldown.toFixed(1)}s` : 'Q · Esquiva pronta';
+    const explorationGoal=exploration.objective(player.position);
+    const explorationStatus=document.getElementById('exploration-status');
+    explorationStatus.textContent=!explorationGoal.ready?'🧭 Procure suprimentos nas casas abandonadas':
+      explorationGoal.complete?'🗺 Todos os locais vasculhados!':
+      `🧭 Explorar: ${explorationGoal.site.discovered?explorationGoal.site.label:'Local desconhecido'} · ${explorationGoal.direction} · ${explorationGoal.meters}m · caixas ${explorationGoal.opened}/${explorationGoal.total}`;
     document.getElementById('mission-title').textContent = buildings.structures.some(s=>s.type==='farmPlot')?'Cultive alimentos, pesque e proteja sua casa':'Monte uma horta e complete sua casa';
     document.getElementById('mission-goal').textContent = survival.firesBuilt ?
       'Construa um telhado, um canteiro e fabrique uma vara de pesca'  : 'Reúna 4 madeiras e 4 pedras para a fogueira';
@@ -241,6 +255,7 @@ function updateHUD() {
     document.getElementById('skill-hud').textContent=`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`;
     const closestBuilding=buildings.nearest(player.position,2.85);
     const closest=resources.findNearby(player.position);
+    const closestLoot=exploration.nearest(player.position);
     const prompt=document.getElementById('interact-hint');
     if(placement){
         prompt.classList.add('hidden');
@@ -250,6 +265,9 @@ function updateHUD() {
         prompt.classList.remove('hidden');
     }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=guard.hp===0?'[F] Reanimar aldeão com 2 frutas e 1 água':'[F] Recrutar aldeão para defender sua base';
+        prompt.classList.remove('hidden');
+    }else if(closestLoot&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent=`[F] Vasculhar ${closestLoot.container.label} · ${closestLoot.site.label}`;
         prompt.classList.remove('hidden');
     }else if(closest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         const names={wood:'madeira',stone:'pedras',fiber:'fibras',berries:'frutas',water:'água',iron:'ferro (requer picareta)'};
@@ -327,7 +345,7 @@ function doDodge() {
 }
 function damagePlayer(amount, origin) {
     if (!gameActive || invulnerableTimer > 0) return false;
-    health = Math.max(0,health-amount);
+    health = Math.max(0,health-amount*(survival.crafted.reinforcedVest?.80:1));
     invulnerableTimer = 0.86; flashDamage(); sfx.damage(); playerRev5.hurt();
     const dx = player.position.x-origin.x, dz = player.position.z-origin.z;
     const d = Math.hypot(dx,dz)||1;
@@ -338,14 +356,17 @@ function damagePlayer(amount, origin) {
     return true;
 }
 const projectileSystem = createProjectileSystem({THREE,scene,player,allColliders,isPositionFree,damagePlayer,
-    removeMesh,isGameActive:()=>gameActive});
+    removeMesh,isGameActive:()=>gameActive,onWebHit:seconds=>{webSlowTimer=Math.max(webSlowTimer,seconds);showToast('🕸 Teia! Movimento reduzido temporariamente.');}});
+const spiderAI=createSpiderAI({player,getGroundHeight,resolveCollision,damagePlayer,
+    throwProjectile:enemy=>projectileSystem.throwProjectile(enemy),
+    hasLineOfSight:(a,b)=>!buildings.blocksLine(a,b)});
 
 function removeMesh(mesh,defeated=false) {
     const deceased=enemies.find(e=>e.mesh===mesh);
-    if(defeated&&deceased&&zombieModels.defeat(deceased))return;
+    if(defeated&&deceased&&(zombieModels.defeat(deceased)||spiderModels.defeat(deceased)))return;
     scene.remove(mesh);
     const zombie=enemies.find(e=>e.mesh===mesh);
-    if(zombie)zombieModels.dispose(zombie);
+    if(zombie){zombieModels.dispose(zombie);spiderModels.dispose(zombie);}
     const disposed=new Set();
     mesh.traverse(node => {
         if (!node.isMesh) return;
@@ -422,7 +443,7 @@ function spawnSpeedBoost(at = null) {
     speedBoosts.push(boost);
 }
 
-const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,getQuality:()=>graphicsQuality,onSpawn:enemy=>zombieModels.attach(enemy)});
+const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,getQuality:()=>graphicsQuality,onSpawn:enemy=>{zombieModels.attach(enemy);spiderModels.attach(enemy);}});
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
 const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
@@ -441,14 +462,17 @@ function initWorld() {
     cameraObstacles.push(...cemetery.cameraObstacles);
     cameraRig.refreshObstacles();
     forest.updateVisibility(player.position,graphicsQuality,0,true);
+    exploration.generate(worldSeed);
     resources.generate(worldSeed,graphicsQuality);
     wildlife.generate(worldSeed,graphicsQuality);
     void zombieModels.preload();
+    void spiderModels.preload();
     for (let i=0; i<2; i++) spawnHealthPack();
     for (let i=0; i<2; i++) spawnSpeedBoost();
     for (let i=0; i<2; i++) spawnEnemy('normal');
     spawnEnemy('fast');
     if(Math.random()<0.35)spawnEnemy('zombie');
+    spawnEnemy('spider'); // Uma aranha na floresta por mundo; o rig substitui o proxy humano.
     updateHUD();
 }
 
@@ -469,7 +493,7 @@ function serializeProgress() {
         seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
         currentWeapon,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
-        wildlife:wildlife.serialize(),
+        wildlife:wildlife.serialize(),exploration:exploration.serialize(),
         healthPacks:healthPacks.map(item=>({x:item.position.x,z:item.position.z})),
         speedBoosts:speedBoosts.map(item=>({x:item.position.x,z:item.position.z})),
         enemies:enemies.map(enemy=>({type:enemy.type,x:enemy.mesh.position.x,z:enemy.mesh.position.z,
@@ -492,13 +516,14 @@ function replaceItems(items, data, create) {
 function restoreProgress(data) {
     level=data.level;xp=data.xp;kills=data.kills;maxHealth=data.maxHealth;health=data.health;
     wave=data.wave;elapsed=data.elapsed;spawnTimer=15;
-    zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;
+    zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;
     survival=data.survival;raidState=data.raid||createRaidState();raidAlertUntil=0;
     poisonTimer=data.poisonTimer||0;cemeterySpawnTimer=5;guard.setState(data.guard);
     buildings.restore(data.buildings);
     if(Array.isArray(data.wildlife))wildlife.restore(data.wildlife);
     refreshBuildingCamera();
     resources.restore(data.resources);
+    exploration.restore(data.exploration);
     unlockedWeaponCount=survival.crafted.spear?3:survival.crafted.hammer?2:1;
     const location=resolveCollision(data.player.x,data.player.z,.46);
     player.position.set(location.x,getGroundHeight(location.x,location.z),location.z);
@@ -626,7 +651,7 @@ function beginAdventure(restore=false) {
         worldSeed=save.seed;
         graphicsQuality=save.graphicsQuality;
     }
-    zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;spawnTimer=15;
+    zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;spawnTimer=15;
     if (!worldInitialized) {initWorld();worldInitialized=true;}
     if (save) restoreProgress(save);
     overlay.classList.add('hidden');
@@ -687,6 +712,7 @@ const enemyAI = createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
     showBossTelegraph:shrine.showBossTelegraph,hideBossTelegraph:shrine.hideBossTelegraph,
     damagePlayer,spawnParticle,throwProjectile:projectileSystem.throwProjectile,sfx,
     isGameActive:()=>gameActive,hasLineOfSight:(from,to)=>!buildings.blocksLine(from,to),
+    spiderAI,
     getPlayerPerception:()=>({sounds:zombieSenses,night:isNight(survival),sneaking,sprinting:runningFastNow}),
     getRaidTarget:(pos)=>raidTarget(buildings.structures,pos,player.position),
     getGuard:()=>guard.recruited&&guard.alive?guard.position:null,
@@ -802,7 +828,7 @@ for(const [id,callback] of [
 ])document.getElementById(id).addEventListener('click',callback);
 const skillsUI=createSkillsUI({getState:()=>survival,onClose:closeSkills});
 const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume:consume,
-    onClose:closeInventory,onRotate:rotateBuild,onDismantle:deconstructNear,onRepair:repairNear,onFish:fishNearby,
+    onClose:closeInventory,onRotate:rotateBuild,onDismantle:deconstructNear,onRepair:()=>repairNear(),onRepairKit:()=>repairNear(true),onFish:fishNearby,
     getRotation:()=>rotationOffset*90,getCanCraft:canCraftAtPosition,
     getCraftStatus:(id,cost)=>craftingStatus(id,cost),
     getRecipeCost:id=>recipeCost(id,RECIPES[id]?.cost,survival.skills)});
@@ -850,12 +876,13 @@ function interactWithBuilding(){
     }
     return false;
 }
-function repairNear(){
+function repairNear(useKit=false){
     const candidate=buildings.structures.filter(s=>s.hp<maxBuildingHP(s.type)&&Math.hypot(s.x-player.position.x,s.z-player.position.z)<3.5)
       .sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z))[0];
     if(!candidate){showToast('Nenhuma construção danificada ao alcance.');return false;}
-    if(!buildings.repair(candidate,survival)){showToast('Precisa de 1 madeira ou pedra para reparar.');return false;}
-    earnSkill('building',8);
+    if(!(useKit?buildings.repairKit(candidate,survival):buildings.repair(candidate,survival))){
+        showToast(useKit?'Precisa fabricar um kit de manutenção na bancada.':'Precisa de 1 madeira ou pedra para reparar.');return false;}
+    earnSkill('building',useKit?18:8);
     sfx.collect();showToast(`🛠 ${RECIPES[candidate.type].label} reparada: ${candidate.hp}/${maxBuildingHP(candidate.type)}`);
     saveProgress();updateHUD();return true;
 }
@@ -878,6 +905,15 @@ function harvestNear(){
     if(interactWithBuilding())return true;
     if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)){
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
+    }
+    if(exploration.nearest(player.position)){
+        const loot=exploration.search(player.position,survival.inventory);
+        if(!loot.ok){showToast(`🎒 ${loot.reason}`);return false;}
+        const items=Object.entries(loot.items).map(([key,count])=>
+          `+${count} ${RESOURCES[key]?.label||key}`).join(' · ');
+        playerNoise(12,'search');
+        earnSkill('gathering',16);sfx.collect();
+        showToast(`📦 ${loot.label}: ${items}`);updateHUD();saveProgress();return true;
     }
     const result=resources.harvest(player.position,canUseTool(survival,'pickaxe'));
     if(!result){
@@ -908,6 +944,12 @@ function fishNearby(){
 }
 function consume(type){
   if(!gameActive)return false;
+  if(type==='medicalKit'){
+    if((survival.inventory.medicalKit||0)<1){showToast('🧰 Nenhum kit médico disponível');return false;}
+    if(health>=maxHealth&&poisonTimer<=0){showToast('❤️ Vida cheia e nenhum veneno ativo');return false;}
+    survival.inventory.medicalKit--;health=Math.min(maxHealth,health+65);poisonTimer=0;
+    sfx.heal();showToast('🧰 Kit médico: até +65 vida e veneno eliminado');updateHUD();saveProgress();return true;
+  }
   if(type==='bandage'){
     if((survival.inventory.bandage||0)<1){showToast('🩹 Sem bandagens na mochila');return false}
     if(health>=maxHealth){showToast('❤️ Vida já está no máximo');return false}
@@ -994,6 +1036,7 @@ document.addEventListener('mousedown', e => {
 const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
   player, treeColliders, rockColliders, collectibles:[], healthPacks, speedBoosts,
   enemies, shrinePosition, playerYaw, resources:resources.nodes, structures:buildings.structures,
+  explorationSites:exploration.sites,
   cemeteryPosition:CEMETERY_POS,guardPosition:guard.alive?guard.position:null
 }));
 
@@ -1038,7 +1081,7 @@ function animate() {
         const beforeDay=survival.days;
         const vitals=advanceSurvival(survival,dt,{sprinting:runningFast,moving:moveDir.lengthSq()>.01,
             nearFire:buildings.near('campfire',player.position,7),sheltered:buildings.near('shelter',player.position,5)||buildings.covered(player.position),
-            survivalLevel:skillLevel(survival,'survival')});
+            survivalLevel:skillLevel(survival,'survival'),trailBoots:survival.crafted.trailBoots});
         if(survival.days>beforeDay)earnSkill('survival',40);
         const poisonStep=Math.min(dt,poisonTimer);poisonTimer=Math.max(0,poisonTimer-poisonStep);
         const dotDamage=poisonStep*.92;
@@ -1059,7 +1102,7 @@ function animate() {
             saveProgress();
         }
         const currentSpeed=(baseSpeed+(level-1)*.15)*speedBoost*(runningFast?runMultiplier:1)*
-            (sneaking?.43:1)*(poisonTimer>0?.76:1);
+            (sneaking?.43:1)*(poisonTimer>0?.76:1)*(webSlowTimer>0?.52:1);
         const cos = Math.cos(playerYaw), sin = Math.sin(playerYaw);
         dashCooldown=Math.max(0,dashCooldown-dt);
         dashTimer=Math.max(0,dashTimer-dt);
@@ -1133,6 +1176,7 @@ function animate() {
         playerRev5.update(dt,{speed:realMovementSpeed,sprinting:runningFast,grounded:isGrounded,
           attackProgress:combat.isAttacking?THREE.MathUtils.clamp(1-combat.attackAnimTimer/combat.attackAnimDuration,0,1):null,
           attackStep:combat.comboStep});
+        webSlowTimer=Math.max(0,webSlowTimer-dt);
         invulnerableTimer = Math.max(0, invulnerableTimer-dt);
         player.visible = invulnerableTimer<=0 || Math.floor(invulnerableTimer*12)%2 === 0;
 
@@ -1169,11 +1213,28 @@ function animate() {
 
         zombieSenses.prune(elapsed);
         resources.update(dt,player.position,graphicsQuality);
+        for(const event of exploration.update(player.position,graphicsQuality)){
+            if(event.type==='discovered'){showToast(`🗺 Descoberto: ${event.site.label}. Vasculhe os móveis com F!`);saveProgress();}
+            if(event.type==='danger'){
+                showToast(`⚠ ${event.site.label}: infectados rondam a região!`);
+                for(let i=0;i<event.site.threat&&enemies.length<10;i++){
+                    for(let attempt=0;attempt<12;attempt++){
+                        const angle=Math.random()*Math.PI*2,d=8+Math.random()*3;
+                        const x=event.site.x+Math.cos(angle)*d,z=event.site.z+Math.sin(angle)*d;
+                        if(!isPositionFree(x,z,.85)||Math.hypot(x-player.position.x,z-player.position.z)<7)continue;
+                        spawnEnemy(i===0&&event.site.threat>=2?'spider':'zombie');const spawned=enemies[enemies.length-1];
+                        spawned.mesh.position.set(x,getGroundHeight(x,z)+spawned.size/2,z);break;
+                    }
+                }
+                saveProgress();
+            }
+        }
         buildings.update(elapsed,dt);
         wildlife.update(dt,player.position,graphicsQuality);
         guard.update(dt,elapsed,player.position);
         enemyAI.update(dt,elapsed);
         zombieModels.updateCorpses(dt,removeMesh);
+        spiderModels.updateCorpses(dt,removeMesh);
         // Patrulha do cemitério: surgem infectados quando o jogador explora a região.
         cemeterySpawnTimer-=dt;
         if(withinCemetery(player.position,21)&&cemeterySpawnTimer<=0&&enemies.length<12){
@@ -1195,7 +1256,7 @@ function animate() {
             const spawnPlan=ambientSpawnPlan({night:vitals.night,wave,random:Math.random()});
             spawnTimer=spawnPlan.delay;
             if (enemies.length<spawnPlan.cap) {
-                const r=Math.random();spawnEnemy(vitals.night ? (r<.85?chooseZombieType({night:true,day:survival.days,roll:Math.random()}):r<.94?'fast':'tank') : (r<.75?chooseZombieType({night:false,day:survival.days,roll:Math.random()}):r<.9?'normal':'fast'));
+                const r=Math.random();spawnEnemy(r<.08 && survival.days>=2 && enemies.filter(e=>e.type==='spider').length<2?'spider':vitals.night ? (r<.85?chooseZombieType({night:true,day:survival.days,roll:Math.random()}):r<.94?'fast':'tank') : (r<.75?chooseZombieType({night:false,day:survival.days,roll:Math.random()}):r<.9?'normal':'fast'));
             }
         }
         hudTick+=dt;
