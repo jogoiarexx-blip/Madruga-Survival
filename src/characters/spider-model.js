@@ -3,6 +3,7 @@
 export const SPIDER_GLB='./assets/models/aranha_sombria_animada.glb';
 export const SPIDER_PARTS='./assets/models/aranha-parts/manifest.json';
 export const SPIDER_CLIPS=Object.freeze(['Idle','Walk','Jump','Attack','WebShot']);
+export const SPIDER_DURATIONS=Object.freeze({Idle:3,Walk:1.2,Jump:1.6,Attack:1.12,WebShot:1.45});
 
 export function verifySpiderClips(animations){
   const names=new Set((animations||[]).map(clip=>clip.name));
@@ -16,14 +17,27 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
   if(!Number.isInteger(manifest.byteLength)||manifest.byteLength<100000||manifest.byteLength>25000000||
      !Array.isArray(manifest.parts)||manifest.parts.length<1||manifest.parts.length>60)
     throw new Error('Manifesto da aranha inválido');
+  // Baixar até cinco partes em paralelo: evita dezenas de esperas em série no Pages.
+  // Guardar a posição original para reconstruir o arquivo sem reordenar seus bytes.
+  const parts=new Array(manifest.parts.length);
+  let cursor=0;
+  async function worker(){
+    while(cursor<manifest.parts.length){
+      const index=cursor++,part=manifest.parts[index];
+      if(!/^part\d{2}\.b64$/.test(part))throw new Error('Parte desconhecida da aranha');
+      const r=await fetcher(manifestUrl.replace(/manifest\.json$/,part));
+      if(!r.ok)throw new Error('Parte faltando: '+part);
+      const data=atobFn((await r.text()).replace(/\s/g,''));
+      const block=new Uint8Array(data.length);
+      for(let i=0;i<data.length;i++)block[i]=data.charCodeAt(i);
+      parts[index]=block;
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(5,parts.length)},()=>worker()));
   const bytes=new Uint8Array(manifest.byteLength);let offset=0;
-  for(const part of manifest.parts){
-    if(!/^part\d{2}\.b64$/.test(part))throw new Error('Parte desconhecida da aranha');
-    const r=await fetcher(manifestUrl.replace(/manifest\.json$/,part));
-    if(!r.ok)throw new Error('Parte faltando: '+part);
-    const data=atobFn((await r.text()).replace(/\s/g,''));
-    if(offset+data.length>bytes.length)throw new Error('Tamanho da aranha excedido');
-    for(let i=0;i<data.length;i++)bytes[offset++]=data.charCodeAt(i);
+  for(const block of parts){
+    if(!block||offset+block.length>bytes.length)throw new Error('Tamanho da aranha excedido');
+    bytes.set(block,offset);offset+=block.length;
   }
   if(offset!==bytes.length)throw new Error('Pacote da aranha truncado');
   let glb=bytes;
@@ -71,7 +85,8 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,url=SPI
    const mixer=new THREE.AnimationMixer(model);const actions={};
    for(const clip of asset.animations)actions[clip.name]=mixer.clipAction(clip);
    // Os efeitos de teia são animados pelo clipe WebShot, não por um mesh duplicado.
-   const visual={model,mixer,actions,current:null,lock:0,actionTime:0,previousMoving:false,
+   const visual={model,mixer,actions,current:null,lock:0,actionTime:0,flash:0,dead:false,
+     mixerAccumulator:0,rotationTiltX:0,rotationTiltZ:0,
      play(name,{once=false,speed=1,blend=.17}={}){
        const next=actions[name];if(!next)return false;
        if(!once&&this.current===name){next.setEffectiveTimeScale(speed);return true;}
@@ -82,27 +97,42 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,url=SPI
        next.clampWhenFinished=once;next.play();this.current=name;return true;
      },
      attack(kind='Attack'){
-       const duration=kind==='WebShot'?1.45:1.12;
+       const duration=SPIDER_DURATIONS[kind]||SPIDER_DURATIONS.Attack;
        this.play(kind,{once:true,blend:.11});this.lock=duration;this.actionTime=0;
      },
-     jump(){this.play('Jump',{once:true,blend:.12});this.lock=1.6;this.actionTime=0;},
+     jump(){this.play('Jump',{once:true,blend:.12});this.lock=SPIDER_DURATIONS.Jump;this.actionTime=0;},
      hurt(){if(this.lock>.5)return;this.flash=.22;},
      die(){this.lock=3;this.play('Idle',{blend:.10});this.dead=true;},
-     update(dt,moving,near=true,pace=1){
-       if(!Number.isFinite(dt)||dt<=0)return;
-       const step=Math.min(.065,dt);this.lock=Math.max(0,this.lock-step);this.actionTime+=step;
-       if(this.dead){this.model.rotation.z=Math.min(1.35,this.model.rotation.z+step*2.8);this.model.position.y=-enemy.size/2-Math.min(.22,this.model.rotation.z*.15);}
-       else {
+     update(dt,moving,near=true,pace=1,slope={x:0,z:0}){
+       if(!Number.isFinite(dt)||dt<=0||!this.model)return;
+       const step=Math.min(.1,dt);
+       this.lock=Math.max(0,this.lock-step);this.actionTime+=step;
+       if(this.dead){
+         this.model.rotation.z=Math.min(1.35,this.model.rotation.z+step*2.8);
+         this.model.rotation.x*=Math.exp(-8*step);
+         this.model.position.y=-enemy.size/2-Math.min(.22,this.model.rotation.z*.15);
+       }else{
          const wanted=moving?'Walk':'Idle';
          const cadence=Math.max(.7,Math.min(1.45,pace||1));
          if(this.lock<=0)this.play(wanted,{speed:moving?cadence:1});
-         if(this.current==='Jump')this.model.position.y=-enemy.size/2+Math.max(0,Math.sin(Math.PI*Math.min(1,this.actionTime/1.6)))*.32;
-         else this.model.position.y=-enemy.size/2;
-         if(this.flash>0){this.flash=Math.max(0,this.flash-step);this.model.rotation.z=Math.sin(this.flash*40)*.075;}
-         else this.model.rotation.z*=Math.max(0,1-step*12);
+         // O salto desloca o collider pela IA; não somar outra altura ao rig.
+         this.model.position.y=-enemy.size/2;
+         const blend=1-Math.exp(-9*step);
+         this.rotationTiltX+=(Math.max(-.23,Math.min(.23,slope.x||0))-this.rotationTiltX)*blend;
+         this.rotationTiltZ+=(Math.max(-.23,Math.min(.23,slope.z||0))-this.rotationTiltZ)*blend;
+         this.model.rotation.x=this.rotationTiltX;
+         if(this.flash>0){
+           this.flash=Math.max(0,this.flash-step);
+           this.model.rotation.z=this.rotationTiltZ+Math.sin(this.flash*40)*.075;
+         }else this.model.rotation.z+=(this.rotationTiltZ-this.model.rotation.z)*blend;
        }
-       // Model remains visible at distance; no unexpected disappearance in long shots.
-       this.mixer.update(step);
+       // Reduz trabalho com muitos ossos longe da câmera sem perder tempo do clipe.
+       // O mixer distante avança em blocos, não em câmera lenta.
+       this.mixerAccumulator+=step;
+       const interval=near?0:.13;
+       if(this.mixerAccumulator>=interval){
+         this.mixer.update(this.mixerAccumulator);this.mixerAccumulator=0;
+       }
      },
      dispose(){this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);this.model=null;}
    };

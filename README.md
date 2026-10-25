@@ -1,3 +1,12 @@
+## Aranha Sombria — v2.8.0 (revisão de física, animações e desempenho)
+
+- Salto da aranha agora desloca o collider com arco físico, trajetória travada e colisão com paredes; a aterrissagem é sincronizada ao solo.
+- O corpo inclina discretamente com a superfície, mantendo a caixa de colisão vertical.
+- A teia respeita a invulnerabilidade da esquiva; projéteis percorrem subpassos para não atravessar paredes finas em quedas de FPS.
+- Loader GLB mantém a verificação SHA-256, mas busca as 26 partes em paralelo com limite de cinco solicitações; atualização de rig distante em lotes para economizar CPU.
+- Saves, cinco animações GLB e 72 ossos do modelo permanecem preservados. Os testes existentes e 10 verificações novas passam; teste visual WebGL não concluído (Chromium bloqueia localhost neste ambiente).
+- Relatório em `RELATORIO-REV280.md`.
+
 ## Aranha Sombria — v2.7.0
 
 O modelo original enviado pelo usuário foi integrado como inimigo 3D com 72 ossos e as animações Idle, Walk, Jump, Attack e WebShot. A movimentação usa o controlador de colisão do mundo e a animação tem blend de 170 ms. A teia provoca dano leve e lentidão temporária. O GLB local otimizado ocupa 6,6 MB; no GitHub Pages ele é carregado das partes gzip em `assets/models/aranha-parts/`. Diagnóstico no console: `window.madrugaSpiderStatus`. O modelo original enviado pelo usuário não foi alterado.

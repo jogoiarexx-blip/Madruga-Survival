@@ -15,13 +15,21 @@ function throwProjectile(enemy, spread = 0) {
 function updateProjectiles(dt) {
     for (let i=projectiles.length-1;i>=0;i--) {
         const p=projectiles[i]; p.age+=dt;
-        p.mesh.position.addScaledVector(p.velocity,dt);
+        // Subpassos impedem projéteis de atravessar paredes finas em FPS baixo.
+        // Aplicar lentidão apenas se o dano realmente passou pela esquiva.
+        const distance=p.velocity.length()*Math.min(dt,.12);
+        const substeps=Math.max(1,Math.ceil(distance/.24));
+        let collided=false,hitPlayer=false;
+        for(let step=0;step<substeps&&!collided&&!hitPlayer;step++){
+            p.mesh.position.addScaledVector(p.velocity,Math.min(dt,.12)/substeps);
+            collided = isPositionFree ? !isPositionFree(p.mesh.position.x,p.mesh.position.z,0.16) :
+                allColliders.some(c => (c.x-p.mesh.position.x)**2+(c.z-p.mesh.position.z)**2 < (c.radius+0.16)**2);
+            if(collided)break;
+            hitPlayer=Math.hypot(player.position.x-p.mesh.position.x,player.position.z-p.mesh.position.z)<0.83 &&
+                Math.abs(player.position.y+1-p.mesh.position.y)<1.2;
+            if(hitPlayer){const applied=damagePlayer(p.damage,p.mesh.position);if(applied&&p.isWeb)onWebHit(2.7);}
+        }
         p.mesh.rotation.y+=dt*6;
-        const collided = isPositionFree ? !isPositionFree(p.mesh.position.x,p.mesh.position.z,0.16) :
-            allColliders.some(c => (c.x-p.mesh.position.x)**2+(c.z-p.mesh.position.z)**2 < (c.radius+0.16)**2);
-        const hitPlayer = Math.hypot(player.position.x-p.mesh.position.x,player.position.z-p.mesh.position.z)<0.83 &&
-            Math.abs(player.position.y+1-p.mesh.position.y)<1.2;
-        if (hitPlayer){damagePlayer(p.damage,p.mesh.position);if(p.isWeb)onWebHit(2.7);}
         if (p.age>4 || collided || hitPlayer || !isGameActive()) {
             removeMesh(p.mesh);projectiles.splice(i,1);
         }
