@@ -3,12 +3,24 @@ import {SPIDER_DURATIONS} from '../characters/spider-model.js';
 export const SPIDER_ATTACK_PHASE=0.48/SPIDER_DURATIONS.Attack;
 export const SPIDER_WEB_PHASE=0.49/SPIDER_DURATIONS.WebShot;
 export const SPIDER_JUMP_DAMAGE_PHASE=.79;
+export const SPIDER_WEB_FAN_SPREAD=Object.freeze([-.23,0,.23]);
+// Golpe forte interrompe somente o wind-up anterior ao impacto; nunca depois.
+export function spiderInterruptWindup(brain,strength=1){
+  if(!brain?.action||strength<1.5)return false;
+  const hitAt=brain.action==='Attack'?.48:brain.action==='WebShot'||brain.action==='WebBurst'?.49:
+    brain.action==='Jump'?SPIDER_DURATIONS.Jump*SPIDER_JUMP_DAMAGE_PHASE:0;
+  if(brain.actionTime>=hitAt)return false;
+  brain.action=null;brain.actionTime=0;brain.hit=false;
+  brain.cooldown=Math.max(brain.cooldown||0,.85);
+  return true;
+}
+
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
 export function spiderDecision(distance,visible,timer,random=0.5){
   if(timer>0||!visible)return null;
   if(distance<2.2)return 'Attack';
-  if(distance>5&&distance<15)return 'WebShot';
+  if(distance>5&&distance<15)return random<.23?'WebBurst':'WebShot';
   if(distance>=2.2&&distance<5&&random<.30)return 'Jump';
   return null;
 }
@@ -30,27 +42,34 @@ export function spiderTerrainSlope(x,z,yaw,getGroundHeight,sample=.65){
   return {x:clamp(-Math.atan(forward),-.23,.23),z:clamp(Math.atan(right),-.23,.23)};
 }
 
-export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePlayer,throwProjectile,hasLineOfSight=()=>true}){
+export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePlayer,throwProjectile,
+  hasLineOfSight=()=>true,onSpiderSound=()=>{}}){
  function update(enemy,dt,elapsed){
    if(!enemy||!Number.isFinite(dt)||dt<=0)return;
    const step=Math.min(dt,.1),mesh=enemy.mesh;
    const dx=player.position.x-mesh.position.x,dz=player.position.z-mesh.position.z,dist=Math.hypot(dx,dz);
    const visible=dist<26&&hasLineOfSight(mesh.position,player.position);
    const ai=enemy.spiderBrain||(enemy.spiderBrain={cooldown:1.1,action:null,actionTime:0,hit:false});
+   ai.stepTimer=Math.max(0,(ai.stepTimer??0)-step);
    ai.cooldown=Math.max(0,ai.cooldown-step);
    enemy.knockback=Math.max(0,(enemy.knockback||0)-step);
    let leaping=false;
    if(ai.action){
      ai.actionTime+=step;
-     const duration=SPIDER_DURATIONS[ai.action];
+     const duration=SPIDER_DURATIONS[ai.action==='WebBurst'?'WebShot':ai.action];
      if(ai.action==='Attack'&&!ai.hit&&ai.actionTime>=.48){
        ai.hit=true;
        const near=Math.hypot(mesh.position.x-player.position.x,mesh.position.z-player.position.z);
        if(near<2.2&&hasLineOfSight(mesh.position,player.position))damagePlayer(enemy.damage,mesh.position);
      }
-     if(ai.action==='WebShot'&&!ai.hit&&ai.actionTime>=.49){
+     if((ai.action==='WebShot'||ai.action==='WebBurst')&&!ai.hit&&ai.actionTime>=.49){
        ai.hit=true;
-       if(visible)throwProjectile(enemy);
+       // Arco visível e evitável: projéteis respeitam paredes e invulnerabilidade.
+       if(visible){
+         if(ai.action==='WebBurst')for(const spread of SPIDER_WEB_FAN_SPREAD)throwProjectile(enemy,spread);
+         else throwProjectile(enemy);
+         onSpiderSound('web',dist,enemy);
+       }
      }
      if(ai.action==='Jump'){
        const phase=ai.actionTime/duration;
@@ -73,11 +92,12 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
    const decision=ai.action?null:spiderDecision(dist,visible,ai.cooldown,Math.abs(Math.sin(elapsed+mesh.id)));
    if(decision){
      ai.action=decision;ai.actionTime=0;ai.hit=false;
-     ai.cooldown=decision==='WebShot'?5.1:decision==='Jump'?3.0:1.55;
+     ai.cooldown=decision==='WebBurst'?7.3:decision==='WebShot'?5.1:decision==='Jump'?3.0:1.55;
+     onSpiderSound(decision==='WebBurst'||decision==='WebShot'?'charge':decision==='Jump'?'jump':'attack',dist,enemy);
      if(decision==='Jump'){
        ai.jumpX=dx/(dist||1);ai.jumpZ=dz/(dist||1);ai.jumpYaw=Math.atan2(dx,dz);
        enemy.spiderVisual?.jump();
-     }else enemy.spiderVisual?.attack(decision);
+     }else enemy.spiderVisual?.attack(decision==='WebBurst'?'WebShot':decision);
    }
    const moving=!ai.action&&enemy.knockback<=0&&dist>2&&dist<32;
    let actualMoving=false;
@@ -86,6 +106,11 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
      const next=resolveCollision(mesh.position.x+dx/(dist||1)*speed,mesh.position.z+dz/(dist||1)*speed,enemy.size*.36);
      actualMoving=Math.hypot(next.x-mesh.position.x,next.z-mesh.position.z)>.0001;
      mesh.position.x=next.x;mesh.position.z=next.z;
+     // Um único passo audível por ciclo, mesmo com FPS muito alto.
+     if(actualMoving&&ai.stepTimer<=0){
+       onSpiderSound('step',dist,enemy);
+       ai.stepTimer=.48;
+     }
    }
    const jumpAltitude=ai.action==='Jump'?spiderJumpHeight(ai.actionTime):0;
    mesh.position.y=getGroundHeight(mesh.position.x,mesh.position.z)+enemy.size/2+jumpAltitude;

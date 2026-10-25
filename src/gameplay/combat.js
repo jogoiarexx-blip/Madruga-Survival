@@ -1,3 +1,4 @@
+import {spiderInterruptWindup} from './spider-ai.js?v=2.10.0-spider';
 import {PLAYER_HIT_PHASES,PLAYER_ATTACK_DURATIONS} from '../characters/player-attack-pose.js';
 import {nextComboStep,comboProfile,COMBO_WINDOW,ATTACK_BUFFER_WINDOW} from './combo-system.js?v=2.4.0-combat';
 // Combate corpo a corpo, especial, dano em inimigos e efeitos temporários.
@@ -25,7 +26,17 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true, impactStr
     // Short hit-stun only: bosses resist staggering and ongoing attacks aren't cancelled.
     const stagger=enemy.type==='boss'?.12:Math.min(.36,.17*Math.max(.5,Math.min(2,impactStrength)));
     enemy.knockback = Math.max(enemy.knockback||0,stagger);
-    if(enemy.hp>0){enemy.rev4Visual?.hurt();enemy.spiderVisual?.hurt();}
+    if(enemy.hp>0){
+      enemy.rev4Visual?.hurt();
+      if(enemy.type==='spider'){
+        const interrupted=spiderInterruptWindup(enemy.spiderBrain,impactStrength);
+        if(interrupted)enemy.spiderVisual?.interrupt?.();
+        enemy.spiderVisual?.hurt(impactStrength);
+        // Dano comum não interrompe a animação de ataque, mas gera reação visível.
+        sfx.spiderHurt?.(Math.hypot(enemy.mesh.position.x-player.position.x,
+          enemy.mesh.position.z-player.position.z));
+      }
+    }
     if(enemy.type==='boss' && enemy.hp>0 && enemy.hp<=enemy.maxHp*.5 && !enemy.enraged){
         enemy.enraged=true;enemy.speed*=1.28;
         enemy.mesh.material.color.setHex(0xe24629);
@@ -44,6 +55,8 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true, impactStr
     enemy.mesh.position.x = pushed.x; enemy.mesh.position.z = pushed.z;
     sfx.hit();
     if (enemy.hp <= 0) {
+        if(enemy.type==='spider')sfx.spiderDeath?.(Math.hypot(enemy.mesh.position.x-player.position.x,
+          enemy.mesh.position.z-player.position.z));
         const drop = {x: enemy.mesh.position.x, z: enemy.mesh.position.z};
         removeMesh(enemy.mesh,true);
         enemies.splice(enemies.indexOf(enemy), 1);

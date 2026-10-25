@@ -1,4 +1,4 @@
-import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.9.0-spider';
+import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.10.0-spider';
 
 // Aranha Sombria: modelo original do usuário, com 72 ossos e cinco clipes.
 // O mesmo GLB é reutilizado por todos os inimigos; cada aranha recebe seu próprio rig e mixer.
@@ -88,7 +88,7 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
    const footPlant=createSpiderLegPlant({THREE,model,getGroundHeight});
    for(const clip of asset.animations)actions[clip.name]=mixer.clipAction(clip);
    // Os efeitos de teia são animados pelo clipe WebShot, não por um mesh duplicado.
-   const visual={model,mixer,actions,current:null,lock:0,actionTime:0,flash:0,dead:false,
+   const visual={model,mixer,actions,current:null,lock:0,actionTime:0,flash:0,recoil:0,dead:false,
      mixerAccumulator:0,rotationTiltX:0,rotationTiltZ:0,footPlant,
      play(name,{once=false,speed=1,blend=.17}={}){
        const next=actions[name];if(!next)return false;
@@ -104,7 +104,11 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
        this.play(kind,{once:true,blend:.11});this.lock=duration;this.actionTime=0;
      },
      jump(){this.play('Jump',{once:true,blend:.12});this.lock=SPIDER_DURATIONS.Jump;this.actionTime=0;},
-     hurt(){if(this.lock>.5)return;this.flash=.22;},
+     hurt(strength=1){
+       this.flash=Math.max(this.flash,.24);
+       this.recoil=Math.max(this.recoil,.07*Math.max(.6,Math.min(2.0,strength)));
+     },
+     interrupt(){this.lock=0;this.play('Idle',{blend:.13});},
      die(){this.lock=3;this.play('Idle',{blend:.10});this.dead=true;},
      update(dt,moving,near=true,pace=1,slope={x:0,z:0},groundIK=near){
        if(!Number.isFinite(dt)||dt<=0||!this.model)return;
@@ -119,7 +123,10 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
          const cadence=Math.max(.7,Math.min(1.45,pace||1));
          if(this.lock<=0)this.play(wanted,{speed:moving?cadence:1});
          // O salto desloca o collider pela IA; não somar outra altura ao rig.
-         this.model.position.y=-enemy.size/2;
+         // Recuo em golpe recebido, sem deslocar o collider nem alterar material
+         // compartilhado do GLB (outras aranhas não devem piscar juntas).
+         this.recoil*=Math.exp(-13*step);
+         this.model.position.y=-enemy.size/2+this.recoil;
          const blend=1-Math.exp(-9*step);
          this.rotationTiltX+=(Math.max(-.23,Math.min(.23,slope.x||0))-this.rotationTiltX)*blend;
          this.rotationTiltZ+=(Math.max(-.23,Math.min(.23,slope.z||0))-this.rotationTiltZ)*blend;
