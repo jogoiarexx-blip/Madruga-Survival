@@ -1,3 +1,5 @@
+import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.9.0-spider';
+
 // Aranha Sombria: modelo original do usuário, com 72 ossos e cinco clipes.
 // O mesmo GLB é reutilizado por todos os inimigos; cada aranha recebe seu próprio rig e mixer.
 export const SPIDER_GLB='./assets/models/aranha_sombria_animada.glb';
@@ -55,7 +57,7 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
   return new GLTFLoader().parseAsync(glb.buffer,'./assets/models/');
 }
 
-export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,url=SPIDER_GLB}){
+export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,url=SPIDER_GLB}){
  let asset=null,loading=null,failed=false;
  const active=new Set(),corpses=new Map();
  function preload(){
@@ -83,10 +85,11 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,url=SPI
    for(const child of enemy.mesh.children)child.visible=false;
    enemy.mesh.material.visible=false;enemy.mesh.add(model);
    const mixer=new THREE.AnimationMixer(model);const actions={};
+   const footPlant=createSpiderLegPlant({THREE,model,getGroundHeight});
    for(const clip of asset.animations)actions[clip.name]=mixer.clipAction(clip);
    // Os efeitos de teia são animados pelo clipe WebShot, não por um mesh duplicado.
    const visual={model,mixer,actions,current:null,lock:0,actionTime:0,flash:0,dead:false,
-     mixerAccumulator:0,rotationTiltX:0,rotationTiltZ:0,
+     mixerAccumulator:0,rotationTiltX:0,rotationTiltZ:0,footPlant,
      play(name,{once=false,speed=1,blend=.17}={}){
        const next=actions[name];if(!next)return false;
        if(!once&&this.current===name){next.setEffectiveTimeScale(speed);return true;}
@@ -103,7 +106,7 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,url=SPI
      jump(){this.play('Jump',{once:true,blend:.12});this.lock=SPIDER_DURATIONS.Jump;this.actionTime=0;},
      hurt(){if(this.lock>.5)return;this.flash=.22;},
      die(){this.lock=3;this.play('Idle',{blend:.10});this.dead=true;},
-     update(dt,moving,near=true,pace=1,slope={x:0,z:0}){
+     update(dt,moving,near=true,pace=1,slope={x:0,z:0},groundIK=near){
        if(!Number.isFinite(dt)||dt<=0||!this.model)return;
        const step=Math.min(.1,dt);
        this.lock=Math.max(0,this.lock-step);this.actionTime+=step;
@@ -131,10 +134,13 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,url=SPI
        this.mixerAccumulator+=step;
        const interval=near?0:.13;
        if(this.mixerAccumulator>=interval){
-         this.mixer.update(this.mixerAccumulator);this.mixerAccumulator=0;
+         const advanced=this.mixerAccumulator;
+         this.mixer.update(advanced);this.mixerAccumulator=0;
+         // Aplicar o CCD depois da animação e só para criaturas próximas, no chão.
+         this.footPlant?.update({dt:advanced,clip:this.current,moving,near:groundIK&&!this.dead,action:actions[this.current]});
        }
      },
-     dispose(){this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);this.model=null;}
+     dispose(){this.footPlant?.reset();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);this.model=null;}
    };
    enemy.spiderVisual=visual;visual.play('Idle');return true;
  }

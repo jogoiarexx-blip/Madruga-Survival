@@ -97,7 +97,7 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
      ai.slope=spiderTerrainSlope(mesh.position.x,mesh.position.z,mesh.rotation.y,getGroundHeight);
      ai.slopeTimer=.18;
    }
-   enemy.spiderVisual?.update(step,actualMoving,dist<42,actualMoving?1:0,ai.slope);
+   enemy.spiderVisual?.update(step,actualMoving,dist<42,actualMoving?1:0,ai.slope,dist<24);
  }
  return {update};
 }

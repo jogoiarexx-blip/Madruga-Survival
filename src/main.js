@@ -14,8 +14,8 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import {createSpiderModelManager} from './characters/spider-model.js?v=2.8.0-spider';
-import {createSpiderAI} from './gameplay/spider-ai.js?v=2.8.0-spider';
+import {createSpiderModelManager} from './characters/spider-model.js?v=2.9.0-spider';
+import {createSpiderAI} from './gameplay/spider-ai.js?v=2.9.0-spider';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
 import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.4.0-combat';
@@ -23,7 +23,7 @@ import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.3.0-perception';
 import { createCombatSystem } from './gameplay/combat.js?v=2.4.0-combat';
-import { createProjectileSystem } from './gameplay/projectiles.js?v=2.8.0-spider';
+import { createProjectileSystem } from './gameplay/projectiles.js?v=2.9.0-spider';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.6.0-crafting';
@@ -178,7 +178,7 @@ const jumpForce = 8.5;
 
 const enemies = [];
 const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight});
-const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton});
+const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
   get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length})});
 const healthPacks = [];
