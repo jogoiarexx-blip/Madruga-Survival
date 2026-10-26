@@ -3,6 +3,7 @@ import {SPIDER_VARIANTS,isSpiderVariant} from './spider-variants.js?v=2.13.0';
 import {restoreGuard} from '../characters/villager-guard.js';
 // Save v2 separado do save da campanha v1 para não destruir a partida antiga.
 import {restoreSurvival} from './survival.js';
+import {restoreHotbar} from './consumable-hotbar.js';
 import {STRUCTURE_TYPES,MODULAR_TYPES,MAX_STRUCTURES} from '../world/building-rules.js';
 import {validChestItems} from './storage.js';
 import {maxBuildingHP} from './base-defense.js';
@@ -27,7 +28,8 @@ export function validateSave(data){
   !integer(data.wave,1,6)||!number(data.elapsed,0,1e7)||!integer(data.currentWeapon,0,2))return null;
  if(!point(data.player)||!number(data.player.yaw,-1e9,1e9))return null;
  const survival=restoreSurvival(data.survival);
- if(!survival)return null;
+ const hotbar=restoreHotbar(data.hotbar);
+ if(!survival||!hotbar)return null;
  if((data.currentWeapon===1&&!survival.crafted.hammer)||
    (data.currentWeapon===2&&!survival.crafted.spear)||
    (survival.crafted.spear&&!survival.crafted.hammer))return null;
@@ -51,7 +53,7 @@ export function validateSave(data){
  const raid=restoreRaid(data.raid);if(!raid)return null;
  const guard=restoreGuard(data.guard);if(!guard)return null;
  if(data.poisonTimer!==undefined&&!number(data.poisonTimer,0,30))return null;
- return {...data,survival,raid,...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
+ return {...data,survival,hotbar,raid,...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
 }
 export function readSave(storage){try{const raw=storage?.getItem(SAVE_KEY);
  if(!raw||raw.length>60000)return null;

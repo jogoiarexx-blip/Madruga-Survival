@@ -1,4 +1,4 @@
-// Madruga Survival v2.14.0 — caverna, aranha rainha e cristais de crafting.
+// Madruga Survival v2.15.0 — barra de consumíveis configurável e persistente.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -34,6 +34,8 @@ import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
 import {createSurvivalUI} from './ui/survival-ui.js?v=2.13.0';
+import {createConsumableHotbarUI} from './ui/consumable-hotbar-ui.js?v=2.15.0';
+import {defaultHotbar,assignHotbarSlot,hotbarIndexFromCode} from './gameplay/consumable-hotbar.js?v=2.15.0';
 import {createTouchControls} from './input/touch-controls.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
@@ -141,6 +143,7 @@ const controls = {
 
 // ========== GAME STATE ==========
 let survival=createSurvival();
+let hotbarSlots=defaultHotbar();
 let raidState=createRaidState(),raidAlertUntil=0,poisonTimer=0,cemeterySpawnTimer=5;
 let health = 100;
 let maxHealth = 100;
@@ -273,6 +276,7 @@ function updateHUD() {
       bossWrapper.classList.toggle('rage',!!queen.enraged);
     }
     survivalUI.update();
+    consumableHotbarUI.update();
     skillsUI.update();
     document.getElementById('skill-hud').textContent=`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`;
     const closestBuilding=buildings.nearest(player.position,2.85);
@@ -536,7 +540,7 @@ function refreshBuildingCamera(){
 function serializeProgress() {
     return {
         seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
-        currentWeapon,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
+        currentWeapon,hotbar:hotbarSlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
         wildlife:wildlife.serialize(),exploration:exploration.serialize(),spiderNests:spiderNests.serialize(),
         arachnidCave:arachnidCave.serialize(),
@@ -564,7 +568,7 @@ function restoreProgress(data) {
     level=data.level;xp=data.xp;kills=data.kills;maxHealth=data.maxHealth;health=data.health;
     wave=data.wave;elapsed=data.elapsed;spawnTimer=15;
     zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;
-    survival=data.survival;raidState=data.raid||createRaidState();raidAlertUntil=0;
+    survival=data.survival;hotbarSlots=[...data.hotbar];raidState=data.raid||createRaidState();raidAlertUntil=0;
     poisonTimer=data.poisonTimer||0;cemeterySpawnTimer=5;guard.setState(data.guard);
     buildings.restore(data.buildings);
     if(Array.isArray(data.wildlife))wildlife.restore(data.wildlife);
@@ -665,9 +669,8 @@ document.addEventListener('keydown', e => {
     if (e.code === 'KeyY') fishNearby();
     if (e.code === 'KeyB') craft('campfire');
     if (e.code === 'KeyH') craft('shelter');
-    if (e.code === 'Digit4') consume('berries');
-    if (e.code === 'Digit5') consume('water');
-    if (e.code === 'Digit6') consume('cooked');
+    const hotbarIndex=hotbarIndexFromCode(e.code);
+    if (hotbarIndex!==-1) {useHotbarSlot(hotbarIndex);return;}
     if (e.code === 'KeyR') craft('cooked');
     if (e.code === 'KeyG') rotateBuild();
     if (e.code === 'KeyV') craft('floor');
@@ -699,7 +702,7 @@ let worldInitialized = false;
 function beginAdventure(restore=false) {
     if(placement)releasePlacement();
     const save = restore ? availableSave : null;
-    if (!save) {clearSave(progressStorage);availableSave=null;}
+    if (!save) {clearSave(progressStorage);availableSave=null;hotbarSlots=defaultHotbar();}
     else {
         worldSeed=save.seed;
         graphicsQuality=save.graphicsQuality;
@@ -709,6 +712,8 @@ function beginAdventure(restore=false) {
     if (save) restoreProgress(save);
     overlay.classList.add('hidden');
     gameActive=true;saveTick=0;
+    document.getElementById('consumable-hotbar').classList.remove('hidden');
+    consumableHotbarUI.update();
     initAudio();controls.lock();
 }
 document.getElementById('start-btn').onclick = () => beginAdventure(false);
@@ -897,6 +902,10 @@ for(const [id,callback] of [
     ['placement-near',()=>movePlacement('distance',-.75)]
 ])document.getElementById(id).addEventListener('click',callback);
 const skillsUI=createSkillsUI({getState:()=>survival,onClose:closeSkills});
+const consumableHotbarUI=createConsumableHotbarUI({
+  getSlots:()=>hotbarSlots,getInventory:()=>survival.inventory,
+  onUse:useHotbarSlot,onAssign:configureHotbar
+});
 const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume:consume,
     onClose:closeInventory,onRotate:rotateBuild,onDismantle:deconstructNear,onRepair:()=>repairNear(),onRepairKit:()=>repairNear(true),onFish:fishNearby,
     getRotation:()=>rotationOffset*90,getCanCraft:canCraftAtPosition,
@@ -1040,6 +1049,18 @@ function fishNearby(){
     if(result.ok){earnSkill('fishing',28);sfx.collect();updateHUD();saveProgress();}
     showToast(result.message);
     return result.ok;
+}
+function useHotbarSlot(index){
+  if(!gameActive || placement || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen ||
+     !document.getElementById('pause-menu').classList.contains('hidden'))return false;
+  const item=hotbarSlots[index];
+  return item?consume(item):false;
+}
+function configureHotbar(index,item){
+  const changed=assignHotbarSlot(hotbarSlots,index,item);
+  if(!changed)return false;
+  hotbarSlots=changed;
+  consumableHotbarUI.update();saveProgress();return true;
 }
 function consume(type){
   if(!gameActive)return false;

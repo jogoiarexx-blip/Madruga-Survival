@@ -1,3 +1,10 @@
+## v2.15.0 — Consumíveis acessíveis na tela
+- Nova hotbar de 6 slots na parte inferior, com teclado 4–9 e uso por toque.
+- Itens reconfiguráveis na mochila; exibe ícone e estoque da mochila, desativa slots vazios e sem recursos.
+- Integração transacional ao consumo existente e persistência em save v2; migração de saves anteriores.
+- Novos módulos `src/gameplay/consumable-hotbar.js`, `src/ui/consumable-hotbar-ui.js` e 14 testes dedicados.
+- Validações: `npm test` e `npm run check` aprovados; WebGL real requer teste manual.
+
 ## v2.14.0 — Caverna e Rainha
 - Câmera restrita à arena com raycast de paredes, iluminação e decoração rochosa, barra de chefe e telegraph de fase 2.
 - Melhoria visual sem substituir nenhum GLB. Ver relatório técnico da revisão.

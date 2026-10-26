@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-build="2.14.0-cave">
+<html lang="pt-BR" data-build="2.15.0-hotbar">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Madruga Survival v2.14.0 · Caverna e Rainha das Aranhas</title>
+    <title>Madruga Survival v2.15.0 · Barra de consumíveis</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg">
-    <link rel="stylesheet" href="./styles/main.css?v=2.14.0-cave">
+    <link rel="stylesheet" href="./styles/main.css?v=2.15.0-hotbar">
 </head>
 <body>
     <div id="player-model-status" role="status" aria-live="polite">
@@ -50,10 +50,11 @@
     </div>
     <div id="instructions">
         <span>🔩 Novidade v2.6: vasculhe oficinas, depósito e posto médico por tecido e sucata; equipe colete e botas, fabrique kits e cuide da base.</span> · 
-        <strong>WASD</strong> mover · <strong>F</strong> coletar/plantar · <strong>I</strong> mochila/crafting · <strong>B</strong> fogueira · <strong>H</strong> abrigo · <strong>V/M/N/K/L</strong> escolher construção · <strong>F/Enter</strong> confirmar · <strong>Esc</strong> cancelar · <strong>G</strong> girar · <strong>C</strong> encaixe · <strong>X</strong> desmontar · <strong>T</strong> reparar · <strong>Y</strong> pescar · <strong>4/5/6</strong> comer/beber · <strong>Shift</strong> correr · <strong>C</strong> furtividade (fora do modo construção) · <strong>Clique/J</strong> atacar · <strong>E</strong> especial · <strong>Q</strong> esquiva · <strong>U</strong> habilidades · <strong>P</strong> salvar
+        <strong>WASD</strong> mover · <strong>F</strong> coletar/plantar · <strong>I</strong> mochila/crafting · <strong>B</strong> fogueira · <strong>H</strong> abrigo · <strong>V/M/N/K/L</strong> escolher construção · <strong>F/Enter</strong> confirmar · <strong>Esc</strong> cancelar · <strong>G</strong> girar · <strong>C</strong> encaixe · <strong>X</strong> desmontar · <strong>T</strong> reparar · <strong>Y</strong> pescar · <strong>4–9</strong> slots configuráveis (mochila) · <strong>Shift</strong> correr · <strong>C</strong> furtividade (fora do modo construção) · <strong>Clique/J</strong> atacar · <strong>E</strong> especial · <strong>Q</strong> esquiva · <strong>U</strong> habilidades · <strong>P</strong> salvar
     </div>
     <canvas id="minimap" aria-label="Minimapa da floresta"></canvas>
     <div id="crosshair" aria-hidden="true"></div>
+    <section id="consumable-hotbar" class="hidden" aria-label="Barra rápida de consumíveis"></section>
     <div id="interact-hint" class="hidden" aria-live="off"></div>
     <section id="placement-panel" class="hidden" aria-label="Posicionar construção" aria-live="off">
       <div class="placement-heading"><strong id="placement-name">🧱 Posicionar estrutura</strong><span id="placement-coords"></span></div>
@@ -95,8 +96,11 @@
         <header><h2>🎒 Mochila e fabricação</h2><button id="inventory-close" type="button" aria-label="Fechar mochila">✕</button></header>
         <p>Explore a floresta e aperte F perto de recursos. Os itens reaparecem depois de um tempo. Casas abandonadas têm tecido e sucata; ninhos de aranhas têm seda, quitina e ovos que eclodem. Pressione F perto de um ninho para recolher um ovo. O progresso fica salvo.</p>
         <div id="inventory-items"></div>
+        <h3>🎯 Configurar atalhos de consumíveis</h3>
+        <p class="hotbar-help">Escolha o item de cada slot. Durante o jogo, use as teclas 4–9 ou toque nos botões da barra inferior. As quantidades vêm da mochila e os atalhos ficam salvos.</p>
+        <div id="hotbar-config" aria-label="Configuração dos seis atalhos"></div>
         <h3>Consumir</h3>
-        <div class="recipe-actions"><button id="use-berries">🫐 Frutas [4]</button><button id="use-water">💧 Água [5]</button><button id="use-cooked">🍖 Carne [6]</button><button id="use-vegetables">🥕 Legumes</button><button id="use-grilledFish">🍤 Peixe</button><button id="use-stew">🍲 Ensopado</button><button id="use-bandage">🩹 Usar bandagem (+25 vida)</button><button id="use-medicalKit">🧰 Kit médico (+65 vida e cura veneno)</button><button id="use-silkDressing">🕸️ Curativo de seda (+40 vida e remove teia)</button></div>
+        <div class="recipe-actions"><button id="use-berries">🫐 Frutas</button><button id="use-water">💧 Água</button><button id="use-cooked">🍖 Carne</button><button id="use-vegetables">🥕 Legumes</button><button id="use-grilledFish">🍤 Peixe</button><button id="use-stew">🍲 Ensopado</button><button id="use-bandage">🩹 Usar bandagem (+25 vida)</button><button id="use-medicalKit">🧰 Kit médico (+65 vida e cura veneno)</button><button id="use-silkDressing">🕸️ Curativo de seda (+40 vida e remove teia)</button></div>
         <div class="recipe-actions"><button id="fish-now" type="button">🎣 Pescar próximo à água [Y]</button></div>
         <div class="recipe-actions"><button id="open-skills-inventory" type="button">⭐ Ver evolução das habilidades</button></div>
         <h3>Construir e fabricar</h3>

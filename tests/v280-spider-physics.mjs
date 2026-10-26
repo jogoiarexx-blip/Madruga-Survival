@@ -83,9 +83,9 @@ test('projétil não atravessa paredes finas em quadros longos',()=>{
 test('cache-busting da v2.8 aplicado ao HTML e imports',()=>{
   const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-  assert.match(index,/data-build="(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave)"/);
+  assert.match(index,/data-build="(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar)"/);
   assert.match(main,/spider-model\.js\?v=(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0)/);
-  assert.match(main,/projectiles\.js\?v=(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave)/);
+  assert.match(main,/projectiles\.js\?v=(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar)/);
 });
 {
   // Concurrency: GLB sintético com 8 fragmentos e fetches de latência artificial.

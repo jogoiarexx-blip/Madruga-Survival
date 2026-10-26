@@ -1,3 +1,7 @@
+## Madruga Survival v2.15.0 — Barra rápida de consumíveis
+
+**Slots 4 a 9:** escolha seus alimentos e curativos na seção *Configurar atalhos de consumíveis* da mochila (`I`). Durante a partida, pressione as teclas **4–9** ou toque na barra inferior no celular. A quantidade real aparece em cada slot e a configuração é salva com a partida. As teclas **1–3** continuam equipando armas. Saves anteriores continuam compatíveis. Veja `RELATORIO-REV215.md`.
+
 ## Madruga Survival v2.14.0 — Refinamento da caverna e Rainha
 
 Câmera com colisões e limite da arena, iluminação subterrânea, visual de fase 2, barra de vida da Rainha, animação de transição e testes. Veja `RELATORIO-REV214.md`.

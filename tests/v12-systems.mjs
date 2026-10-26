@@ -108,7 +108,7 @@ check('novo save inclui vida da base, raiders e histórico sem corromper a v2',(
  player:{x:0,z:0,yaw:0},survival:s(),raid:{lastNight:2,waves:1},resources:[],
  buildings:[{type:'wall',x:6,z:6,rotation:0,hp:35},{type:'workbench',x:9,z:9,rotation:0,hp:90}],
  healthPacks:[],speedBoosts:[],enemies:[{type:'normal',x:15,z:5,hp:2,enraged:false,raider:true}]};
- const db=storage();assert.ok(writeSave(db,sample));assert.deepEqual(readSave(db),{version:2,...sample});
+ const db=storage();assert.ok(writeSave(db,sample));assert.deepEqual(readSave(db),{version:2,...sample,hotbar:['berries','water','cooked','bandage','medicalKit','silkDressing']});
  const old={...sample};delete old.raid;old.buildings=[{type:'wall',x:6,z:6,rotation:0}];
  old.enemies=[{type:'normal',x:15,z:5,hp:2,enraged:false}];
  assert.deepEqual(validateSave({version:2,...old}).raid,{lastNight:0,waves:0});
