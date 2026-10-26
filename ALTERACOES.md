@@ -1,3 +1,8 @@
+## v2.22.0 — Preparação GPU e shaders
+
+- Compilação antecipada assíncrona de materiais, texturas progressivas após iniciar, preparação dos GLBs antes de aparecer.
+- Menu inicial continua sem renderização, downloads ou WebGL.
+
 ## v2.21.0 — Menu sem loop e assets sob demanda
 
 - Renderização, downloads GLB, GPU e terreno 3D adiados até início da partida.

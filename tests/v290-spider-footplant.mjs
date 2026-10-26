@@ -71,7 +71,7 @@ test('gestor de modelos recebe altura do terreno e integra IK só após o mixer'
   const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
   assert.match(m,/createSpiderLegPlant\(\{THREE,model,getGroundHeight\}\)/);
   assert.ok(m.indexOf('this.mixer.update(advanced)')<m.indexOf('this.footPlant?.update'));
-  assert.match(main,/createSpiderModelManager\(\{THREE,GLTFLoader,cloneSkeleton,getGroundHeight(?:,deferPreload:true)?\}\)/);
+  assert.match(main,/createSpiderModelManager\(\{THREE,GLTFLoader,cloneSkeleton,getGroundHeight(?:,deferPreload:true)?/);
   const ai=readFileSync(new URL('../src/gameplay/spider-ai.js',import.meta.url),'utf8');
   assert.match(ai,/ai\.slope,dist<24\)/);
 });
@@ -79,9 +79,9 @@ test('cache bust do navegador e scripts de verificação atualizados',()=>{
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
   const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
-  assert.match(html,/data-build="(?:2\.(?:9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu)"/);
+  assert.match(html,/data-build="(?:2\.(?:9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu)"/);
   assert.match(main,/spider-model\.js\?v=(?:2\.(?:9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0)/);
-  assert.ok(['2.9.0','2.10.0','2.11.0','2.12.0','2.13.0','2.14.0','2.15.0','2.16.0','2.17.0','2.18.0','2.19.0','2.20.0','2.21.0'].includes(pkg.version));
+  assert.ok(['2.9.0','2.10.0','2.11.0','2.12.0','2.13.0','2.14.0','2.15.0','2.16.0','2.17.0','2.18.0','2.19.0','2.20.0','2.21.0','2.22.0'].includes(pkg.version));
   assert.ok(pkg.scripts.test.includes('v290-spider-footplant.mjs'));
 });
 console.log(`v2.9: ${tests} novas verificações aprovadas`);

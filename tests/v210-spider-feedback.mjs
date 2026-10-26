@@ -93,8 +93,8 @@ test('áudio procedural gera efeitos de passos, ataque, teia, ferimento e morte'
 test('entrada do jogo envia eventos e versão está atualizada',()=>{
  const main=file('../src/main.js'),index=file('../index.html'),pkg=JSON.parse(file('../package.json'));
  assert.match(main,/onSpiderSound:/);
- assert.match(index,/data-build="(?:2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu)"/);
- assert.ok(['2.10.0','2.11.0','2.12.0','2.13.0','2.14.0','2.15.0','2.16.0','2.17.0','2.18.0','2.19.0','2.20.0','2.21.0'].includes(pkg.version));
+ assert.match(index,/data-build="(?:2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu)"/);
+ assert.ok(['2.10.0','2.11.0','2.12.0','2.13.0','2.14.0','2.15.0','2.16.0','2.17.0','2.18.0','2.19.0','2.20.0','2.21.0','2.22.0'].includes(pkg.version));
  assert.ok(pkg.scripts.test.includes('v210-spider-feedback.mjs'));
 });
 console.log('v2.10:',passed,'novas verificações aprovadas');

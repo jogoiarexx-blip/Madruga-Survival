@@ -58,7 +58,7 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
   return new GLTFLoader().parseAsync(glb.buffer,'./assets/models/');
 }
 
-export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,url=SPIDER_GLB,deferPreload=false}){
+export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,url=SPIDER_GLB,deferPreload=false,onBeforeMount=async()=>{}}){
  let asset=null,loading=null,failed=false;
  const active=new Set(),corpses=new Map();
  function preload(){
@@ -69,8 +69,9 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
    const isPages=typeof location!=='undefined'&&/(^|\.)github\.io$/.test(location.hostname);
    const tryDirect=()=>new GLTFLoader().loadAsync(url);
    const load=isPages?loadSpiderParts({GLTFLoader}).catch(tryDirect):tryDirect().catch(()=>loadSpiderParts({GLTFLoader}));
-   loading=load.then(gltf=>{
+   loading=load.then(async gltf=>{
      if(!gltf?.scene||!verifySpiderClips(gltf.animations))throw new Error('Aranha sem rig ou cinco clipes');
+      try{await onBeforeMount(gltf.scene,'Aranha Sombria');}catch(error){console.warn('Pré-aquecimento opcional ignorado:',error);}
      asset=gltf;for(const e of active)mount(e);return true;
    }).catch(error=>{failed=true;console.warn('Aranha Sombria indisponível; inimigo mantém forma provisória.',error);return false;});
    return loading;

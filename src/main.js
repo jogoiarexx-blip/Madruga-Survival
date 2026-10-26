@@ -1,4 +1,4 @@
-// Madruga Survival v2.21.0 — menu inerte, assets sob demanda e renderização adaptativa.
+// Madruga Survival v2.22.0 — menu inerte, assets sob demanda e renderização adaptativa.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -14,6 +14,7 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createFrameDriver,createAssetPipeline} from './render/startup-scheduler.js';
+import {createGpuWarmup} from './render/gpu-warmup.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
 import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
@@ -116,6 +117,19 @@ const natureAssets = createNatureAssets(THREE);
 // ========== PERSONAGEM ==========
 const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,equipWeaponVisual,setWeaponUpgrades} =
     createPlayerModel(THREE,scene);
+const gpuWarmup=createGpuWarmup({
+  getRenderer:()=>renderer,getScene:()=>scene,getCamera:()=>camera,
+  isActive:()=>gameActive&&!document.hidden,
+  onProgress:({label,phase,done,total})=>{
+    if(!gameActive)return;
+    const status=document.getElementById('gpu-warmup-status');
+    if(!status)return;
+    if(phase==='ready'||phase==='failed'){status.classList.add('hidden');return;}
+    status.textContent=phase==='textures'?`🎨 Preparando ${label}: textura ${done}/${total}`:
+      `🎨 Preparando shaders: ${label}`;
+    status.classList.remove('hidden');
+  }
+});
 const modelBanner=document.getElementById('player-model-status');
 const modelMessage=document.getElementById('player-model-message');
 const modelRetry=document.getElementById('player-model-retry');
@@ -127,7 +141,8 @@ function showPlayerModelStatus(message,state){
     modelRetry.style.display=state==='error'?'inline-block':'none';
 }
 const playerRev5=createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,
-    onStatus:showPlayerModelStatus,fallbackRig:{torso,leftLeg,rightLeg}});
+    onStatus:showPlayerModelStatus,fallbackRig:{torso,leftLeg,rightLeg},
+    onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
 modelRetry.addEventListener('click',()=>{if(gameActive)void playerRev5.preload();});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaRev5Status',{
     configurable:true,get:()=>({loaded:playerRev5.loaded,failed:playerRev5.failed,
@@ -202,8 +217,10 @@ const gravity = -25;
 const jumpForce = 8.5;
 
 const enemies = [];
-const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true});
-const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true});
+const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true,
+  onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
+const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true,
+  onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
   get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length,
      variants:Object.fromEntries(['shadow','hunter','weaver'].map(id=>[id,enemies.filter(e=>e.spiderVariant===id).length]))})});
@@ -643,6 +660,7 @@ const pauseMenu = document.getElementById('pause-menu');
 const assetStatus=document.getElementById('asset-loading-status');
 const assetPipeline=createAssetPipeline({
     stages:[
+        {name:'Shaders do cenário',load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
         {name:'Personagem REV5',load:()=>playerRev5.preload()},
         {name:'Zumbis REV2',load:()=>zombieModels.preload()},
         {name:'Aranha Sombria',load:()=>spiderModels.preload()}

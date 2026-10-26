@@ -113,7 +113,7 @@ export function findRev5Hand(root,side='Left') {
   return found;
 }
 
-export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallbackRig={},onStatus=()=>{},url=PLAYER_REV5_URL}) {
+export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallbackRig={},onStatus=()=>{},onBeforeMount=async()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
   let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0,queuedComboStep=null;
   let restingGrip=null;
@@ -207,7 +207,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
         .catch(originalError=>loadPlayerRev5Resilient({GLTFLoader,onStatus,manifests:[PLAYER_REV5_PARTS_MANIFEST]})
           .catch(partsError=>{throw Error('REV5 local: '+String(originalError?.message||originalError)+
             ' | partes: '+String(partsError?.message||partsError));}));
-    promise=load.then(gltf=>{
+    promise=load.then(async gltf=>{
       if(!gltf?.scene||!Array.isArray(gltf.animations))throw Error('Modelo REV5 inválido');
       for(const name of ['Idle','Walking','Running','SwordAttack_REV3','CastMagic','Jump','HitReact','Death']){
         if(!gltf.animations.some(c=>c.name===name))throw Error('Animação REV5 ausente: '+name);
@@ -224,6 +224,8 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
       magic=meshRoot.getObjectByName('REV4_Magic_LeftHand');
       if(sword)sword.visible=false;
       if(magic)magic.visible=false;
+      // Shader e texturas preparados antes da exibição; falhas não impedem o rig.
+      try{await onBeforeMount(meshRoot,'Personagem REV5');}catch(error){console.warn('Pré-aquecimento REV5 ignorado:',error);}
       // Find sanitized Three.js bone name; never reject a valid GLB just because
       // its original rig named the bone with a colon.
       const hand=findRev5Hand(meshRoot,'Left');

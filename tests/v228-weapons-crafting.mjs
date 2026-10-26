@@ -112,6 +112,6 @@ check('integração mantém modificadores e UI de estoque conectados',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  for(const k of ['armoredBroom','hardenedSpear','spikedHammer','attackProgress:combat.isAttacking'])assert.ok(main.includes(k),k);
  for(const k of ['craftBatchPreview(','craft-ready-filter','Mochila + baús próximos','Só possíveis'])assert.ok(ui.includes(k),k);
- assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu/.test(html));
+ assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu/.test(html));
 });
 console.log('QA v2.2.8:',passed,'testes adicionais');

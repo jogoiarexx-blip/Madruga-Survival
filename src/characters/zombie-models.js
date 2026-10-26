@@ -55,7 +55,7 @@ const LOCOMOTION_CLIP_SCALE=Object.freeze({
   zombie_brute:1.75
 });
 
-export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,url=ZOMBIE_GLB_URL,deferPreload=false}) {
+export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,url=ZOMBIE_GLB_URL,deferPreload=false,onBeforeMount=async()=>{}}) {
   let asset=null, loading=null, failed=false;
   const active=new Set();
   const corpses=new Map();
@@ -69,8 +69,9 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,g
     const load=usingGithub?loadRev2Parts({GLTFLoader}).catch(()=>new GLTFLoader().loadAsync(url)):
       // Também habilitar o rig original quando o clone local guarda só as partes.
       new GLTFLoader().loadAsync(url).catch(()=>loadRev2Parts({GLTFLoader}));
-    loading=load.then(gltf=>{
+    loading=load.then(async gltf=>{
       if(!gltf?.scene||!gltf.animations?.length)throw new Error('GLB sem malha ou animações');
+      try{await onBeforeMount(gltf.scene,'Zumbis REV2');}catch(error){console.warn('Pré-aquecimento opcional ignorado:',error);}
       asset=gltf;
       for(const enemy of active) mount(enemy);
       return true;
