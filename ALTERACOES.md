@@ -1,3 +1,12 @@
+## v2.11.0 — Variedades de Aranhas
+
+- Sombria (equilibrada), Caçadora (pequena, veloz e saltadora), Tecelã (grande, resistente e disparo em leque).
+- Reutilização do GLB da Aranha Sombria, com materiais clonados por inimigo e matizes diferentes.
+- Spawn condicionado a dias, noite e risco das ruínas; limite ambiente de duas aranhas mantido.
+- Correção importante do save v2: validação e persistência da espécie e da vida das aranhas; partidas antigas sem espécie continuam válidas.
+- Projéteis agora recebem os três ângulos do leque corretamente, além de dano, lentidão e velocidade por espécie.
+- 19 novos testes, confira `RELATORIO-REV211.md`.
+
 ## v2.2.8 — Melhoria das armas, animações REV5 e craft
 
 Veja `RELATORIO-REV228.md` para alterações e testes desta versão.

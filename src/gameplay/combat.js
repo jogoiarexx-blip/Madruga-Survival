@@ -1,4 +1,4 @@
-import {spiderInterruptWindup} from './spider-ai.js?v=2.10.0-spider';
+import {spiderInterruptWindup} from './spider-ai.js?v=2.11.0-spider';
 import {PLAYER_HIT_PHASES,PLAYER_ATTACK_DURATIONS} from '../characters/player-attack-pose.js';
 import {nextComboStep,comboProfile,COMBO_WINDOW,ATTACK_BUFFER_WINDOW} from './combo-system.js?v=2.4.0-combat';
 // Combate corpo a corpo, especial, dano em inimigos e efeitos temporários.

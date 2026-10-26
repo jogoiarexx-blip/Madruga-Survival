@@ -49,6 +49,6 @@ assert.match(main,/madrugaSpiderStatus/);
 assert.match(main,/spiderModels\.updateCorpses/);
 assert.match(main,/onWebHit:seconds/);
 assert.match(main,/spiderAI,/);
-assert.match(main,/spawnEnemy\('spider'\)/);
+assert.match(main,/spawnEnemy\('spider'(?:,'shadow')?\)/);
 assert.match(main,/webSlowTimer>0\?\.52:1/);
 console.log('v2.7: 22 verificações da Aranha Sombria aprovadas');

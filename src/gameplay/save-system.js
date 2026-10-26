@@ -1,4 +1,5 @@
 import {ZOMBIE_TYPES} from './zombie-variants.js';
+import {SPIDER_VARIANTS,isSpiderVariant} from './spider-variants.js';
 import {restoreGuard} from '../characters/villager-guard.js';
 // Save v2 separado do save da campanha v1 para não destruir a partida antiga.
 import {restoreSurvival} from './survival.js';
@@ -14,8 +15,8 @@ const number=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=ma
 const integer=(n,min,max)=>Number.isInteger(n)&&number(n,min,max);
 const point=p=>p&&number(p.x,-109,109)&&number(p.z,-109,109);
 const points=(items,max)=>Array.isArray(items)&&items.length<=max&&items.every(point);
-const types=new Set(['normal','fast','tank','shaman','boss',...Object.keys(ZOMBIE_TYPES)]);
-const maxEnemyHP={normal:2,fast:1,tank:4,shaman:3,boss:24,...Object.fromEntries(Object.entries(ZOMBIE_TYPES).map(([id,v])=>[id,v.hp]))};
+const types=new Set(['normal','fast','tank','shaman','boss','spider',...Object.keys(ZOMBIE_TYPES)]);
+const maxEnemyHP={normal:2,fast:1,tank:4,shaman:3,boss:24,spider:Math.max(...Object.values(SPIDER_VARIANTS).map(v=>v.hp)),...Object.fromEntries(Object.entries(ZOMBIE_TYPES).map(([id,v])=>[id,v.hp]))};
 export function validateSave(data){
  if(!data||typeof data!=='object'||Array.isArray(data)||data.version!==2)return null;
  if(!integer(data.seed,0,0xffffffff)||!['low','medium','high'].includes(data.graphicsQuality))return null;
@@ -30,7 +31,10 @@ export function validateSave(data){
    (survival.crafted.spear&&!survival.crafted.hammer))return null;
  if(!points(data.healthPacks,20)||!points(data.speedBoosts,18))return null;
  if(!Array.isArray(data.enemies)||data.enemies.length>30||
-    !data.enemies.every(e=>point(e)&&types.has(e.type)&&integer(e.hp,1,maxEnemyHP[e.type]||0)&&typeof e.enraged==='boolean'))return null;
+    !data.enemies.every(e=>point(e)&&types.has(e.type)&&integer(e.hp,1,e.type==='spider'?
+     SPIDER_VARIANTS[e.spiderVariant??'shadow']?.hp??0:maxEnemyHP[e.type]||0)&&
+     (e.type==='spider'?(e.spiderVariant===undefined||isSpiderVariant(e.spiderVariant)):e.spiderVariant===undefined)&&
+     typeof e.enraged==='boolean'))return null;
  if(!Array.isArray(data.resources)||data.resources.length>200||
    !data.resources.every(n=>point(n)&&['wood','stone','berries','fiber','water','iron'].includes(n.type)&&number(n.cooldown,0,120)))return null;
  if(!Array.isArray(data.buildings)||data.buildings.length>MAX_STRUCTURES||

@@ -83,9 +83,9 @@ test('projétil não atravessa paredes finas em quadros longos',()=>{
 test('cache-busting da v2.8 aplicado ao HTML e imports',()=>{
   const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-  assert.match(index,/data-build="2\.(?:8|9|10)\.0-spider"/);
-  assert.match(main,/spider-model\.js\?v=2\.(?:8|9|10)\.0-spider/);
-  assert.match(main,/projectiles\.js\?v=2\.(?:8|9|10)\.0-spider/);
+  assert.match(index,/data-build="2\.(?:8|9|10|11)\.0-spider"/);
+  assert.match(main,/spider-model\.js\?v=2\.(?:8|9|10|11)\.0-spider/);
+  assert.match(main,/projectiles\.js\?v=2\.(?:8|9|10|11)\.0-spider/);
 });
 {
   // Concurrency: GLB sintético com 8 fragmentos e fetches de latência artificial.

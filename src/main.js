@@ -7,23 +7,24 @@ import { createTerrain } from './world/terrain.js';
 import { createMinimap } from './ui/minimap.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
-import { initAudio, sfx } from './audio/sfx.js?v=2.10.0-spider';
+import { initAudio, sfx } from './audio/sfx.js?v=2.11.0-spider';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import {createSpiderModelManager} from './characters/spider-model.js?v=2.10.0-spider';
-import {createSpiderAI} from './gameplay/spider-ai.js?v=2.10.0-spider';
+import {createSpiderModelManager} from './characters/spider-model.js?v=2.11.0-spider';
+import {createSpiderAI} from './gameplay/spider-ai.js?v=2.11.0-spider';
+import {chooseSpiderVariant} from './gameplay/spider-variants.js';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
 import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.4.0-combat';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.3.0-perception';
-import { createCombatSystem } from './gameplay/combat.js?v=2.10.0-spider';
-import { createProjectileSystem } from './gameplay/projectiles.js?v=2.10.0-spider';
+import { createCombatSystem } from './gameplay/combat.js?v=2.11.0-spider';
+import { createProjectileSystem } from './gameplay/projectiles.js?v=2.11.0-spider';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.6.0-crafting';
@@ -180,7 +181,8 @@ const enemies = [];
 const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight});
 const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
-  get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length})});
+  get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length,
+     variants:Object.fromEntries(['shadow','hunter','weaver'].map(id=>[id,enemies.filter(e=>e.spiderVariant===id).length]))})});
 const healthPacks = [];
 const speedBoosts = [];
 const trees = [];
@@ -362,7 +364,7 @@ const spiderAI=createSpiderAI({player,getGroundHeight,resolveCollision,damagePla
     const event={step:'spiderStep',attack:'spiderAttack',charge:'spiderCharge',web:'spiderWeb',jump:'spiderJump'}[kind];
     if(event)sfx[event]?.(distance);
   },
-    throwProjectile:enemy=>projectileSystem.throwProjectile(enemy),
+    throwProjectile:(enemy,spread)=>projectileSystem.throwProjectile(enemy,spread),
     hasLineOfSight:(a,b)=>!buildings.blocksLine(a,b)});
 
 function removeMesh(mesh,defeated=false) {
@@ -476,7 +478,7 @@ function initWorld() {
     for (let i=0; i<2; i++) spawnEnemy('normal');
     spawnEnemy('fast');
     if(Math.random()<0.35)spawnEnemy('zombie');
-    spawnEnemy('spider'); // Uma aranha na floresta por mundo; o rig substitui o proxy humano.
+    spawnEnemy('spider','shadow'); // Primeiro encontro acessível; espécies difíceis surgem com o progresso.
     updateHUD();
 }
 
@@ -501,7 +503,8 @@ function serializeProgress() {
         healthPacks:healthPacks.map(item=>({x:item.position.x,z:item.position.z})),
         speedBoosts:speedBoosts.map(item=>({x:item.position.x,z:item.position.z})),
         enemies:enemies.map(enemy=>({type:enemy.type,x:enemy.mesh.position.x,z:enemy.mesh.position.z,
-            hp:enemy.hp,enraged:enemy.enraged,raider:!!enemy.raider}))
+            hp:enemy.hp,enraged:enemy.enraged,raider:!!enemy.raider,
+            ...(enemy.type==='spider'?{spiderVariant:enemy.spiderVariant||'shadow'}:{})}))
     };
 }
 
@@ -537,7 +540,7 @@ function restoreProgress(data) {
     for(const enemy of enemies) removeMesh(enemy.mesh);
     enemies.length=0;
     for(const savedEnemy of data.enemies) {
-        spawnEnemy(savedEnemy.type);
+        spawnEnemy(savedEnemy.type,savedEnemy.spiderVariant);
         const enemy=enemies[enemies.length-1];
         enemy.mesh.position.set(savedEnemy.x,getGroundHeight(savedEnemy.x,savedEnemy.z)+enemy.size/2,savedEnemy.z);
         enemy.hp=Math.min(enemy.maxHp,savedEnemy.hp);enemy.raider=!!savedEnemy.raider;
@@ -1226,7 +1229,9 @@ function animate() {
                         const angle=Math.random()*Math.PI*2,d=8+Math.random()*3;
                         const x=event.site.x+Math.cos(angle)*d,z=event.site.z+Math.sin(angle)*d;
                         if(!isPositionFree(x,z,.85)||Math.hypot(x-player.position.x,z-player.position.z)<7)continue;
-                        spawnEnemy(i===0&&event.site.threat>=2?'spider':'zombie');const spawned=enemies[enemies.length-1];
+                        const useSpider=i===0&&event.site.threat>=2;
+                        spawnEnemy(useSpider?'spider':'zombie',useSpider?chooseSpiderVariant({day:survival.days,threat:event.site.threat,night:vitals.night,roll:Math.random()}):undefined);
+                        const spawned=enemies[enemies.length-1];
                         spawned.mesh.position.set(x,getGroundHeight(x,z)+spawned.size/2,z);break;
                     }
                 }
@@ -1260,7 +1265,9 @@ function animate() {
             const spawnPlan=ambientSpawnPlan({night:vitals.night,wave,random:Math.random()});
             spawnTimer=spawnPlan.delay;
             if (enemies.length<spawnPlan.cap) {
-                const r=Math.random();spawnEnemy(r<.08 && survival.days>=2 && enemies.filter(e=>e.type==='spider').length<2?'spider':vitals.night ? (r<.85?chooseZombieType({night:true,day:survival.days,roll:Math.random()}):r<.94?'fast':'tank') : (r<.75?chooseZombieType({night:false,day:survival.days,roll:Math.random()}):r<.9?'normal':'fast'));
+                const r=Math.random(),spawnSpider=r<.08&&survival.days>=2&&enemies.filter(e=>e.type==='spider').length<2;
+                const type=spawnSpider?'spider':vitals.night ? (r<.85?chooseZombieType({night:true,day:survival.days,roll:Math.random()}):r<.94?'fast':'tank') : (r<.75?chooseZombieType({night:false,day:survival.days,roll:Math.random()}):r<.9?'normal':'fast');
+                spawnEnemy(type,spawnSpider?chooseSpiderVariant({day:survival.days,night:vitals.night,roll:Math.random()}):undefined);
             }
         }
         hudTick+=dt;

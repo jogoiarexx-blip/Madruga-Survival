@@ -1,5 +1,6 @@
 // Aranha Sombria — deslocamento de salto real, percepção e ataques com eventos únicos.
 import {SPIDER_DURATIONS} from '../characters/spider-model.js';
+import {getSpiderVariant} from './spider-variants.js';
 export const SPIDER_ATTACK_PHASE=0.48/SPIDER_DURATIONS.Attack;
 export const SPIDER_WEB_PHASE=0.49/SPIDER_DURATIONS.WebShot;
 export const SPIDER_JUMP_DAMAGE_PHASE=.79;
@@ -17,11 +18,16 @@ export function spiderInterruptWindup(brain,strength=1){
 
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
-export function spiderDecision(distance,visible,timer,random=0.5){
+export function spiderDecision(distance,visible,timer,random=0.5,variant='shadow'){
   if(timer>0||!visible)return null;
-  if(distance<2.2)return 'Attack';
-  if(distance>5&&distance<15)return random<.23?'WebBurst':'WebShot';
-  if(distance>=2.2&&distance<5&&random<.30)return 'Jump';
+  const profile=getSpiderVariant(variant);
+  const biteRange=variant==='weaver'?2.5:variant==='hunter'?1.85:2.2;
+  if(distance<biteRange)return 'Attack';
+  // Caçadoras perseguem com saltos; tecelãs mantêm distância e controlam o chão.
+  if(variant==='hunter'&&distance<7.5&&random<profile.jumpChance)return 'Jump';
+  if(distance>(variant==='weaver'?3.5:variant==='hunter'?7.5:5)&&distance<(variant==='weaver'?19:15))
+    return random<profile.burstChance?'WebBurst':'WebShot';
+  if(distance>=biteRange&&distance<(variant==='weaver'?4.3:5)&&random<profile.jumpChance)return 'Jump';
   return null;
 }
 
@@ -46,7 +52,7 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
   hasLineOfSight=()=>true,onSpiderSound=()=>{}}){
  function update(enemy,dt,elapsed){
    if(!enemy||!Number.isFinite(dt)||dt<=0)return;
-   const step=Math.min(dt,.1),mesh=enemy.mesh;
+   const step=Math.min(dt,.1),mesh=enemy.mesh,profile=getSpiderVariant(enemy.spiderVariant);
    const dx=player.position.x-mesh.position.x,dz=player.position.z-mesh.position.z,dist=Math.hypot(dx,dz);
    const visible=dist<26&&hasLineOfSight(mesh.position,player.position);
    const ai=enemy.spiderBrain||(enemy.spiderBrain={cooldown:1.1,action:null,actionTime:0,hit:false});
@@ -60,13 +66,13 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
      if(ai.action==='Attack'&&!ai.hit&&ai.actionTime>=.48){
        ai.hit=true;
        const near=Math.hypot(mesh.position.x-player.position.x,mesh.position.z-player.position.z);
-       if(near<2.2&&hasLineOfSight(mesh.position,player.position))damagePlayer(enemy.damage,mesh.position);
+       if(near<(enemy.spiderVariant==='weaver'?2.5:enemy.spiderVariant==='hunter'?1.85:2.2)&&hasLineOfSight(mesh.position,player.position))damagePlayer(enemy.damage,mesh.position);
      }
      if((ai.action==='WebShot'||ai.action==='WebBurst')&&!ai.hit&&ai.actionTime>=.49){
        ai.hit=true;
        // Arco visível e evitável: projéteis respeitam paredes e invulnerabilidade.
        if(visible){
-         if(ai.action==='WebBurst')for(const spread of SPIDER_WEB_FAN_SPREAD)throwProjectile(enemy,spread);
+         if(ai.action==='WebBurst')for(const spread of [-profile.fanSpread,0,profile.fanSpread])throwProjectile(enemy,spread);
          else throwProjectile(enemy);
          onSpiderSound('web',dist,enemy);
        }
@@ -89,17 +95,18 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
      }
      if(ai.actionTime>=duration){ai.action=null;ai.actionTime=0;}
    }
-   const decision=ai.action?null:spiderDecision(dist,visible,ai.cooldown,Math.abs(Math.sin(elapsed+mesh.id)));
+   const decision=ai.action?null:spiderDecision(dist,visible,ai.cooldown,Math.abs(Math.sin(elapsed+mesh.id)),enemy.spiderVariant||'shadow');
    if(decision){
      ai.action=decision;ai.actionTime=0;ai.hit=false;
-     ai.cooldown=decision==='WebBurst'?7.3:decision==='WebShot'?5.1:decision==='Jump'?3.0:1.55;
+     ai.cooldown=decision==='WebBurst'?profile.burstCooldown:decision==='WebShot'?profile.webCooldown:decision==='Jump'?profile.jumpCooldown:profile.biteCooldown;
      onSpiderSound(decision==='WebBurst'||decision==='WebShot'?'charge':decision==='Jump'?'jump':'attack',dist,enemy);
      if(decision==='Jump'){
        ai.jumpX=dx/(dist||1);ai.jumpZ=dz/(dist||1);ai.jumpYaw=Math.atan2(dx,dz);
        enemy.spiderVisual?.jump();
      }else enemy.spiderVisual?.attack(decision==='WebBurst'?'WebShot':decision);
    }
-   const moving=!ai.action&&enemy.knockback<=0&&dist>2&&dist<32;
+   const biteRange=enemy.spiderVariant==='hunter'?1.85:enemy.spiderVariant==='weaver'?2.5:2.2;
+   const moving=!ai.action&&enemy.knockback<=0&&dist>biteRange*.91&&dist<32;
    let actualMoving=false;
    if(moving){
      const speed=enemy.speed*step;

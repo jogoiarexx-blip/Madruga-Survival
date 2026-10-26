@@ -1,8 +1,9 @@
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 import {ZOMBIE_TYPES,isZombieType} from '../gameplay/zombie-variants.js';
+import {getSpiderVariant,isSpiderVariant} from '../gameplay/spider-variants.js';
 // Construção procedural de inimigos, centralizada e testável.
 export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn=()=>{},getQuality=()=> 'medium'}) {
-function spawnEnemy(type = 'normal') {
+function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
     let size = 0.9, color = 0xe74c3c, speed = 3.2, hp = 2, damage = 12;
     let skinColor = color, clothColor = color, eyeColor = 0xfff4ac, accentColor = 0x4b2227;
     if (isZombieType(type)) {
@@ -16,7 +17,9 @@ function spawnEnemy(type = 'normal') {
     } else if (type === 'shaman') {
         size = 0.93; color = 0x6839b1; speed = 2.65; hp = 3; damage = 11;
     } else if (type === 'spider') {
-        size=1.55;color=0x251828;skinColor=color;clothColor=color;speed=3.6;hp=6;damage=10;
+        const profile=getSpiderVariant(spiderVariant);
+        size=profile.size;color=0x251828;skinColor=color;clothColor=color;
+        speed=profile.speed;hp=profile.hp;damage=profile.damage;
     } else if (type === 'boss') {
         size = 2.9; color = 0xa41c35; speed = 2.5; hp = 24; damage = 25;
     }
@@ -27,8 +30,6 @@ function spawnEnemy(type = 'normal') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     } else if (type === 'shaman') {
         skinColor = color; clothColor = color; accentColor = 0x311d67; eyeColor = 0x66eaff;
-    } else if (type === 'spider') {
-        size=1.55;color=0x251828;skinColor=color;clothColor=color;speed=3.6;hp=6;damage=10;
     } else if (type === 'boss') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     }
@@ -112,7 +113,7 @@ function spawnEnemy(type = 'normal') {
     mesh.position.set(spot.x, getGroundHeight(spot.x, spot.z) + size/2, spot.z);
     mesh.castShadow = true;
     scene.add(mesh);
-    enemies.push({ mesh, type, speed, hp, maxHp:hp, damage, size, isZombie:isZombieType(type),
+    enemies.push({ mesh, type, ...(type==='spider'?{spiderVariant:isSpiderVariant(spiderVariant)?spiderVariant:'shadow'}:{}), speed, hp, maxHp:hp, damage, size, isZombie:isZombieType(type),
         attackTimer: type === 'boss' ? 1.5 : 0.55 + Math.random() * 0.5,
         windup:0, knockback:0, enraged:false, phaseNotice:false, strafe:Math.random()<0.5?-1:1 });
     onSpawn(enemies[enemies.length-1]);

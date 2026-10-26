@@ -1,4 +1,5 @@
-import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.10.0-spider';
+import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.11.0-spider';
+import {getSpiderVariant} from '../gameplay/spider-variants.js';
 
 // Aranha Sombria: modelo original do usuário, com 72 ossos e cinco clipes.
 // O mesmo GLB é reutilizado por todos os inimigos; cada aranha recebe seu próprio rig e mixer.
@@ -79,9 +80,19 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
    const model=cloneSkeleton(asset.scene);
    if(!model)return false;
    // A geometria original vai de y=0 a y=1,7. A base deve tocar o terreno.
+   const profile=getSpiderVariant(enemy.spiderVariant),tintedMaterials=[];
    const scale=enemy.size/1.7;
-   model.scale.setScalar(scale);model.position.y=-enemy.size/2;model.name='Aranha_Sombria_Rig72';
-   model.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=false;node.frustumCulled=false;node.userData.sharedZombieGeometry=true;}});
+   model.scale.setScalar(scale);model.position.y=-enemy.size/2;model.name=`Aranha_${enemy.spiderVariant||'shadow'}_Rig72`;
+   model.traverse(node=>{if(node.isMesh){
+     node.castShadow=true;node.receiveShadow=false;node.frustumCulled=false;node.userData.sharedZombieGeometry=true;
+     // O clone do esqueleto compartilha materiais: cada espécie recebe seu próprio,
+     // sem tingir também todas as outras aranhas que usam o mesmo GLB.
+     const tint=material=>{if(!material)return material;const copy=material.clone();
+       if(copy.color)copy.color.multiply(new THREE.Color(profile.tint));
+       if(profile.glow&&copy.emissive){copy.emissive.setHex(profile.glow);copy.emissiveIntensity=Math.max(.12,copy.emissiveIntensity||0);}
+       tintedMaterials.push(copy);return copy;};
+     node.material=Array.isArray(node.material)?node.material.map(tint):tint(node.material);
+   }});
    for(const child of enemy.mesh.children)child.visible=false;
    enemy.mesh.material.visible=false;enemy.mesh.add(model);
    const mixer=new THREE.AnimationMixer(model);const actions={};
@@ -147,7 +158,7 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
          this.footPlant?.update({dt:advanced,clip:this.current,moving,near:groundIK&&!this.dead,action:actions[this.current]});
        }
      },
-     dispose(){this.footPlant?.reset();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);this.model=null;}
+     dispose(){this.footPlant?.reset();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);for(const m of tintedMaterials)m.dispose();this.model=null;}
    };
    enemy.spiderVisual=visual;visual.play('Idle');return true;
  }

@@ -1,3 +1,7 @@
+## Aranhas com três espécies — v2.11.0
+
+Aranha Sombria, Caçadora e Tecelã agora compartilham o mesmo GLB com 72 ossos e 5 animações, mas têm tamanho, cores, velocidade, vida e comportamento diferentes. Caçadoras saltam mais; tecelãs lançam teias em leque e aparecem em áreas de maior ameaça e noites avançadas. Save v2 agora preserva aranhas e suas espécies, sem invalidar partidas antigas. `npm test` e `npm run check` verificam os subsistemas; validação visual em navegador ainda é necessária. Detalhes em `RELATORIO-REV211.md`.
+
 ## Aranha Sombria — v2.8.0 (revisão de física, animações e desempenho)
 
 - Salto da aranha agora desloca o collider com arco físico, trajetória travada e colisão com paredes; a aterrissagem é sincronizada ao solo.

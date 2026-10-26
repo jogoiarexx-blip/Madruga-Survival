@@ -54,7 +54,7 @@ await test('main disponibiliza diagnóstico e invalida cache da revisão',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/window,'madrugaRev5Status'/);
- assert.match(main,/player-rev5\.js\?v=(?:2\.2\.8-weapons-craft|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider)/);
- assert.match(html,/data-build="(?:2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider)"/);
+ assert.match(main,/player-rev5\.js\?v=(?:2\.2\.8-weapons-craft|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider)/);
+ assert.match(html,/data-build="(?:2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider)"/);
 });
 console.log('v2.2.2',checks,'testes aprovados');
