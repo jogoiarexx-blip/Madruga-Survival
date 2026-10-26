@@ -10,6 +10,7 @@ import {restoreRaid} from './raids.js';
 import {validCrop} from './farming.js';
 import {validWildlife} from '../world/wildlife.js';
 import {validExplorationSave} from '../world/exploration.js';
+import {validSpiderNestSave} from '../world/spider-nests.js';
 export const SAVE_KEY='madrugacraft.survival.v2';
 const number=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=max;
 const integer=(n,min,max)=>Number.isInteger(n)&&number(n,min,max);
@@ -45,7 +46,7 @@ export function validateSave(data){
      (b.type!=='farmPlot'||b.crop===undefined||validCrop(b.crop))&&
      (b.hp===undefined||integer(b.hp,1,maxBuildingHP(b.type)))))return null;
  if(data.wildlife!==undefined&&!validWildlife(data.wildlife))return null;
- if(!validExplorationSave(data.exploration))return null;
+ if(!validExplorationSave(data.exploration)||!validSpiderNestSave(data.spiderNests))return null;
  const raid=restoreRaid(data.raid);if(!raid)return null;
  const guard=restoreGuard(data.guard);if(!guard)return null;
  if(data.poisonTimer!==undefined&&!number(data.poisonTimer,0,30))return null;

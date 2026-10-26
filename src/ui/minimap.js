@@ -5,7 +5,7 @@ export function createMinimap(canvas, getState) {
     minimap.width = 140; minimap.height = 140;
     if (!mmCtx) return () => {};
     return function drawMinimap() {
-        const {player,treeColliders,rockColliders,collectibles,healthPacks,speedBoosts,enemies,shrinePosition,playerYaw,resources=[],structures=[],explorationSites=[],cemeteryPosition=null,guardPosition=null} = getState();
+        const {player,treeColliders,rockColliders,collectibles,healthPacks,speedBoosts,enemies,shrinePosition,playerYaw,resources=[],structures=[],explorationSites=[],spiderNests=[],cemeteryPosition=null,guardPosition=null} = getState();
         const w = minimap.width, center = w / 2, scale = 1.2;
         mmCtx.clearRect(0, 0, w, w);
         mmCtx.fillStyle = '#173522'; mmCtx.fillRect(0, 0, w, w);
@@ -23,6 +23,7 @@ export function createMinimap(canvas, getState) {
           const searched=site.containers.every(c=>c.opened);
           dot(site.x,site.z,searched?'#87918a':site.threat?'#f1a36a':'#ffe08b',5);
         }
+        for(const n of spiderNests)if(n.eggs>0&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<30)dot(n.x,n.z,'#b7c9f7',5);
         treeColliders.forEach(t => dot(t.x,t.z,'#315536',2));
         rockColliders.forEach(t => dot(t.x,t.z,'#617065',2));
         collectibles.forEach(c => dot(c.position.x,c.position.z,'#ffd46d',3));

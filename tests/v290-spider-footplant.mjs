@@ -79,9 +79,9 @@ test('cache bust do navegador e scripts de verificação atualizados',()=>{
   const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
   const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
-  assert.match(html,/data-build="2\.(?:9|10|11)\.0-spider"/);
-  assert.match(main,/spider-model\.js\?v=2\.(?:9|10|11)\.0-spider/);
-  assert.ok(['2.9.0','2.10.0','2.11.0'].includes(pkg.version));
+  assert.match(html,/data-build="(?:2\.(?:9|10|11)\.0-spider|2\.12\.0-nests)"/);
+  assert.match(main,/spider-model\.js\?v=(?:2\.(?:9|10|11)\.0-spider|2\.12\.0-nests)/);
+  assert.ok(['2.9.0','2.10.0','2.11.0','2.12.0'].includes(pkg.version));
   assert.ok(pkg.scripts.test.includes('v290-spider-footplant.mjs'));
 });
 console.log(`v2.9: ${tests} novas verificações aprovadas`);

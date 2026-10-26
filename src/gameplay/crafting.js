@@ -57,11 +57,11 @@ export function reserveCraftMaterials(state,cost,chests=[]){
 
 const COOKING=new Set(['cooked','grilledFish','stew']);
 const REPAIRS={repairHammer:'hammer',repairSpear:'spear',repairPickaxe:'pickaxe'};
-const UPGRADES={reinforcedVest:'body',trailBoots:'feet',ironSpear:'spear',ironHammer:'hammer',reinforcedGrip:'spear',spikedHammer:'hammer',hardenedSpear:'spear',armoredBroom:'broom'};
+const UPGRADES={reinforcedVest:'body',trailBoots:'feet',chitinPadding:'body',ironSpear:'spear',ironHammer:'hammer',reinforcedGrip:'spear',spikedHammer:'hammer',hardenedSpear:'spear',armoredBroom:'broom'};
 export const CRAFT_STATIONS=Object.freeze({
   pickaxe:'workbench',ironSpear:'workbench',ironHammer:'workbench',reinforcedGrip:'workbench',
   spikedHammer:'workbench',hardenedSpear:'workbench',armoredBroom:'workbench',
-  reinforcedVest:'workbench',trailBoots:'workbench',medicalKit:'workbench',repairKit:'workbench',
+  reinforcedVest:'workbench',trailBoots:'workbench',chitinPadding:'workbench',silkDressing:'workbench',medicalKit:'workbench',repairKit:'workbench',
   repairHammer:'workbench',repairSpear:'workbench',repairPickaxe:'workbench',
   cooked:'campfire',grilledFish:'campfire',stew:'campfire'
 });
@@ -69,10 +69,10 @@ export function craftCategory(id){
  if(isStructureRecipe(id))return 'build';
  if(COOKING.has(id))return 'food';
  if(Object.hasOwn(REPAIRS,id)||Object.hasOwn(UPGRADES,id))return 'upgrade';
- if(id==='bandage'||id==='medicalKit')return 'healing';
+ if(id==='bandage'||id==='medicalKit'||id==='silkDressing')return 'healing';
  return 'gear';
 }
-export function batchable(id){return COOKING.has(id)||['bandage','medicalKit','repairKit'].includes(id);}
+export function batchable(id){return COOKING.has(id)||['bandage','medicalKit','repairKit','silkDressing'].includes(id);}
 function requirement(state,id){
  const c=state?.crafted||{},dur=state?.durability||{};
  if(['hammer','spear','pickaxe','fishingRod'].includes(id)&&c[id])return 'Equipamento já fabricado';

@@ -1,3 +1,9 @@
+## v2.12.0 — Ninhos e exploração de aranhas
+- Ninhos determinísticos; ovos coletáveis e eclosões finitas; teias no chão e minimapa.
+- Novo loot de seda e quitina, curativo de seda e proteção de quitina na bancada.
+- Estado de ninhos validado no save v2 e migrado de checkpoints antigos.
+- 20 testes adicionais, 377 verificações no `npm test`, `npm run check` aprovado.
+
 ## v2.11.0 — Variedades de Aranhas
 
 - Sombria (equilibrada), Caçadora (pequena, veloz e saltadora), Tecelã (grande, resistente e disparo em leque).

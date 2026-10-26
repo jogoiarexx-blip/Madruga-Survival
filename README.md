@@ -1,3 +1,14 @@
+## Madruga Survival v2.12.0 — Ninhos, ovos e teias
+
+- Três ninhos procedurais por semente do mundo (Bosque, Ravina e Tecelãs), com objetos 3D low poly e ovos visíveis.
+- Aproxime-se e pressione **F** para recolher um ovo por vez e obter **seda de aranha** e **quitina**; mochila cheia não consome ovo.
+- Ovos eclodem após permanência na região; a eclosão respeita limite de inimigos ativos, com quantidade total finita.
+- Teias ambientais próximas aos ninhos reduzem temporariamente a velocidade (respeitam a esquiva) e têm 9 segundos de recarga.
+- **Curativo de seda** (bancada): restaura até 40 PV e remove lentidão por teia. **Reforço de quitina** (bancada): proteção adicional de 10%.
+- Aranhas derrotadas também podem soltar seda e quitina. Saves anteriores continuam compatíveis, sem reiniciar o mundo.
+- Testes: `npm test`, `npm run check`, `tests/v212-spider-nests.mjs`. Validação visual em navegador real continua necessária.
+- Relatório detalhado em `RELATORIO-REV212.md`.
+
 ## Aranhas com três espécies — v2.11.0
 
 Aranha Sombria, Caçadora e Tecelã agora compartilham o mesmo GLB com 72 ossos e 5 animações, mas têm tamanho, cores, velocidade, vida e comportamento diferentes. Caçadoras saltam mais; tecelãs lançam teias em leque e aparecem em áreas de maior ameaça e noites avançadas. Save v2 agora preserva aranhas e suas espécies, sem invalidar partidas antigas. `npm test` e `npm run check` verificam os subsistemas; validação visual em navegador ainda é necessária. Detalhes em `RELATORIO-REV211.md`.

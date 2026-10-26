@@ -1,4 +1,4 @@
-// Madruga Survival v2.10.0 — sobrevivência, Aranha Sombria e combate responsivo.
+// Madruga Survival v2.12.0 — ninhos, eclosão, teias e crafting de quitina.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
 import { createForest } from './world/forest.js';
@@ -30,6 +30,7 @@ import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.6.0-crafting';
 import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
 import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
+import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
 import {createSurvivalUI} from './ui/survival-ui.js?v=2.6.0-crafting';
 import {createTouchControls} from './input/touch-controls.js';
@@ -196,6 +197,8 @@ const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:
 const exploration=createExplorationWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),
     addCollider:collider=>collisionWorld.add(collider)});
+const spiderNests=createSpiderNestWorld({THREE,scene,getGroundHeight,
+    isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)});
 const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality,mergeGeometries});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
@@ -246,6 +249,10 @@ function updateHUD() {
     explorationStatus.textContent=!explorationGoal.ready?'🧭 Procure suprimentos nas casas abandonadas':
       explorationGoal.complete?'🗺 Todos os locais vasculhados!':
       `🧭 Explorar: ${explorationGoal.site.discovered?explorationGoal.site.label:'Local desconhecido'} · ${explorationGoal.direction} · ${explorationGoal.meters}m · caixas ${explorationGoal.opened}/${explorationGoal.total}`;
+    const nestCount=spiderNests.nests.reduce((sum,n)=>sum+n.eggs,0);
+    document.getElementById('spider-nest-status').textContent=nestCount?
+      `🕸 Ninhos: ${nestCount} ovos restantes · F recolhe seda e quitina · cuidado com as teias!`:
+      '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens';
     document.getElementById('mission-title').textContent = buildings.structures.some(s=>s.type==='farmPlot')?'Cultive alimentos, pesque e proteja sua casa':'Monte uma horta e complete sua casa';
     document.getElementById('mission-goal').textContent = survival.firesBuilt ?
       'Construa um telhado, um canteiro e fabrique uma vara de pesca'  : 'Reúna 4 madeiras e 4 pedras para a fogueira';
@@ -258,6 +265,7 @@ function updateHUD() {
     const closestBuilding=buildings.nearest(player.position,2.85);
     const closest=resources.findNearby(player.position);
     const closestLoot=exploration.nearest(player.position);
+    const nearNest=spiderNests.nearest(player.position);
     const prompt=document.getElementById('interact-hint');
     if(placement){
         prompt.classList.add('hidden');
@@ -267,6 +275,9 @@ function updateHUD() {
         prompt.classList.remove('hidden');
     }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=guard.hp===0?'[F] Reanimar aldeão com 2 frutas e 1 água':'[F] Recrutar aldeão para defender sua base';
+        prompt.classList.remove('hidden');
+    }else if(nearNest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent=`[F] Recolher ovo · ${nearNest.label} (${nearNest.eggs} restantes)`;
         prompt.classList.remove('hidden');
     }else if(closestLoot&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] Vasculhar ${closestLoot.container.label} · ${closestLoot.site.label}`;
@@ -347,7 +358,7 @@ function doDodge() {
 }
 function damagePlayer(amount, origin) {
     if (!gameActive || invulnerableTimer > 0) return false;
-    health = Math.max(0,health-amount*(survival.crafted.reinforcedVest?.80:1));
+    health = Math.max(0,health-amount*(survival.crafted.reinforcedVest?.80:1)*(survival.crafted.chitinPadding?.90:1));
     invulnerableTimer = 0.86; flashDamage(); sfx.damage(); playerRev5.hurt();
     const dx = player.position.x-origin.x, dz = player.position.z-origin.z;
     const d = Math.hypot(dx,dz)||1;
@@ -469,6 +480,7 @@ function initWorld() {
     cameraRig.refreshObstacles();
     forest.updateVisibility(player.position,graphicsQuality,0,true);
     exploration.generate(worldSeed);
+    spiderNests.generate(worldSeed);
     resources.generate(worldSeed,graphicsQuality);
     wildlife.generate(worldSeed,graphicsQuality);
     void zombieModels.preload();
@@ -499,7 +511,7 @@ function serializeProgress() {
         seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
         currentWeapon,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
-        wildlife:wildlife.serialize(),exploration:exploration.serialize(),
+        wildlife:wildlife.serialize(),exploration:exploration.serialize(),spiderNests:spiderNests.serialize(),
         healthPacks:healthPacks.map(item=>({x:item.position.x,z:item.position.z})),
         speedBoosts:speedBoosts.map(item=>({x:item.position.x,z:item.position.z})),
         enemies:enemies.map(enemy=>({type:enemy.type,x:enemy.mesh.position.x,z:enemy.mesh.position.z,
@@ -531,6 +543,7 @@ function restoreProgress(data) {
     refreshBuildingCamera();
     resources.restore(data.resources);
     exploration.restore(data.exploration);
+    spiderNests.restore(data.spiderNests);
     unlockedWeaponCount=survival.crafted.spear?3:survival.crafted.hammer?2:1;
     const location=resolveCollision(data.player.x,data.player.z,.46);
     player.position.set(location.x,getGroundHeight(location.x,location.z),location.z);
@@ -694,7 +707,7 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
-    onEnemyKilled:(type)=>{kills++;if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
+    onEnemyKilled:(type)=>{kills++;if(type==='spider'){addResource(survival,'spiderSilk',1);if(Math.random()<.65)addResource(survival,'chitin',1);showToast('🕸 Aranha derrotada · +1 seda');}else if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
     getWeaponBonus:()=>currentWeapon===2?(survival.crafted.ironSpear?3:0)+(survival.crafted.hardenedSpear?2:0):
        currentWeapon===1?(survival.crafted.ironHammer?2:0)+(survival.crafted.spikedHammer?2:0):
        survival.crafted.armoredBroom?1:0,
@@ -913,6 +926,13 @@ function harvestNear(){
     if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)){
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
     }
+    if(spiderNests.nearest(player.position)){
+        const result=spiderNests.harvest(player.position,survival.inventory);
+        if(!result.ok){showToast('🎒 '+result.reason);return false;}
+        playerNoise(17,'nest');earnSkill('gathering',20);sfx.collect();
+        showToast(`🕸 Ovo recolhido: +${result.items.spiderSilk} seda · +${result.items.chitin} quitina`);
+        saveProgress();updateHUD();return true;
+    }
     if(exploration.nearest(player.position)){
         const loot=exploration.search(player.position,survival.inventory);
         if(!loot.ok){showToast(`🎒 ${loot.reason}`);return false;}
@@ -956,6 +976,12 @@ function consume(type){
     if(health>=maxHealth&&poisonTimer<=0){showToast('❤️ Vida cheia e nenhum veneno ativo');return false;}
     survival.inventory.medicalKit--;health=Math.min(maxHealth,health+65);poisonTimer=0;
     sfx.heal();showToast('🧰 Kit médico: até +65 vida e veneno eliminado');updateHUD();saveProgress();return true;
+  }
+  if(type==='silkDressing'){
+    if((survival.inventory.silkDressing||0)<1){showToast('🕸 Sem curativos de seda');return false;}
+    if(health>=maxHealth&&webSlowTimer<=0){showToast('❤️ Sem feridas ou teia para remover');return false;}
+    survival.inventory.silkDressing--;health=Math.min(maxHealth,health+40);webSlowTimer=0;
+    sfx.heal();showToast('🕸 Curativo: +40 vida e teia removida');updateHUD();saveProgress();return true;
   }
   if(type==='bandage'){
     if((survival.inventory.bandage||0)<1){showToast('🩹 Sem bandagens na mochila');return false}
@@ -1043,7 +1069,7 @@ document.addEventListener('mousedown', e => {
 const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
   player, treeColliders, rockColliders, collectibles:[], healthPacks, speedBoosts,
   enemies, shrinePosition, playerYaw, resources:resources.nodes, structures:buildings.structures,
-  explorationSites:exploration.sites,
+  explorationSites:exploration.sites,spiderNests:spiderNests.nests,
   cemeteryPosition:CEMETERY_POS,guardPosition:guard.alive?guard.position:null
 }));
 
@@ -1236,6 +1262,20 @@ function animate() {
                     }
                 }
                 saveProgress();
+            }
+        }
+        for(const event of spiderNests.update(dt,player.position,{
+            canHatch:enemies.length<11&&enemies.filter(e=>e.type==='spider').length<4,
+            canTrip:invulnerableTimer<=0&&dashTimer<=0})){
+            if(event.type==='hatch'){
+                spawnEnemy('spider',event.variant);
+                const spawned=enemies[enemies.length-1];
+                const pos=resolveCollision(event.x+1.6,event.z+1.4,spawned.size*.36);
+                spawned.mesh.position.set(pos.x,getGroundHeight(pos.x,pos.z)+spawned.size/2,pos.z);
+                showToast('⚠ Ovos eclodiram! Uma aranha saiu do ninho.');saveProgress();
+            }else if(event.type==='web'){
+                webSlowTimer=Math.max(webSlowTimer,event.seconds);
+                showToast('🕸 Teia no chão! Movimento reduzido.');
             }
         }
         buildings.update(elapsed,dt);

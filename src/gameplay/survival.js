@@ -9,7 +9,9 @@ export const RESOURCES = Object.freeze({
   fish:{label:'Peixe cru',icon:'🐟'},grilledFish:{label:'Peixe assado',icon:'🍤'},
   stew:{label:'Ensopado de legumes',icon:'🍲'},bandage:{label:'Bandagem',icon:'🩹'},
   scrap:{label:'Sucata metálica',icon:'🔩'},cloth:{label:'Tecido reaproveitado',icon:'🧵'},
-  medicalKit:{label:'Kit médico',icon:'🧰'},repairKit:{label:'Kit de manutenção',icon:'🛠️'}
+  medicalKit:{label:'Kit médico',icon:'🧰'},repairKit:{label:'Kit de manutenção',icon:'🛠️'},
+  spiderSilk:{label:'Seda de aranha',icon:'🕸️'},chitin:{label:'Quitina',icon:'🪲'},
+  silkDressing:{label:'Curativo de seda',icon:'🩹'}
 });
 export const RECIPES = Object.freeze({
   campfire:{label:'Fogueira',cost:{wood:4,stone:4},hint:'Aquece e permite cozinhar'},
@@ -36,6 +38,8 @@ export const RECIPES = Object.freeze({
   trailBoots:{label:'Botas de caminhada',cost:{cloth:5,scrap:4,fiber:5},hint:'Bancada · reduz consumo de energia na corrida'},
   medicalKit:{label:'Kit médico de emergência',cost:{bandage:2,cloth:2,water:2},hint:'Bancada · recupera 65 de vida e elimina veneno'},
   repairKit:{label:'Kit de manutenção da base',cost:{scrap:2,iron:1,wood:2},hint:'Bancada · recupera até 95 de vida estrutural'},
+  silkDressing:{label:'Curativo de seda (teia e feridas)',cost:{spiderSilk:2,fiber:2,bandage:1},hint:'Bancada · cura 40 PV e remove lentidão das teias'},
+  chitinPadding:{label:'Reforço de quitina',cost:{chitin:6,scrap:3,cloth:2},hint:'Bancada · reforço permanente que reduz 10% do dano sofrido'},
   bandage:{label:'Fabricar bandagem',cost:{fiber:3,water:1},hint:'Recupera 25 de vida, pode fabricar várias'},
   repairPickaxe:{label:'Reparar picareta',cost:{wood:1,stone:2},hint:'Exige bancada; restaura durabilidade'},
   repairHammer:{label:'Reparar marreta',cost:{stone:2,wood:1},hint:'Exige bancada; restaura durabilidade'},
@@ -48,8 +52,8 @@ export const DAY_SECONDS = 480;
 export const clamp = n => Math.max(0,Math.min(100,n));
 export function createSurvival() {
   return {hunger:85,thirst:80,stamina:100,warmth:100,days:1,time:DAY_SECONDS*.34,
-    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0,bandage:0,scrap:0,cloth:0,medicalKit:0,repairKit:0},
-    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,hardenedSpear:false,spikedHammer:false,armoredBroom:false,reinforcedVest:false,trailBoots:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
+    inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0,bandage:0,scrap:0,cloth:0,medicalKit:0,repairKit:0,spiderSilk:0,chitin:0,silkDressing:0},
+    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,hardenedSpear:false,spikedHammer:false,armoredBroom:false,reinforcedVest:false,trailBoots:false,chitinPadding:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
 }
 export function isNight(state) {
   const t=(state.time%DAY_SECONDS)/DAY_SECONDS;
@@ -121,7 +125,7 @@ export function restoreSurvival(data){
   if(obj.crafted.spikedHammer&&!obj.crafted.ironHammer)return null;
   if(obj.crafted.hardenedSpear&&!obj.crafted.ironSpear)return null;
   if(obj.crafted.reinforcedGrip&&(!obj.crafted.spear||!obj.crafted.hammer))return null;
-  if(!['ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom','reinforcedVest','trailBoots'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
+  if(!['ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom','reinforcedVest','trailBoots','chitinPadding'].every(k=>typeof obj.crafted[k]==='boolean'))return null;
   if(!Object.entries({pickaxe:80,hammer:100,spear:90}).every(([k,max])=>Number.isInteger(obj.durability[k])&&obj.durability[k]>=0&&obj.durability[k]<=max&&(!obj.durability[k]||obj.crafted[k])))return null;
   if(!Number.isInteger(obj.firesBuilt)||obj.firesBuilt<0||obj.firesBuilt>100)return null;
   if(!Number.isInteger(obj.sheltersBuilt)||obj.sheltersBuilt<0||obj.sheltersBuilt>100)return null;

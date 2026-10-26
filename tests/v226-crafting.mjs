@@ -97,7 +97,7 @@ check('UI, craft e combate estão conectados',()=>{
  for(const item of ['craftItem(survival','craftingStatus(','setWeaponUpgrades(survival.crafted)','reinforcedGrip','getCraftStatus'])
   assert.ok(main.includes(item),item);
  for(const item of ['use-bandage','recipe-list'])assert.ok(html.includes(item),item);
- assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider/.test(html));
+ assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests/.test(html));
  assert.match(rev,/SwordAttack_Refined/);assert.match(rev,/swingIndex/);
 });
 console.log('v2.2.6: '+done+' grupos de regressão aprovados');
