@@ -1,4 +1,4 @@
-// Madruga Survival v2.15.0 — barra de consumíveis configurável e persistente.
+// Madruga Survival v2.20.0 — equipamentos utilizáveis e baús em duas grades.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -33,12 +33,17 @@ import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js?v=2.13.0';
-import {createConsumableHotbarUI} from './ui/consumable-hotbar-ui.js?v=2.15.0';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.18.0';
+import {createConsumableHotbarUI} from './ui/consumable-hotbar-ui.js?v=2.16.0';
 import {defaultHotbar,assignHotbarSlot,hotbarIndexFromCode} from './gameplay/consumable-hotbar.js?v=2.15.0';
+import {canPlaceOnHotbar,getQuickSlot} from './gameplay/inventory-ui-logic.js';
+import {createBag,reconcileBag,validBag,moveBagStack,splitBagStack,sortBag} from './gameplay/inventory-slots.js';
 import {createTouchControls} from './input/touch-controls.js';
+import {createBuildWheelUI,BUILD_WHEEL_TYPES} from './ui/build-wheel-ui.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
+import {planStoreBagStack,planTakeFromChest} from './gameplay/bag-storage.js';
+import {isGearEquipped,setGearEquipped,equipNewCraft} from './gameplay/gear-loadout.js';
 import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
@@ -110,7 +115,7 @@ function showPlayerModelStatus(message,state){
     modelRetry.style.display=state==='error'?'inline-block':'none';
 }
 const playerRev5=createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,
-    onStatus:showPlayerModelStatus});
+    onStatus:showPlayerModelStatus,fallbackRig:{torso,leftLeg,rightLeg}});
 modelRetry.addEventListener('click',()=>void playerRev5.preload());
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaRev5Status',{
     configurable:true,get:()=>({loaded:playerRev5.loaded,failed:playerRev5.failed,
@@ -144,6 +149,7 @@ const controls = {
 // ========== GAME STATE ==========
 let survival=createSurvival();
 let hotbarSlots=defaultHotbar();
+let inventorySlots=createBag(survival.inventory);
 let raidState=createRaidState(),raidAlertUntil=0,poisonTimer=0,cemeterySpawnTimer=5;
 let health = 100;
 let maxHealth = 100;
@@ -224,6 +230,7 @@ function updateHUD() {
     document.getElementById('health-bar').style.width = Math.max(0, health / maxHealth * 100) + '%';
     document.getElementById('level-display').textContent = `Nível ${level} · XP ${xp}/${xpRequired()} · KOs ${kills}`;
     document.getElementById('xp-bar').style.width = `${100 * xp / xpRequired()}%`;
+    playerRev5.setGear?.(survival.equippedGear);
     const ability = document.getElementById('ability-display');
     ability.textContent = combat.specialCooldown > 0 ? `E · Giratório: ${combat.specialCooldown.toFixed(1)}s` : 'E · Golpe giratório pronto';
     ability.classList.toggle('ready', combat.specialCooldown <= 0);
@@ -381,7 +388,7 @@ function doDodge() {
 }
 function damagePlayer(amount, origin) {
     if (!gameActive || invulnerableTimer > 0) return false;
-    health = Math.max(0,health-amount*(survival.crafted.reinforcedVest?.80:1)*(survival.crafted.chitinPadding?.90:1));
+    health = Math.max(0,health-amount*(isGearEquipped(survival,'vest')?.80:1)*(isGearEquipped(survival,'padding')?.90:1));
     invulnerableTimer = 0.86; flashDamage(); sfx.damage(); playerRev5.hurt();
     const dx = player.position.x-origin.x, dz = player.position.z-origin.z;
     const d = Math.hypot(dx,dz)||1;
@@ -538,9 +545,10 @@ function refreshBuildingCamera(){
     cameraObstacles.push(...buildingCameraMeshes);cameraRig.refreshObstacles();
 }
 function serializeProgress() {
+    inventorySlots=reconcileBag(inventorySlots,survival.inventory) || createBag(survival.inventory);
     return {
         seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
-        currentWeapon,hotbar:hotbarSlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
+        currentWeapon,hotbar:hotbarSlots,inventorySlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
         wildlife:wildlife.serialize(),exploration:exploration.serialize(),spiderNests:spiderNests.serialize(),
         arachnidCave:arachnidCave.serialize(),
@@ -568,7 +576,7 @@ function restoreProgress(data) {
     level=data.level;xp=data.xp;kills=data.kills;maxHealth=data.maxHealth;health=data.health;
     wave=data.wave;elapsed=data.elapsed;spawnTimer=15;
     zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;
-    survival=data.survival;hotbarSlots=[...data.hotbar];raidState=data.raid||createRaidState();raidAlertUntil=0;
+    survival=data.survival;hotbarSlots=[...data.hotbar];inventorySlots=data.inventorySlots.map(s=>s?{...s}:null);raidState=data.raid||createRaidState();raidAlertUntil=0;
     poisonTimer=data.poisonTimer||0;cemeterySpawnTimer=5;guard.setState(data.guard);
     buildings.restore(data.buildings);
     if(Array.isArray(data.wildlife))wildlife.restore(data.wildlife);
@@ -615,7 +623,7 @@ function updateContinueButton() {
 const overlay = document.getElementById('overlay');
 const pauseMenu = document.getElementById('pause-menu');
 function showPauseMenu(message = '') {
-    if (!gameActive || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen) return;
+    if (!gameActive || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || buildWheelUI.isOpen) return;
     pauseMenu.classList.remove('hidden');
     if (message) pauseMenu.querySelector('p').textContent = message;
     Object.keys(keys).forEach(key => { keys[key] = false; });
@@ -623,6 +631,17 @@ function showPauseMenu(message = '') {
 function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); controls.lock(); }
 document.addEventListener('keydown', e => {
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+    // Com a roda aberta, nenhuma tecla movimenta, ataca ou fabrica inadvertidamente.
+    if(buildWheelUI.isOpen){
+        if(e.code==='Escape'||e.code==='KeyZ'){e.preventDefault();closeBuildWheel();return;}
+        if(buildWheelUI.keydown(e.code))e.preventDefault();
+        return;
+    }
+    if(e.code==='KeyZ' && !e.repeat && gameActive){
+        e.preventDefault();
+        if(placement)releasePlacement();
+        openBuildWheel();return;
+    }
     // O modo construção captura atalhos antes de combate e coleta.
     if (placement && !e.repeat){
         if(['Escape','Backspace'].includes(e.code)){cancelPlacement();return;}
@@ -702,7 +721,8 @@ let worldInitialized = false;
 function beginAdventure(restore=false) {
     if(placement)releasePlacement();
     const save = restore ? availableSave : null;
-    if (!save) {clearSave(progressStorage);availableSave=null;hotbarSlots=defaultHotbar();}
+    buildWheelUI.close();
+    if (!save) {clearSave(progressStorage);availableSave=null;hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);}
     else {
         worldSeed=save.seed;
         graphicsQuality=save.graphicsQuality;
@@ -725,7 +745,7 @@ document.getElementById('restart-btn').onclick = () => location.reload();
 document.addEventListener('pointerlockchange', () => {
     document.getElementById('instructions').style.opacity = controls.isLocked ? '0.6' : '1';
     if (controls.isLocked) pauseMenu.classList.add('hidden');
-    else if (gameActive && !placement && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen) {saveProgress();showPauseMenu();}
+    else if (gameActive && !placement && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen && !buildWheelUI.isOpen) {saveProgress();showPauseMenu();}
 });
 document.addEventListener('wheel', e => {
     if (!controls.isLocked || !gameActive) return;
@@ -901,21 +921,131 @@ for(const [id,callback] of [
     ['placement-far',()=>movePlacement('distance',.75)],
     ['placement-near',()=>movePlacement('distance',-.75)]
 ])document.getElementById(id).addEventListener('click',callback);
+// A roda não fabrica nem debita recursos: reutiliza startPlacement/confirmPlacement.
+const buildWheelUI=createBuildWheelUI({
+  getAvailability:type=>{
+    const cost=constructionCost(type);
+    const stock=Object.fromEntries(Object.keys(cost).map(key=>[
+      key,(survival.inventory[key]||0)+nearbyCraftChests().reduce((sum,chest)=>sum+(chest.items[key]||0),0)]));
+    const enough=hasConstructionMaterials(type,cost);
+    const limit=buildings.structures.length>=MAX_STRUCTURES;
+    return {cost,stock,ok:gameActive&&enough&&!limit,
+      reason:limit?'Limite de construções atingido':enough?'Inicie a partida':'Materiais insuficientes'};
+  },
+  onSelect:type=>{
+    if(!BUILD_WHEEL_TYPES.includes(type)||!gameActive)return false;
+    buildWheelUI.close();
+    const started=startPlacement(type);
+    if(!started)buildWheelUI.open();
+    return started;
+  },
+  onClose:()=>closeBuildWheel()
+});
+function openBuildWheel(){
+  if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen)return false;
+  if(placement)releasePlacement();
+  buildWheelUI.open();
+  Object.keys(keys).forEach(key=>{keys[key]=false;});
+  controls.unlock();pauseMenu.classList.add('hidden');
+  return true;
+}
+function closeBuildWheel(){
+  if(!buildWheelUI.isOpen)return false;
+  buildWheelUI.close();
+  if(gameActive)resumeGame();
+  return true;
+}
+function toggleBuildWheel(){return buildWheelUI.isOpen?closeBuildWheel():openBuildWheel();}
+document.getElementById('build-toggle').addEventListener('click',toggleBuildWheel);
+document.getElementById('pause-build-btn').addEventListener('click',openBuildWheel);
 const skillsUI=createSkillsUI({getState:()=>survival,onClose:closeSkills});
+let selectedInventoryItem=null;
+function chooseInventoryItem(key){
+  selectedInventoryItem=key;
+  consumableHotbarUI.update();
+}
+function quickAssignInventoryItem(key){
+  const index=getQuickSlot(hotbarSlots,key);
+  if(index<0){showToast('Barra cheia. Selecione um slot 4–9 para substituir.');return false;}
+  const success=configureHotbar(index,key);
+  if(success){selectedInventoryItem=null;survivalUI.update(true);showToast(`✅ ${key} definido no atalho ${index+4}`);}
+  return success;
+}
 const consumableHotbarUI=createConsumableHotbarUI({
   getSlots:()=>hotbarSlots,getInventory:()=>survival.inventory,
-  onUse:useHotbarSlot,onAssign:configureHotbar
+  onUse:useHotbarSlot,onAssign:configureHotbar,
+  getSelectedItem:()=>selectedInventoryItem,
+  onSelectSlot:index=>{
+    if(!canPlaceOnHotbar(selectedInventoryItem))return false;
+    const success=configureHotbar(index,selectedInventoryItem);
+    if(success){selectedInventoryItem=null;survivalUI.update(true);consumableHotbarUI.update();}
+    return success;
+  },
+  onConfigured:()=>{selectedInventoryItem=null;survivalUI.update(true);consumableHotbarUI.update();}
 });
-const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume:consume,
+function updateBagFromInventory(){
+  inventorySlots=reconcileBag(inventorySlots,survival.inventory) || createBag(survival.inventory);
+  return inventorySlots;
+}
+function changeBagPosition(from,to,mode='move',amount){
+  const before=updateBagFromInventory();
+  const result=mode==='split'?(amount===undefined?splitBagStack(before,from,to):moveBagStack(before,from,to,amount)):
+    moveBagStack(before,from,to);
+  if(!result||!validBag(result,survival.inventory))return false;
+  inventorySlots=result;saveProgress();return true;
+}
+function organizeBag(){
+  const result=sortBag(updateBagFromInventory());
+  if(!result||!validBag(result,survival.inventory))return false;
+  inventorySlots=result;saveProgress();return true;
+}
+function closestAccessibleChest(){
+  const nearby=nearbyCraftChests();
+  nearby.sort((a,b)=>Math.hypot(a.x-player.position.x,a.z-player.position.z)-Math.hypot(b.x-player.position.x,b.z-player.position.z));
+  return nearby[0]||null;
+}
+function commitBagChestPlan(chest,plan){
+  if(!plan)return false;
+  // Protege contra baú destruído ou movido depois da escolha.
+  if(!gameActive||!buildings.structures.includes(chest)||closestAccessibleChest()!==chest)return false;
+  Object.assign(survival.inventory,plan.inventory);
+  chest.items=plan.items;inventorySlots=plan.bag;
+  sfx.collect();saveProgress();updateHUD();return true;
+}
+function storeSelectedStack(index,amount){
+  const chest=closestAccessibleChest();if(!chest)return false;
+  const plan=planStoreBagStack(survival.inventory,updateBagFromInventory(),chest.items,index,amount);
+  return commitBagChestPlan(chest,plan);
+}
+function withdrawChestResource(key,amount){
+  const chest=closestAccessibleChest();if(!chest)return false;
+  const plan=planTakeFromChest(survival.inventory,updateBagFromInventory(),chest.items,key,amount);
+  return commitBagChestPlan(chest,plan);
+}
+function toggleEquippedGear(key){
+  if(!gameActive||!survival.crafted)return false;
+  const next=!isGearEquipped(survival,key);
+  if(!setGearEquipped(survival,key,next))return false;
+  updateHUD();saveProgress();showToast(next?'🛡 Equipamento vestido':'🎒 Equipamento retirado');return true;
+}
+const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume:consume,onToggleGear:toggleEquippedGear,
+    getBag:updateBagFromInventory,onBagMove:changeBagPosition,onBagSort:organizeBag,
+    getNearbyChest:closestAccessibleChest,onBagStore:storeSelectedStack,onChestTake:withdrawChestResource,
     onClose:closeInventory,onRotate:rotateBuild,onDismantle:deconstructNear,onRepair:()=>repairNear(),onRepairKit:()=>repairNear(true),onFish:fishNearby,
     getRotation:()=>rotationOffset*90,getCanCraft:canCraftAtPosition,
     getCraftStatus:(id,cost)=>craftingStatus(id,cost),
-    getRecipeCost:id=>recipeCost(id,RECIPES[id]?.cost,survival.skills)});
-const storageUI=createStorageUI({getInventory:()=>survival.inventory,onTransfer:(chest,key,direction,amount)=>{
-    if(!gameActive||!buildings.structures.includes(chest))return;
-    const count=transferItem(survival,chest,key,direction,amount);
-    if(count){sfx.collect();saveProgress();updateHUD();}else showToast('Sem itens ou baú cheio.');
-},onClose:closeStorage});
+    getRecipeCost:id=>recipeCost(id,RECIPES[id]?.cost,survival.skills),
+    getSelectedItem:()=>selectedInventoryItem,onSelectItem:chooseInventoryItem,onQuickAssign:quickAssignInventoryItem});
+const storageUI=createStorageUI({getInventory:()=>survival.inventory,getBag:updateBagFromInventory,
+ onTransfer:(chest,key,direction,amount,index)=>{
+  if(!gameActive||!buildings.structures.includes(chest)||closestAccessibleChest()!==chest)return false;
+  const bag=updateBagFromInventory();
+  const source=direction==='store'?(Number.isInteger(index)?index:bag.findIndex(s=>s?.item===key)):-1;
+  const plan=direction==='store'?planStoreBagStack(survival.inventory,bag,chest.items,source,amount):
+    planTakeFromChest(survival.inventory,bag,chest.items,key,amount);
+  if(!commitBagChestPlan(chest,plan)){showToast('⚠ Estoque insuficiente ou baú cheio.');return false;}
+  return true;
+ },onClose:closeStorage});
 function closeStorage(){
     if(!storageUI.isOpen)return;
     buildings.setChestOpen(storageUI.chest,false);storageUI.close();resumeGame();
@@ -1114,6 +1244,7 @@ function craft(recipe,quantity=1){
     yieldCount:['cooked','grilledFish','stew'].includes(recipe)?cookedYield(skillLevel(survival,'crafting')):1
   });
   if(!result.ok){showToast('⚠ '+result.reason);return false}
+  equipNewCraft(survival,recipe);
   if(recipe==='hammer'){unlockedWeaponCount=Math.max(2,unlockedWeaponCount);equipWeapon(1)}
   if(recipe==='spear'){unlockedWeaponCount=3;equipWeapon(2)}
   if(['ironSpear','ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom'].includes(recipe))setWeaponUpgrades(survival.crafted);
@@ -1151,8 +1282,8 @@ const touchControls=createTouchControls({canvas:renderer.domElement,enabled:touc
       playerYaw-=dx*.006;mousePitch=THREE.MathUtils.clamp(mousePitch+dy*.005,-.30,.76);},
     onKey:(code,down)=>{document.dispatchEvent(new KeyboardEvent(down?'keydown':'keyup',{
         code,bubbles:true,cancelable:true}));},
-    onPause:()=>{if(gameActive){if(placement)releasePlacement();controls.unlock();touchControls.release();showPauseMenu();saveProgress();}},
-    onInventory:toggleInventory});
+    onPause:()=>{if(gameActive){if(placement)releasePlacement();if(buildWheelUI.isOpen)buildWheelUI.close();controls.unlock();touchControls.release();showPauseMenu();saveProgress();}},
+    onInventory:toggleInventory,onBuild:toggleBuildWheel});
 document.addEventListener('mousedown', e => {
     if(e.button!==0||e.target!==renderer.domElement||!controls.isLocked)return;
     if(placement)confirmPlacement();else combat.attack();
@@ -1208,7 +1339,7 @@ function animate() {
         const beforeDay=survival.days;
         const vitals=advanceSurvival(survival,dt,{sprinting:runningFast,moving:moveDir.lengthSq()>.01,
             nearFire:buildings.near('campfire',player.position,7),sheltered:buildings.near('shelter',player.position,5)||buildings.covered(player.position),
-            survivalLevel:skillLevel(survival,'survival'),trailBoots:survival.crafted.trailBoots});
+            survivalLevel:skillLevel(survival,'survival'),trailBoots:isGearEquipped(survival,'boots')});
         if(survival.days>beforeDay)earnSkill('survival',40);
         const poisonStep=Math.min(dt,poisonTimer);poisonTimer=Math.max(0,poisonTimer-poisonStep);
         const dotDamage=poisonStep*.92;

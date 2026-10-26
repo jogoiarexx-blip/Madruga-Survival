@@ -1,3 +1,4 @@
+import {createBag} from '../src/gameplay/inventory-slots.js';
 import assert from 'node:assert/strict';
 import {createSurvival,restoreSurvival,RECIPES,canAfford,spendRecipe,DAY_SECONDS} from '../src/gameplay/survival.js';
 import {canUseTool,useTool,makeTool,restoreTool,TOOL_MAX} from '../src/gameplay/tools.js';
@@ -108,7 +109,7 @@ check('novo save inclui vida da base, raiders e histórico sem corromper a v2',(
  player:{x:0,z:0,yaw:0},survival:s(),raid:{lastNight:2,waves:1},resources:[],
  buildings:[{type:'wall',x:6,z:6,rotation:0,hp:35},{type:'workbench',x:9,z:9,rotation:0,hp:90}],
  healthPacks:[],speedBoosts:[],enemies:[{type:'normal',x:15,z:5,hp:2,enraged:false,raider:true}]};
- const db=storage();assert.ok(writeSave(db,sample));assert.deepEqual(readSave(db),{version:2,...sample,hotbar:['berries','water','cooked','bandage','medicalKit','silkDressing']});
+ const db=storage();assert.ok(writeSave(db,sample));assert.deepEqual(readSave(db),{version:2,...sample,hotbar:['berries','water','cooked','bandage','medicalKit','silkDressing'],inventorySlots:createBag(sample.survival.inventory)});
  const old={...sample};delete old.raid;old.buildings=[{type:'wall',x:6,z:6,rotation:0}];
  old.enemies=[{type:'normal',x:15,z:5,hp:2,enraged:false}];
  assert.deepEqual(validateSave({version:2,...old}).raid,{lastNight:0,waves:0});

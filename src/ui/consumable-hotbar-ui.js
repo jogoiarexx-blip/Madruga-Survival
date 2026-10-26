@@ -1,10 +1,11 @@
+import {INVENTORY_DRAG_TYPE,canPlaceOnHotbar} from '../gameplay/inventory-ui-logic.js';
 import {HOTBAR_CONSUMABLES,HOTBAR_LENGTH,slotCount} from '../gameplay/consumable-hotbar.js';
 import {RESOURCES} from '../gameplay/survival.js';
 
-export function createConsumableHotbarUI({getSlots,getInventory,onUse,onAssign}){
+export function createConsumableHotbarUI({getSlots,getInventory,onUse,onAssign,getSelectedItem=()=>null,onSelectSlot=()=>false,onConfigured=()=>{}}){
   const bar=document.getElementById('consumable-hotbar');
   const config=document.getElementById('hotbar-config');
-  const buttons=[], selectors=[];
+  const buttons=[], selectors=[],dropTargets=[];
   for(let index=0;index<HOTBAR_LENGTH;index++){
     const number=index+4;
     const button=document.createElement('button');
@@ -16,8 +17,21 @@ export function createConsumableHotbarUI({getSlots,getInventory,onUse,onAssign})
     button.addEventListener('click',event=>{event.preventDefault();if(!button.disabled)onUse(index);});
     bar.appendChild(button);buttons.push({button,icon,amount});
 
-    const field=document.createElement('label');field.className='hotbar-config-item';
+    const field=document.createElement('div');field.className='hotbar-config-item';field.dataset.slot=String(index);
     const title=document.createElement('span');title.textContent=`Tecla ${number}`;
+    const target=document.createElement('button');target.type='button';target.className='inventory-hotbar-target';
+    target.dataset.slot=String(index);target.setAttribute('aria-label',`Colocar item selecionado no atalho ${number}`);
+    target.addEventListener('click',()=>{if(getSelectedItem())onSelectSlot(index);else selectors[index].focus();});
+    target.addEventListener('dragover',e=>{
+      if([...e.dataTransfer?.types||[]].includes(INVENTORY_DRAG_TYPE)){e.preventDefault();e.dataTransfer.dropEffect='copy';field.classList.add('drop-ready');}
+    });
+    target.addEventListener('dragleave',()=>field.classList.remove('drop-ready'));
+    target.addEventListener('drop',e=>{
+      e.preventDefault();field.classList.remove('drop-ready');
+      const resource=e.dataTransfer?.getData(INVENTORY_DRAG_TYPE);
+      if(canPlaceOnHotbar(resource) && onAssign(index,resource))onConfigured();
+    });
+    dropTargets.push(target);
     const select=document.createElement('select');select.setAttribute('aria-label',`Consumível do atalho ${number}`);
     const empty=document.createElement('option');empty.value='';empty.textContent='— Vazio —';select.appendChild(empty);
     for(const item of HOTBAR_CONSUMABLES){
@@ -25,8 +39,8 @@ export function createConsumableHotbarUI({getSlots,getInventory,onUse,onAssign})
       option.textContent=`${RESOURCES[item].icon} ${RESOURCES[item].label}`;
       select.appendChild(option);
     }
-    select.addEventListener('change',()=>onAssign(index,select.value||null));
-    field.append(title,select);config.appendChild(field);selectors.push(select);
+    select.addEventListener('change',()=>{if(onAssign(index,select.value||null))onConfigured();});
+    field.append(title,select,target);config.appendChild(field);selectors.push(select);
   }
   function update(){
     const slots=getSlots(),inventory=getInventory();
@@ -42,6 +56,11 @@ export function createConsumableHotbarUI({getSlots,getInventory,onUse,onAssign})
       if(button.disabled!==disabled)button.disabled=disabled;
       button.classList.toggle('empty',!item);
       if(selectors[i].value!==(item||''))selectors[i].value=item||'';
+      const target=dropTargets[i];
+      target.textContent=description?`${description.icon} ${qty} un.`:'+ Soltar item';
+      target.classList.toggle('is-selected',Boolean(getSelectedItem()));
+      const tooltip=description?`Atalho ${i+4}: ${description.label} (${qty} disponíveis)`:`Atalho ${i+4}: vazio`;
+      target.title=getSelectedItem()?`Inserir ${RESOURCES[getSelectedItem()]?.label||'item'} no atalho ${i+4}`:tooltip;
     }
   }
   update();

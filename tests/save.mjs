@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readSave,writeSave,clearSave,SAVE_KEY,validateSave} from '../src/gameplay/save-system.js';
 import {createSurvival} from '../src/gameplay/survival.js';
 import {defaultHotbar} from '../src/gameplay/consumable-hotbar.js';
+import {createBag} from '../src/gameplay/inventory-slots.js';
 const sample=()=>({seed:2026,graphicsQuality:'medium',level:2,xp:2,kills:1,
  health:90,maxHealth:112,wave:1,elapsed:99,currentWeapon:0,
  player:{x:15,z:-14,yaw:.1},survival:createSurvival(),
@@ -13,7 +14,7 @@ function storage(){const memory=new Map();return {getItem:k=>memory.get(k),setIt
 const test=(label,fn)=>{fn();console.log('OK save v2:',label)};
 test('salva e retoma todos os elementos da sobrevivência',()=>{
  const store=storage(),data=sample();assert.ok(writeSave(store,data));
- assert.deepEqual(readSave(store),{version:2,...data,hotbar:defaultHotbar(),raid:{lastNight:0,waves:0}});
+ assert.deepEqual(readSave(store),{version:2,...data,hotbar:defaultHotbar(),inventorySlots:createBag(data.survival.inventory),raid:{lastNight:0,waves:0}});
  assert.ok(clearSave(store));assert.equal(readSave(store),null);
 });
 test('ignora save de campanha v1 sem apagá-lo',()=>{

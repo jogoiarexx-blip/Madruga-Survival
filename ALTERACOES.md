@@ -1,3 +1,17 @@
+## v2.20.0 — Roda de Construção
+
+- Botão dedicado para PC e celular; teclado Z e acesso no menu de pausa.
+- Seletor radial de 10 estruturas com custo real do inventário e dos baús próximos.
+- Seleção integrada à prévia holográfica existente; sem custos antes de confirmar.
+- 12 novos testes de interface, inventário e navegação; regressão completa aprovada.
+- A verificação visual em Chromium não concluiu neste ambiente.
+
+## v2.17.0 — Mochila e pilhas persistentes
+
+- 36 posições reorganizáveis (arrastar/soltar ou toque), dividir metade e reunir pilhas iguais.
+- Persistência de posições com migração dos saves legados, sem transferir propriedade dos recursos do inventário antigo.
+- Regressão completa e dez grupos novos aprovados; teste visual Chromium bloqueado pelo ambiente.
+
 ## v2.15.0 — Consumíveis acessíveis na tela
 - Nova hotbar de 6 slots na parte inferior, com teclado 4–9 e uso por toque.
 - Itens reconfiguráveis na mochila; exibe ícone e estoque da mochila, desativa slots vazios e sem recursos.

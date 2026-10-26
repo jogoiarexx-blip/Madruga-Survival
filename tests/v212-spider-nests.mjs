@@ -119,6 +119,6 @@ test('código integra HUD, save, coleta, spawn e cura',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  for(const needle of ['spiderNests.generate(worldSeed)','spiderNests.serialize()','spiderNests.restore(data.spiderNests)',
  'spiderNests.harvest(player.position,survival.inventory)','spiderNests.update(dt,player.position','spawnEnemy(\'spider\',event.variant)',
- "if(type==='silkDressing')",'survival.crafted.chitinPadding'])assert.ok(main.includes(needle),needle);
+ "if(type==='silkDressing')","isGearEquipped(survival,'padding')"])assert.ok(main.includes(needle),needle);
 });
 console.log(`v2.12: ${passed} novos testes aprovados`);

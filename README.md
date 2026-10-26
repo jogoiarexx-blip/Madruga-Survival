@@ -1,3 +1,13 @@
+## Novidade v2.20 — Roda de construção
+
+Abra a roda usando o botão **🧱 Construção** ou a tecla **Z**. No celular, use o botão 🧱 no alto da tela. Com a câmera travando o cursor no PC, abra por Z ou use **Esc > Abrir roda de construção**. Escolha uma das 10 peças, confira os recursos disponíveis e inicie a prévia 3D. **F/Enter** confirma, **G** gira, **C** alterna o ímã, **Esc** cancela. A roda não debita recursos; o custo é debitado apenas após confirmar o posicionamento. As teclas antigas B, H, V, M, N, K e L continuam funcionando.
+
+> **v2.18.0 — Mochila e baús:** quantidade numérica para mover/dividir pilhas; depósitos e retiradas de baú próximo diretamente na mochila; indicadores visuais de equipamentos. Confira `RELATORIO-REV218.md`.
+
+## Novidade v2.17.0 — Mochila organizada como inventário sandbox
+
+Abra com **I**: 36 slots visuais organizáveis. Selecione uma pilha e depois um slot para mover, trocar ou juntar; ative **½ Dividir metade** para separar em um slot vazio. No PC também é possível arrastar. **▦ Organizar pilhas** reúne recursos iguais. Quantidades continuam sincronizadas com baús, fabricação, consumíveis, hotbar 4–9 e saves anteriores.
+
 ## Madruga Survival v2.15.0 — Barra rápida de consumíveis
 
 **Slots 4 a 9:** escolha seus alimentos e curativos na seção *Configurar atalhos de consumíveis* da mochila (`I`). Durante a partida, pressione as teclas **4–9** ou toque na barra inferior no celular. A quantidade real aparece em cada slot e a configuração é salva com a partida. As teclas **1–3** continuam equipando armas. Saves anteriores continuam compatíveis. Veja `RELATORIO-REV215.md`.
@@ -369,3 +379,15 @@ Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamen
 
 ## v2.13 — Caverna das Aranhas
 Entre na caverna pelo portal próximo à Colônia das Tecelãs (F). Vença a Rainha e recolha cristais. Fabrique a Ponta de Cristal na bancada após a lança temperada. Consulte `RELATORIO-REV213.md`.
+
+### v2.16.0 — Mochila interativa
+Na mochila (`I`), busque itens ou filtre por categoria. Selecione um consumível e toque no atalho 4–9 para configurá-lo. No PC, também pode arrastar um consumível até a caixa do atalho ou dar duplo clique para ocupar um slot vazio. Materiais não consumíveis continuam organizados na grade, e nenhuma ação de atribuição duplica itens.
+
+
+## v2.19 — Armaduras vestíveis e baú em duas grades
+
+Na mochila (`I`), selecione **Colete**, **Quitina** ou **Botas** para vestir/retirar o que já foi fabricado. A proteção e a economia de energia só são aplicadas quando as peças estão vestidas. Peças fabricadas permanecem suas, mesmo retiradas. Itens de partidas antigas começam vestidos se já estavam fabricados.
+
+Ao abrir um baú (`F`), surgem duas grades: as 36 posições da mochila e uma grade de recursos do baú. Selecione origem e toque na outra grade, ou arraste no computador. Use 1, metade, tudo ou digite uma quantidade de 1 a 80. As operações são atômicas e não ultrapassam a capacidade do baú. A grade do baú **agrupa por recurso**, não salva posições individuais.
+
+Colete, reforço de quitina e botas são acessórios 3D de geometria leve, presos ao rig do personagem; suas formas são aproximações visuais e não modelos de roupa costurados ao GLB.

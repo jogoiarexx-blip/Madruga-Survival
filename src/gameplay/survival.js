@@ -1,4 +1,5 @@
 import {createSkills,restoreSkills,survivalDrain} from './skills.js?v=2.2.8-weapons-craft';
+import {normalizeGear} from './gear-loadout.js';
 // Regras puras da sobrevivência (sem dependências de DOM/Three.js).
 export const RESOURCES = Object.freeze({
   wood: {label:'Madeira',icon:'🪵'}, stone:{label:'Pedra',icon:'🪨'},
@@ -54,7 +55,7 @@ export const clamp = n => Math.max(0,Math.min(100,n));
 export function createSurvival() {
   return {hunger:85,thirst:80,stamina:100,warmth:100,days:1,time:DAY_SECONDS*.34,
     inventory:{wood:2,stone:1,fiber:1,berries:2,water:2,meat:0,cooked:0,iron:0,seeds:0,vegetables:0,fish:0,grilledFish:0,stew:0,bandage:0,scrap:0,cloth:0,medicalKit:0,repairKit:0,spiderSilk:0,chitin:0,silkDressing:0,caveCrystal:0},
-    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,hardenedSpear:false,spikedHammer:false,armoredBroom:false,reinforcedVest:false,trailBoots:false,chitinPadding:false,crystalSpear:false,fishingRod:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
+    crafted:{hammer:false,spear:false,pickaxe:false,ironSpear:false,ironHammer:false,reinforcedGrip:false,hardenedSpear:false,spikedHammer:false,armoredBroom:false,reinforcedVest:false,trailBoots:false,chitinPadding:false,crystalSpear:false,fishingRod:false},equippedGear:{vest:false,padding:false,boots:false},fishReadyAt:0,durability:{pickaxe:0,hammer:0,spear:0},firesBuilt:0,sheltersBuilt:0,gripStrikes:0,skills:createSkills()};
 }
 export function isNight(state) {
   const t=(state.time%DAY_SECONDS)/DAY_SECONDS;
@@ -133,8 +134,9 @@ export function restoreSurvival(data){
   if(!Number.isInteger(obj.sheltersBuilt)||obj.sheltersBuilt<0||obj.sheltersBuilt>100)return null;
   obj.gripStrikes=data.gripStrikes??0;
   if(!Number.isInteger(obj.gripStrikes)||obj.gripStrikes<0||obj.gripStrikes>1)return null;
+  const equippedGear=normalizeGear(obj,data.equippedGear);if(!equippedGear)return null;
   const skills=restoreSkills(data.skills);if(!skills)return null;
   return {hunger:obj.hunger,thirst:obj.thirst,stamina:obj.stamina,warmth:obj.warmth,
     time:obj.time,days:obj.days,inventory:Object.fromEntries(Object.keys(RESOURCES).map(k=>[k,obj.inventory[k]])),
-    crafted:{...obj.crafted},fishReadyAt:obj.fishReadyAt,durability:{...obj.durability},gripStrikes:obj.gripStrikes,firesBuilt:obj.firesBuilt,sheltersBuilt:obj.sheltersBuilt,skills};
+    crafted:{...obj.crafted},equippedGear,fishReadyAt:obj.fishReadyAt,durability:{...obj.durability},gripStrikes:obj.gripStrikes,firesBuilt:obj.firesBuilt,sheltersBuilt:obj.sheltersBuilt,skills};
 }

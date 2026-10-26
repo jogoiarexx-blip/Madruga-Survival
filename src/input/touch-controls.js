@@ -1,5 +1,5 @@
 // Controles de toque progressivos: somente dispositivos de ponteiro grosso.
-export function createTouchControls({canvas,enabled,onLook,onKey,onPause,onInventory}){
+export function createTouchControls({canvas,enabled,onLook,onKey,onPause,onInventory,onBuild=()=>{}}){
  const layer=document.getElementById('touch-controls');
  if(!enabled){layer.remove();return {release(){},enabled:false};}
  layer.classList.remove('hidden');
@@ -20,6 +20,7 @@ export function createTouchControls({canvas,enabled,onLook,onKey,onPause,onInven
  }
  document.getElementById('touch-pause').onclick=onPause;
  document.getElementById('touch-inventory').onclick=onInventory;
+ document.getElementById('touch-build').onclick=onBuild;
  let pointer=null,lastX=0,lastY=0;
  canvas.addEventListener('pointerdown',e=>{
    if(e.pointerType!=='touch'||pointer!==null)return;

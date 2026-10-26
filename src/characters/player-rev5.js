@@ -1,3 +1,4 @@
+import {createPlayerGearVisuals} from './player-gear-visual.js';
 // Player REV5: replaces the on-screen procedural avatar with the original rigged
 // Striped Wanderer. The existing player Group remains the physics/camera/save root.
 // All GLB animations are driven by gameplay actions, not by demo timers.
@@ -112,10 +113,19 @@ export function findRev5Hand(root,side='Left') {
   return found;
 }
 
-export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus=()=>{},url=PLAYER_REV5_URL}) {
+export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallbackRig={},onStatus=()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
   let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0,queuedComboStep=null;
   let restingGrip=null;
+  let gearVisuals=null,desiredGear={vest:false,padding:false,boots:false};
+  function setGear(equipped){
+    desiredGear={...desiredGear,...equipped};
+    if(!gearVisuals&&THREE.BoxGeometry&&THREE.MeshStandardMaterial){
+      gearVisuals=createPlayerGearVisuals(THREE,fallbackRig);
+      if(meshRoot)gearVisuals.bind(meshRoot);
+    }
+    gearVisuals?.set(desiredGear);
+  }
   const weaponParent=weapon?.parent,weaponStartY=weapon?.position?.y ?? -1.17;
   const display=new THREE.Group();
   display.name='Player_REV5_Visual';
@@ -225,6 +235,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
       // Gameplay equipment follows the rig hand, or visual fallback root.
       if(weapon)handMount.add(weapon);
       display.add(meshRoot);
+      gearVisuals?.bind(meshRoot);
       display.visible=true;
       loaded=true;
       equip(equipped);
@@ -273,6 +284,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     }
   }
   function dispose(){
+    gearVisuals?.dispose();gearVisuals=null;
     if(animator)animator.dispose();
     if(meshRoot)display.remove(meshRoot);
     handMount=null;restingGrip=null;
@@ -281,7 +293,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,onStatus
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);}
     loaded=false;
   }
-  return {preload,update,equip,attack,setComboStep,special,jump,hurt,die,dispose,
+  return {preload,update,equip,setGear,attack,setComboStep,special,jump,hurt,die,dispose,
     get loaded(){return loaded},get failed(){return failed},get animator(){return animator},
     get model(){return meshRoot},get handMount(){return handMount},get visualVisible(){return display.visible},
     get oldVisualVisible(){return avatar.visible}};

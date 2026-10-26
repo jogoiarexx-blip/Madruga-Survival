@@ -25,7 +25,7 @@ test('Colete é único e protege 20% em golpes de combate',()=>{
  assert.equal(s.inventory.scrap,before-RECIPES.reinforcedVest.cost.scrap);
  assert.equal(craftItem(s,'reinforcedVest',1,{workbench:true}).ok,false);
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.match(main,/amount\*\(survival\.crafted\.reinforcedVest\?\.80:1\)/);
+ assert.match(main,/isGearEquipped\(survival,'vest'\)\?\.80:1/);
 });
 test('Botas reduzem consumo real de energia durante corrida',()=>{
  const s=createSurvival(),t=createSurvival();

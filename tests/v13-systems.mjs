@@ -1,3 +1,4 @@
+import {createBag} from '../src/gameplay/inventory-slots.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createSurvival,restoreSurvival,RECIPES,addResource,useConsumable,canAfford,spendRecipe} from '../src/gameplay/survival.js';
@@ -108,7 +109,7 @@ test('save v1.2 migra sem fauna e v1.3 rejeita animais/culturas corrompidos',()=
   healthPacks:[],speedBoosts:[],enemies:[],wildlife:[{type:'rabbit',x:5,z:5,hp:2,heading:0}]};
  assert.ok(validateSave(state));
  const storage={m:new Map(),setItem(k,v){this.m.set(k,v)},getItem(k){return this.m.get(k)},removeItem(k){this.m.delete(k)}};
- assert.ok(writeSave(storage,state));assert.deepEqual(readSave(storage),{...state,hotbar:['berries','water','cooked','bandage','medicalKit','silkDressing']});
+ assert.ok(writeSave(storage,state));assert.deepEqual(readSave(storage),{...state,hotbar:['berries','water','cooked','bandage','medicalKit','silkDressing'],inventorySlots:createBag(state.survival.inventory)});
  assert.equal(validateSave({...state,wildlife:[{type:'boar',x:5,z:5,hp:900,heading:0}]}),null);
  assert.equal(validateSave({...state,buildings:[{...state.buildings[0],crop:{planted:true,growth:1e9,water:0}}]}),null);
  const old={...state};delete old.wildlife;old.buildings=[];assert.ok(validateSave(old));
