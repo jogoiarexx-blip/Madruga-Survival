@@ -1,5 +1,6 @@
 import {ZOMBIE_TYPES,isZombieType} from './zombie-variants.js';
 import {animateEnemy} from '../characters/enemy-animation.js';
+import {startGoblinAttack,advanceGoblinAttack,goblinHitTest} from './goblin-combat.js';
 import {faceZombieAlongPath} from './zombie-facing.js';
 import {updateZombieAwareness} from './zombie-perception.js';
 import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zombie-attack-events.js?v=2.1.3-zombie-combat';
@@ -51,6 +52,18 @@ function update(dt,elapsed){
                     }
                 }
             }
+            // Goblin: impacto no instante animado, com novo teste de alcance, cone
+            // frontal e obstáculos. Nunca causa dano antecipado ao iniciar o golpe.
+            advanceGoblinAttack(enemy,dt,impact=>{
+                const target=impact.kind==='building'?impact.target:
+                    impact.kind==='guard'?getGuard():player.position;
+                if(!goblinHitTest(enemy,target,{hasLineOfSight,radius:impact.kind==='building'?2.25:1.95}))return;
+                const damage=Math.max(1,Math.round(enemy.damage*impact.damageMultiplier));
+                if(impact.kind==='building')onRaidDamage(impact.target,damage);
+                else if(impact.kind==='guard')onGuardDamage(damage);
+                else damagePlayer(damage,mesh.position);
+                spawnParticle(mesh.position,0x98e665,4);
+            });
             enemy.knockback=Math.max(0,enemy.knockback-dt);
             const shaman=enemy.type==='shaman', boss=enemy.type==='boss';
             const meleeRadius=boss?2.65:1.85;
@@ -58,7 +71,7 @@ function update(dt,elapsed){
             const wantsToMove=!!targetPos&&(aware?dist>(aware.state==='patrol'?1.3:1):shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8);
             const finishingAttack=Number.isFinite(enemy.attackFacingYaw)&&enemy.attackTimer>0;
             const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0 &&
-                !enemy.pendingImpact && !finishingAttack;
+                !enemy.pendingImpact && !enemy.goblinAttack && !finishingAttack;
             const previousX=mesh.position.x, previousZ=mesh.position.z;
             if (moving) {
                 const nx=dx/(dist||1),nz=dz/(dist||1);
@@ -79,7 +92,7 @@ function update(dt,elapsed){
             // O REV2 já anima o quadril e as pernas dentro do GLB. Não aplicar
             // oscilação e escala procedural ao collider: isto faz os pés flutuarem
             // e cria deslizamento mesmo que a cadência da caminhada esteja correta.
-            const skinnedZombie=isZombieType(enemy.type)&&!!enemy.rev4Visual;
+            const skinnedZombie=(isZombieType(enemy.type)&&!!enemy.rev4Visual)||!!enemy.goblinVisual;
             mesh.position.y=getGroundHeight(mesh.position.x,mesh.position.z)+enemy.size/2+
                 (skinnedZombie?0:(dist<52?Math.sin(elapsed*(boss?3.2:6.2)+mesh.id)*0.035:0));
             mesh.scale.y=skinnedZombie?1:1+Math.sin(elapsed*(boss?3.2:7.4)+mesh.id)*(boss?.024:.055);
@@ -91,13 +104,15 @@ function update(dt,elapsed){
                     if(Number.isFinite(enemy.attackFacingYaw)&&enemy.attackTimer>0){
                         mesh.rotation.x=0;mesh.rotation.y=enemy.attackFacingYaw;
                     } else faceZombieAlongPath(mesh,targetPos,previousX,previousZ,actualMoving);
+                } else if(enemy.goblinVisual && finishingAttack){
+                    mesh.rotation.x=0;mesh.rotation.y=enemy.attackFacingYaw;
                 } else mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
             }
             const stepDistance=Math.hypot(mesh.position.x-previousX,mesh.position.z-previousZ);
             const locomotionPace=actualMoving ? stepDistance/Math.max(.001,enemy.speed*(aware?.speed??1)*dt) : 0;
-            animateEnemy(enemy,elapsed,isZombieType(enemy.type)?actualMoving:moving,dt,
+            animateEnemy(enemy,elapsed,(isZombieType(enemy.type)||enemy.goblinVisual)?actualMoving:moving,dt,
                 Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48,
-                locomotionPace, playerDistance<16);
+                enemy.goblinVisual&&playerDistance<9&&actualMoving?Math.max(1.12,locomotionPace):locomotionPace, playerDistance<16);
             if (boss && enemy.windup>0) {
                 enemy.windup=Math.max(0,enemy.windup-dt);
                 showBossTelegraph(enemy);
@@ -124,6 +139,8 @@ function update(dt,elapsed){
                             enemy.rev4Visual.attack();
                             enemy.attackTimer=Math.max(enemy.attackTimer,(ZOMBIE_ATTACK_DURATION[enemy.type]||0)+.10);
                         }
+                    }else if(enemy.type==='normal'){
+                        startGoblinAttack(enemy,'building',targetBuilding);
                     }else{
                         onRaidDamage(targetBuilding,Math.round(enemy.damage*(ZOMBIE_TYPES[enemy.type]?.structureDamage||1)));
                         spawnParticle(mesh.position,0xdba679,3);
@@ -137,7 +154,9 @@ function update(dt,elapsed){
                     sfx.warning();
                 } else if (!targetBuilding&&!shaman && !boss && visible && dist<meleeRadius) {
                     enemy.attackTimer=1.15+(enemy.type==='fast'?-.15:enemy.type==='tank'?.45:0);
-                    if(enemy.rev4Visual){
+                    if(enemy.type==='normal'){
+                        startGoblinAttack(enemy,targetGuard?'guard':'player',targetGuard);
+                    }else if(enemy.rev4Visual){
                         if(queueZombieImpact(enemy,targetGuard?'guard':'player',targetGuard)){
                             enemy.rev4Visual.attack();
                             enemy.attackTimer=Math.max(enemy.attackTimer,(ZOMBIE_ATTACK_DURATION[enemy.type]||0)+.10);

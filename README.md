@@ -1,3 +1,17 @@
+## v2.23 — Goblin animado (novo inimigo comum)
+
+O goblin enviado já possuía **46 ossos** e 6 animações. Agora o jogo inclui
+`assets/models/goblin_animado.glb`, com **15 animações** (9 novas).
+O inimigo interno `normal` usa esse modelo sem alterar o tipo salvo; assim, saves antigos
+continuam funcionando. A luta ganha golpes rápido, pesado e combo, impactos
+retardados que respeitam alcance/visão e reações a dano/morte. Os demais inimigos
+permanecem sem alterações.
+
+**Para testar as animações:** execute `npm run dev`, abra
+`http://localhost:PORTA/PREVIEW-GOBLIN.html` (a porta aparece no terminal) e
+selecione as 15 animações. O visualizador precisa de Three.js via CDN, como
+o jogo. O menu principal não carrega nenhum inimigo antes de iniciar.
+
 ## Novidade v2.21 — Menu e carregamento otimizados
 
 - No menu principal não há animação do cenário nem ciclo de IA/física; nenhum frame é agendado e os modelos 3D não são baixados antes de escolher Iniciar/Retomar.

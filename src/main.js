@@ -1,4 +1,4 @@
-// Madruga Survival v2.22.0 — menu inerte, assets sob demanda e renderização adaptativa.
+// Madruga Survival v2.24.0 — goblin animado, menu inerte e GPU sob demanda.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -24,6 +24,7 @@ import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.4.0-combat';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
+import {createGoblinModelManager} from './characters/goblin-model.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.3.0-perception';
 import { createCombatSystem } from './gameplay/combat.js?v=2.13.0';
 import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave';
@@ -220,6 +221,8 @@ const enemies = [];
 const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true,
   onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
 const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true,
+  onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
+const goblinModels=createGoblinModelManager({THREE,GLTFLoader,cloneSkeleton,deferPreload:true,getGroundHeight,
   onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
   get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length,
@@ -440,19 +443,19 @@ const spiderAI=createSpiderAI({player,getGroundHeight,resolveCollision,damagePla
 
 function removeMesh(mesh,defeated=false) {
     const deceased=enemies.find(e=>e.mesh===mesh);
-    if(defeated&&deceased&&(zombieModels.defeat(deceased)||spiderModels.defeat(deceased)))return;
+    if(defeated&&deceased&&(zombieModels.defeat(deceased)||spiderModels.defeat(deceased)||goblinModels.defeat(deceased)))return;
     scene.remove(mesh);
     const zombie=enemies.find(e=>e.mesh===mesh);
-    if(zombie){zombieModels.dispose(zombie);spiderModels.dispose(zombie);}
+    if(zombie){zombieModels.dispose(zombie);spiderModels.dispose(zombie);goblinModels.dispose(zombie);}
     const disposed=new Set();
     mesh.traverse(node => {
         if (!node.isMesh) return;
         // Recursos partilhados entre braços/pernas de um mesmo inimigo são descartados uma só vez.
-        if (node.geometry && !node.userData?.sharedZombieGeometry && !disposed.has(node.geometry)) {
+        if (node.geometry && !node.userData?.sharedZombieGeometry && !node.userData?.sharedGoblinGeometry && !disposed.has(node.geometry)) {
             disposed.add(node.geometry);node.geometry.dispose();
         }
         for (const m of (Array.isArray(node.material) ? node.material : [node.material])) {
-            if (m && !disposed.has(m)) {disposed.add(m);m.dispose();}
+            if (m && !node.userData?.sharedGoblinMaterial && !disposed.has(m)) {disposed.add(m);m.dispose();}
         }
     });
 }
@@ -526,7 +529,7 @@ function spawnSpeedBoost(at = null) {
     speedBoosts.push(boost);
 }
 
-const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,getQuality:()=>graphicsQuality,onSpawn:enemy=>{zombieModels.attach(enemy);spiderModels.attach(enemy);}});
+const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,getQuality:()=>graphicsQuality,onSpawn:enemy=>{zombieModels.attach(enemy);spiderModels.attach(enemy);goblinModels.attach(enemy);}});
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
 const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
@@ -663,7 +666,8 @@ const assetPipeline=createAssetPipeline({
         {name:'Shaders do cenário',load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
         {name:'Personagem REV5',load:()=>playerRev5.preload()},
         {name:'Zumbis REV2',load:()=>zombieModels.preload()},
-        {name:'Aranha Sombria',load:()=>spiderModels.preload()}
+        {name:'Aranha Sombria',load:()=>spiderModels.preload()},
+        {name:'Goblin animado',load:()=>goblinModels.preload()}
     ],
     onProgress:({label,done,total,complete})=>{
         assetStatus.textContent=complete?'':`⏳ Assets ${done}/${total} · ${label}`;
@@ -1564,6 +1568,7 @@ function animate() {
         enemyAI.update(dt,elapsed);
         zombieModels.updateCorpses(dt,removeMesh);
         spiderModels.updateCorpses(dt,removeMesh);
+        goblinModels.updateCorpses(dt,removeMesh);
         // Patrulha do cemitério: surgem infectados quando o jogador explora a região.
         cemeterySpawnTimer-=dt;
         if(withinCemetery(player.position,21)&&cemeterySpawnTimer<=0&&enemies.length<12){

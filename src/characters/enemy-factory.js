@@ -6,6 +6,7 @@ export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,s
 function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
     let size = 0.9, color = 0xe74c3c, speed = 3.2, hp = 2, damage = 12;
     let skinColor = color, clothColor = color, eyeColor = 0xfff4ac, accentColor = 0x4b2227;
+    if(type==='normal'){color=0x4d9f4a;skinColor=0x74a84b;clothColor=0x654c31;eyeColor=0xf9db69;accentColor=0x38543a;}
     if (isZombieType(type)) {
         const variant=ZOMBIE_TYPES[type];
         size=variant.size; color=variant.skin; skinColor=variant.skin; clothColor=variant.shirt; eyeColor=variant.eyes;
@@ -66,7 +67,7 @@ function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
         eye.position.set(offset * size, -size * 0.16, size * 0.54);
         head.add(eye);
     }
-    if (!isZombieType(type)) for (const offset of [-0.25, 0.25]) {
+    if (!isZombieType(type) && type!=='normal') for (const offset of [-0.25, 0.25]) {
         const horn = new THREE.Mesh(new THREE.ConeGeometry(size * 0.14, size * 0.38,curve.decoration),
             new THREE.MeshStandardMaterial({color: 0x3d1b27}));
         horn.position.set(offset * size, size * 0.33, 0);

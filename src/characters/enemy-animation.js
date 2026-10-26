@@ -17,6 +17,7 @@ export function enemyPose(type, time, moving, windup=0, knocked=0, enraged=false
 }
 export function animateEnemy(enemy, elapsed, moving, dt=0.016,near=true,pace=1,footIKNear=true) {
     if(enemy.rev4Visual){enemy.rev4Visual.update(dt,moving,near,pace,footIKNear);return;}
+    if(enemy.goblinVisual){enemy.goblinVisual.update(dt,moving,near,pace,footIKNear);return;}
     const rig=enemy.mesh?.userData?.rig;
     if (!rig) return;
     const pose=enemyPose(enemy.type,elapsed+enemy.mesh.id*.18,moving,enemy.windup,enemy.knockback,enemy.enraged);

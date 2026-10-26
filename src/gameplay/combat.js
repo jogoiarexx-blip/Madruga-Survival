@@ -28,6 +28,7 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true, impactStr
     enemy.knockback = Math.max(enemy.knockback||0,stagger);
     if(enemy.hp>0){
       enemy.rev4Visual?.hurt();
+      enemy.goblinVisual?.hurt();
       if(enemy.type==='spider'){
         const interrupted=spiderInterruptWindup(enemy.spiderBrain,impactStrength);
         if(interrupted)enemy.spiderVisual?.interrupt?.();

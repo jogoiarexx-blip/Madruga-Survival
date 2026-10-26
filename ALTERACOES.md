@@ -168,3 +168,10 @@ Base aplicada: pacote original da v1.1 com 52 arquivos. Não foi criado projeto 
 
 
 Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamento.
+
+## v2.23.0 — Goblin animado substitui o Inimigo Comum
+
+- `goblin.glb` analisado e rigado: 46 ossos, 6 animações originais; 9 movimentos gerados com SLERP (15 no total).
+- Prévia interativa separada, modelo animado, golpes sincronizados, hitboxes frontais e compatibilidade dos saves.
+- Asset de 13,5 MB carrega depois de iniciar o jogo, com fallback se estiver indisponível.
+- Novo adaptador 3D, combate do goblin, testes regressivos, gerador de animação e relatório.
