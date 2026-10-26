@@ -56,3 +56,32 @@ function materializeSpider(){
   console.log('Aranha Sombria restaurada:',glb.length,'bytes');
 }
 materializeSpider();
+
+// Goblin: mesma estratégia da Aranha Sombria, preservando as 15 animações.
+// Em GitHub Pages é carregado por partes; no QA reconstrói o GLB completo.
+function materializeGoblin(){
+  const base=join(root,'assets','models'),folder=join(base,'goblin-parts');
+  const manifest=JSON.parse(readFileSync(join(folder,'manifest.json'),'utf8'));
+  if(manifest.encoding!=='gzip+b64'||!Array.isArray(manifest.parts)||
+     manifest.parts.length<1||manifest.parts.length>100||
+     !Number.isInteger(manifest.byteLength)||!Number.isInteger(manifest.glbByteLength))
+    throw Error('Manifesto do goblin inválido');
+  const gz=Buffer.concat(manifest.parts.map(name=>{
+    if(!/^part\d{3}\.b64$/.test(name))throw Error('Parte do goblin inválida');
+    return Buffer.from(readFileSync(join(folder,name),'utf8').trim(),'base64');
+  }));
+  const sha256=b=>createHash('sha256').update(b).digest('hex');
+  if(gz.length!==manifest.byteLength||sha256(gz)!==manifest.sha256)
+    throw Error('Goblin compactado com conteúdo inválido');
+  const glb=gunzipSync(gz);
+  if(glb.length!==manifest.glbByteLength||glb.toString('ascii',0,4)!=='glTF')
+    throw Error('Goblin GLB inválido após descompressão');
+  const full=join(base,'goblin_animado.glb');
+  if(existsSync(full)){
+    const cached=readFileSync(full);
+    if(cached.equals(glb))return;
+  }
+  writeFileSync(full,glb);
+  console.log('Goblin animado reconstruído:',glb.length,'bytes');
+}
+materializeGoblin();
