@@ -1,4 +1,4 @@
-// Madruga Survival v2.20.0 — equipamentos utilizáveis e baús em duas grades.
+// Madruga Survival v2.21.0 — menu inerte, assets sob demanda e renderização adaptativa.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -13,6 +13,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
+import {createFrameDriver,createAssetPipeline} from './render/startup-scheduler.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
 import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
@@ -69,14 +70,25 @@ scene.fog = new THREE.FogExp2(0x87ceeb, 0.008);
 const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.1, 300);
 let graphicsQuality = 'medium'; // low, medium, high
 
-const renderer = new THREE.WebGLRenderer({ antialias: !window.matchMedia('(max-width: 700px)').matches, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap;
-document.body.appendChild(renderer.domElement);
+// Cria somente o canvas no menu. Contexto WebGL, sombras e buffers alocados
+// apenas quando o jogador inicia uma partida, poupando GPU/CPU no menu.
+const gameCanvas=document.createElement('canvas');
+gameCanvas.style.visibility='hidden';
+document.body.appendChild(gameCanvas);
+let renderer=null;
+function ensureRenderer(){
+    if(renderer)return renderer;
+    renderer=new THREE.WebGLRenderer({canvas:gameCanvas,
+        antialias:!window.matchMedia('(max-width: 700px)').matches,
+        powerPreference:'high-performance'});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    renderer.setSize(innerWidth,innerHeight);
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.1;
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFShadowMap;
+    return renderer;
+}
 
 const ambient = new THREE.AmbientLight(0xffffff, 0.45);
 scene.add(ambient);
@@ -92,13 +104,13 @@ sun.shadow.camera.right = sun.shadow.camera.top = 100;
 sun.shadow.bias = -0.0005;
 scene.add(sun);
 
-const ground = createTerrain(THREE, scene, getGroundHeight);
+let ground=null; // Geometria procedural adiada até Iniciar/Retomar
 
 // Obstáculos físicos e visuais da câmera.
 const rockColliders = [];
 const collisionWorld = createCollisionWorld();
 const allColliders = collisionWorld.colliders;
-const cameraObstacles = [ground];
+const cameraObstacles = [];
 const natureAssets = createNatureAssets(THREE);
 
 // ========== PERSONAGEM ==========
@@ -116,7 +128,7 @@ function showPlayerModelStatus(message,state){
 }
 const playerRev5=createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,
     onStatus:showPlayerModelStatus,fallbackRig:{torso,leftLeg,rightLeg}});
-modelRetry.addEventListener('click',()=>void playerRev5.preload());
+modelRetry.addEventListener('click',()=>{if(gameActive)void playerRev5.preload();});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaRev5Status',{
     configurable:true,get:()=>({loaded:playerRev5.loaded,failed:playerRev5.failed,
       oldVisualVisible:playerRev5.oldVisualVisible,
@@ -124,7 +136,7 @@ if(typeof window!=='undefined')Object.defineProperty(window,'madrugaRev5Status',
       meshName:playerRev5.model?.name||null})
 });
 
-void playerRev5.preload();
+modelBanner.style.display='none'; // Nenhum GLB requisitado no menu principal.
 
 // ========== CONTROLS ==========
 // Terceira pessoa: não use PointerLockControls sobre a mesma câmera,
@@ -132,11 +144,11 @@ void playerRev5.preload();
 const touchEnabled=window.matchMedia('(pointer: coarse)').matches;
 let touchPlaying=false;
 const controls = {
-    get isLocked() { return touchPlaying || document.pointerLockElement === renderer.domElement; },
+    get isLocked() { return touchPlaying || document.pointerLockElement === gameCanvas; },
     lock() {
         if(touchEnabled){touchPlaying=true;document.body.classList.add('touch-playing');return;}
         try {
-            const promise = renderer.domElement.requestPointerLock?.();
+            const promise = gameCanvas.requestPointerLock?.();
             promise?.catch(() => showPauseMenu('Clique em continuar para capturar o mouse.'));
         } catch (_) { showPauseMenu('Clique em continuar para capturar o mouse.'); }
     },
@@ -173,6 +185,7 @@ let cameraZoom = 7.6;
 let toastTimer = null, skillAlertTimer = null;
 let wave = 1;
 let gameActive = false;
+let frameDriver=null;
 
 let speedBoost = 1;
 let speedBoostTimer = 0;
@@ -189,8 +202,8 @@ const gravity = -25;
 const jumpForce = 8.5;
 
 const enemies = [];
-const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight});
-const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight});
+const zombieModels=createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true});
+const spiderModels=createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,deferPreload:true});
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
   get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length,
      variants:Object.fromEntries(['shadow','hunter','weaver'].map(id=>[id,enemies.filter(e=>e.spiderVariant===id).length]))})});
@@ -506,6 +519,12 @@ const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
     addCollider:collisionWorld.add,cameraObstacles,getGraphicsQuality:()=>graphicsQuality});
 let worldSeed = Math.floor(Math.random() * 0x100000000);
 function initWorld() {
+    ensureRenderer();
+    if(!ground){
+        ground=createTerrain(THREE,scene,getGroundHeight);
+        cameraObstacles.unshift(ground);
+        cameraRig.refreshObstacles();
+    }
     applyGraphicsSettings(THREE,graphicsQuality,renderer,scene,sun);
     natureAssets.setQuality(graphicsQuality);
     forest.generate(graphicsQuality,worldSeed);
@@ -521,8 +540,7 @@ function initWorld() {
     cameraRig.setArena(null);
     resources.generate(worldSeed,graphicsQuality);
     wildlife.generate(worldSeed,graphicsQuality);
-    void zombieModels.preload();
-    void spiderModels.preload();
+    // Modelos são solicitados após o primeiro frame jogável, com concorrência limitada.
     for (let i=0; i<2; i++) spawnHealthPack();
     for (let i=0; i<2; i++) spawnSpeedBoost();
     for (let i=0; i<2; i++) spawnEnemy('normal');
@@ -622,13 +640,26 @@ function updateContinueButton() {
 // ========== INPUT / COMBATE / PAUSA ==========
 const overlay = document.getElementById('overlay');
 const pauseMenu = document.getElementById('pause-menu');
+const assetStatus=document.getElementById('asset-loading-status');
+const assetPipeline=createAssetPipeline({
+    stages:[
+        {name:'Personagem REV5',load:()=>playerRev5.preload()},
+        {name:'Zumbis REV2',load:()=>zombieModels.preload()},
+        {name:'Aranha Sombria',load:()=>spiderModels.preload()}
+    ],
+    onProgress:({label,done,total,complete})=>{
+        assetStatus.textContent=complete?'':`⏳ Assets ${done}/${total} · ${label}`;
+        assetStatus.classList.toggle('hidden',complete);
+    }
+});
 function showPauseMenu(message = '') {
     if (!gameActive || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || buildWheelUI.isOpen) return;
     pauseMenu.classList.remove('hidden');
     if (message) pauseMenu.querySelector('p').textContent = message;
+    frameDriver?.wake();
     Object.keys(keys).forEach(key => { keys[key] = false; });
 }
-function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); controls.lock(); }
+function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); controls.lock(); frameDriver?.wake(); }
 document.addEventListener('keydown', e => {
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     // Com a roda aberta, nenhuma tecla movimenta, ataca ou fabrica inadvertidamente.
@@ -731,10 +762,15 @@ function beginAdventure(restore=false) {
     if (!worldInitialized) {initWorld();worldInitialized=true;}
     if (save) restoreProgress(save);
     overlay.classList.add('hidden');
+    gameCanvas.style.visibility='visible';
     gameActive=true;saveTick=0;
     document.getElementById('consumable-hotbar').classList.remove('hidden');
     consumableHotbarUI.update();
     initAudio();controls.lock();
+    frameDriver.start();
+    // Primeiro quadro é desenhado antes do primeiro download GLB; preserva
+    // resposta ao clique de iniciar, mesmo com conexão lenta.
+    requestAnimationFrame(()=>{if(gameActive)void assetPipeline.start();});
 }
 document.getElementById('start-btn').onclick = () => beginAdventure(false);
 document.getElementById('load-btn').onclick = () => beginAdventure(true);
@@ -746,6 +782,7 @@ document.addEventListener('pointerlockchange', () => {
     document.getElementById('instructions').style.opacity = controls.isLocked ? '0.6' : '1';
     if (controls.isLocked) pauseMenu.classList.add('hidden');
     else if (gameActive && !placement && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen && !buildWheelUI.isOpen) {saveProgress();showPauseMenu();}
+    frameDriver?.wake();
 });
 document.addEventListener('wheel', e => {
     if (!controls.isLocked || !gameActive) return;
@@ -1277,7 +1314,7 @@ function toggleSkills(){if(skillsUI.isOpen)closeSkills();else openSkills();}
 document.getElementById('inventory-toggle').onclick=toggleInventory;
 document.getElementById('skills-toggle').onclick=toggleSkills;
 document.getElementById('open-skills-inventory').onclick=openSkills;
-const touchControls=createTouchControls({canvas:renderer.domElement,enabled:touchEnabled,
+const touchControls=createTouchControls({canvas:gameCanvas,enabled:touchEnabled,
     onLook:(dx,dy)=>{if(!gameActive||!touchPlaying)return;
       playerYaw-=dx*.006;mousePitch=THREE.MathUtils.clamp(mousePitch+dy*.005,-.30,.76);},
     onKey:(code,down)=>{document.dispatchEvent(new KeyboardEvent(down?'keydown':'keyup',{
@@ -1285,7 +1322,7 @@ const touchControls=createTouchControls({canvas:renderer.domElement,enabled:touc
     onPause:()=>{if(gameActive){if(placement)releasePlacement();if(buildWheelUI.isOpen)buildWheelUI.close();controls.unlock();touchControls.release();showPauseMenu();saveProgress();}},
     onInventory:toggleInventory,onBuild:toggleBuildWheel});
 document.addEventListener('mousedown', e => {
-    if(e.button!==0||e.target!==renderer.domElement||!controls.isLocked)return;
+    if(e.button!==0||e.target!==gameCanvas||!controls.isLocked)return;
     if(placement)confirmPlacement();else combat.attack();
 });
 
@@ -1309,11 +1346,11 @@ camera.position.set(0, 3.8, 7.4);
 camera.lookAt(0, 1.6, 0);
 
 function animate() {
-    requestAnimationFrame(animate);
+    // Apenas o driver agenda quadros; a tela inicial não cria um loop RAF.
     const dt = Math.min(clock.getDelta(), 0.05);
     if (document.hidden) return;
     const running = gameActive && controls.isLocked && health > 0;
-    // Pausa/menu: 4 FPS para manter a cena visível sem consumir GPU a 60/144 Hz.
+    // Pausa: o driver agenda 4 FPS via timer, evitando RAF contínuo a 60/144 Hz.
     // Relógio é atualizado primeiro, evitando salto de física ao retomar.
     if (!running) {
         const now=performance.now();
@@ -1579,18 +1616,28 @@ function loseGame() {
     document.getElementById('go-msg').textContent = `Sobreviveu até o Dia ${survival.days} e derrotou ${kills} criaturas. Recomece para tentar durar mais!`;
     document.getElementById('gameover').classList.remove('hidden');
     controls.unlock();
+    frameDriver?.stop();
 }
 
 window.addEventListener('pagehide',()=>saveProgress());
-document.addEventListener('visibilitychange',()=>{if(document.hidden)saveProgress();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveProgress();frameDriver?.wake();});
+window.addEventListener('focus',()=>frameDriver?.wake());
 
-// O mundo só é criado depois da escolha de qualidade, não antes.
+// Menu principal: nenhum requestAnimationFrame, timer recorrente ou download GLB.
+// O render começa exclusivamente após Iniciar/Retomar e suspende em abas ocultas.
+frameDriver=createFrameDriver({
+    requestFrame:callback=>requestAnimationFrame(callback),
+    cancelFrame:id=>cancelAnimationFrame(id),
+    setTimer:(callback,ms)=>setTimeout(callback,ms),
+    clearTimer:id=>clearTimeout(id),
+    getMode:()=>!gameActive||document.hidden?'off':controls.isLocked&&health>0?'play':'pause',
+    onFrame:animate
+});
 updateHUD();
-animate();
 window.__madrugaReady = true;
 
 window.addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
+    renderer?.setSize(innerWidth, innerHeight);
 });

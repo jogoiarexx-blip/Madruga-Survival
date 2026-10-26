@@ -58,7 +58,7 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
   return new GLTFLoader().parseAsync(glb.buffer,'./assets/models/');
 }
 
-export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,url=SPIDER_GLB}){
+export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,url=SPIDER_GLB,deferPreload=false}){
  let asset=null,loading=null,failed=false;
  const active=new Set(),corpses=new Map();
  function preload(){
@@ -175,7 +175,7 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
    if(enemy.enraged)visual.enrage({intro:false});
    return true;
  }
- function attach(e){if(!e||e.type!=='spider')return false;active.add(e);if(!asset&&!failed)void preload();return mount(e);}
+ function attach(e){if(!e||e.type!=='spider')return false;active.add(e);if(!deferPreload&&!asset&&!failed)void preload();return mount(e);}
  function defeat(e){if(!e?.spiderVisual||corpses.has(e))return false;e.spiderVisual.die();corpses.set(e,1.5);return true;}
  function updateCorpses(dt,removeMesh){for(const [e,t] of corpses){e.spiderVisual?.update(dt,false);if(t>dt){corpses.set(e,t-dt);continue;}corpses.delete(e);dispose(e);removeMesh(e.mesh);}}
  function dispose(e){corpses.delete(e);active.delete(e);if(e?.spiderVisual){e.spiderVisual.dispose();e.spiderVisual=null;}}

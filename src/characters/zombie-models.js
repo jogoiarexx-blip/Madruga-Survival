@@ -55,7 +55,7 @@ const LOCOMOTION_CLIP_SCALE=Object.freeze({
   zombie_brute:1.75
 });
 
-export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,url=ZOMBIE_GLB_URL}) {
+export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,getGroundHeight,url=ZOMBIE_GLB_URL,deferPreload=false}) {
   let asset=null, loading=null, failed=false;
   const active=new Set();
   const corpses=new Map();
@@ -175,7 +175,7 @@ export function createZombieModelManager({THREE,scene,GLTFLoader,cloneSkeleton,g
   function attach(enemy){
     if(!enemy||!isZombieType(enemy.type))return false;
     active.add(enemy);
-    if(!asset&&!failed)void preload();
+    if(!deferPreload&&!asset&&!failed)void preload();
     return mount(enemy);
   }
   function defeat(enemy){

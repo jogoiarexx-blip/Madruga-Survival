@@ -1,3 +1,12 @@
+## Novidade v2.21 — Menu e carregamento otimizados
+
+- No menu principal não há animação do cenário nem ciclo de IA/física; nenhum frame é agendado e os modelos 3D não são baixados antes de escolher Iniciar/Retomar.
+- O renderizador WebGL e o terreno procedural só são criados depois que o jogador inicia a partida.
+- O personagem REV5 carrega primeiro, depois os zumbis REV2 e, por último, a Aranha Sombria; os inimigos não desaparecem enquanto os rigs são carregados, porque o fallback geométrico continua disponível.
+- Pausa: o driver agenda no máximo quatro renders por segundo usando temporizador, não ocupa RAF ininterruptamente; aba oculta suspende quadros por completo.
+- Novo menu mantém as opções de qualidade, continuar save, controles e acesso às melhorias anteriores. Uma pequena faixa mostra o progresso de carregamento de assets na partida.
+- Conectividade lenta e aparelhos modestos usam concorrência menor no download em partes do GLB REV5.
+
 ## Novidade v2.20 — Roda de construção
 
 Abra a roda usando o botão **🧱 Construção** ou a tecla **Z**. No celular, use o botão 🧱 no alto da tela. Com a câmera travando o cursor no PC, abra por Z ou use **Esc > Abrir roda de construção**. Escolha uma das 10 peças, confira os recursos disponíveis e inicie a prévia 3D. **F/Enter** confirma, **G** gira, **C** alterna o ímã, **Esc** cancela. A roda não debita recursos; o custo é debitado apenas após confirmar o posicionamento. As teclas antigas B, H, V, M, N, K e L continuam funcionando.

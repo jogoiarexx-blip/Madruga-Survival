@@ -1,3 +1,11 @@
+## v2.21.0 — Menu sem loop e assets sob demanda
+
+- Renderização, downloads GLB, GPU e terreno 3D adiados até início da partida.
+- Novos drivers com pausa de 4 FPS e suspensão na aba oculta.
+- Carregamento sequencial prioriza REV5, depois zumbi REV2 e aranha, com fallback seguro.
+- UI inicial modernizada sem remover conteúdo nem opções.
+- Suíte de regressão integral aprovada; teste real no Chromium ainda pendente.
+
 ## v2.20.0 — Roda de Construção
 
 - Botão dedicado para PC e celular; teclado Z e acesso no menu de pausa.

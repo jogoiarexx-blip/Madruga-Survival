@@ -18,7 +18,7 @@ export const PLAYER_REV5_MIRRORS=Object.freeze([
 ]);
 // Download the published GLB parts concurrently, retrying transient failures.
 export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
-  manifestUrl=PLAYER_REV5_PARTS_MANIFEST,onProgress=()=>{},parallelism=6,retries=3}={}){
+  manifestUrl=PLAYER_REV5_PARTS_MANIFEST,onProgress=()=>{},parallelism=(typeof navigator!=='undefined'&&(navigator.connection?.saveData||/2g/.test(navigator.connection?.effectiveType||'')||navigator.hardwareConcurrency<=4))?3:6,retries=3}={}){
   const response=await fetcher(manifestUrl);
   if(!response.ok)throw Error('Manifesto REV5 indisponível (HTTP '+response.status+')');
   const manifest=await response.json();

@@ -520,3 +520,22 @@ body.placing #interact-hint{display:none}
  #build-wheel-hint{display:none}#build-wheel-close{min-height:32px;padding:4px 20px}}
 @media(prefers-reduced-motion:no-preference){#build-wheel:not(.hidden) #build-wheel-ring{animation:build-wheel-appear .15s ease-out both}
  @keyframes build-wheel-appear{from{opacity:.45;transform:scale(.94)}to{opacity:1;transform:scale(1)}}}
+
+/* v2.21 — menu renderizado apenas por HTML/CSS, sem mundo por trás. */
+#overlay{overflow-y:auto;overscroll-behavior:contain;padding:clamp(14px,4vw,32px);
+ background:radial-gradient(ellipse at 50% 12%,#274834 0%,#111e1b 52%,#080e13 100%);
+ min-height:100dvh;box-sizing:border-box;gap:6px}
+#overlay h1{font-size:clamp(31px,5.6vw,57px);letter-spacing:.02em;color:#e8dba3;
+ text-shadow:0 3px 14px #000d;margin:8px auto}
+#overlay p{max-width:680px;font-size:clamp(12px,1.8vw,16px);line-height:1.55;color:#d7e6dc}
+#overlay .gfx-btn{min-height:43px;border:1px solid #9aac91!important}
+#overlay #start-btn{background:#a23829;border:1px solid #e79e76;min-height:50px;
+ box-shadow:0 4px 20px #0008;transition:filter .12s ease}
+#overlay #start-btn:hover{filter:brightness(1.13)}
+#overlay #load-btn{min-height:46px}
+#menu-performance-tip{font-size:12px!important;color:#bdecbf!important;max-width:520px!important}
+#asset-loading-status{position:fixed;z-index:148;bottom:12px;left:50%;transform:translateX(-50%);
+ background:#142b24e8;color:#ecf4dc;border:1px solid #8eb59a;padding:6px 13px;
+ border-radius:7px;font:600 12px/1.35 system-ui;pointer-events:none;max-width:85vw;text-align:center}
+@media(max-width:700px){#overlay{justify-content:safe center;padding:14px 12px 24px}
+ #overlay p{line-height:1.35}#overlay h1{margin:4px auto}#asset-loading-status{bottom:4px}}
