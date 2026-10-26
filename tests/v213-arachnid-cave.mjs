@@ -83,6 +83,7 @@ class Mesh extends Node{constructor(g,m){super();this.geometry=g;this.material=m
 class Geom{dispose(){}}
 class Material{constructor(p){Object.assign(this,p)}}
 const THREE={Group:Node,Mesh,MeshStandardMaterial:Material,DodecahedronGeometry:Geom,CylinderGeometry:Geom,OctahedronGeometry:Geom,
+ ConeGeometry:Geom,SphereGeometry:Geom,RingGeometry:Geom,MeshBasicMaterial:Material,DoubleSide:2,
  PointLight:class extends Node {}};
 const scene={children:[],add(n){this.children.push(n)},remove(n){const i=this.children.indexOf(n);if(i>=0)this.children.splice(i,1)}};
 const world=createArachnidCave({THREE,scene,getGroundHeight:()=>0});

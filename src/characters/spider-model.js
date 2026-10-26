@@ -100,7 +100,7 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
    for(const clip of asset.animations)actions[clip.name]=mixer.clipAction(clip);
    // Os efeitos de teia são animados pelo clipe WebShot, não por um mesh duplicado.
    const visual={model,mixer,actions,current:null,lock:0,actionTime:0,flash:0,recoil:0,dead:false,
-     mixerAccumulator:0,rotationTiltX:0,rotationTiltZ:0,footPlant,
+     mixerAccumulator:0,rotationTiltX:0,rotationTiltZ:0,footPlant,rage:false,ragePulse:0,
      play(name,{once=false,speed=1,blend=.17}={}){
        const next=actions[name];if(!next)return false;
        if(!once&&this.current===name){next.setEffectiveTimeScale(speed);return true;}
@@ -119,11 +119,22 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
        this.flash=Math.max(this.flash,.24);
        this.recoil=Math.max(this.recoil,.07*Math.max(.6,Math.min(2.0,strength)));
      },
+     enrage({intro=true}={}){
+       if(this.rage)return;
+       this.rage=true;this.ragePulse=intro?1.65:0;
+       if(intro){this.play('WebShot',{once:true,blend:.17,speed:.83});this.lock=1.55;}
+     },
      interrupt(){this.lock=0;this.play('Idle',{blend:.13});},
      die(){this.lock=3;this.play('Idle',{blend:.10});this.dead=true;},
      update(dt,moving,near=true,pace=1,slope={x:0,z:0},groundIK=near){
        if(!Number.isFinite(dt)||dt<=0||!this.model)return;
        const step=Math.min(.1,dt);
+       this.ragePulse=Math.max(0,this.ragePulse-step);
+       if(this.rage){const glow=.23+this.ragePulse*.65+.14*(1+Math.sin(this.actionTime*6));
+         for(const material of tintedMaterials)if(material.emissive){
+           material.emissive.setHex(0x8e266e);material.emissiveIntensity=Math.min(1.35,glow);
+         }
+       }
        this.lock=Math.max(0,this.lock-step);this.actionTime+=step;
        if(this.dead){
          this.model.rotation.z=Math.min(1.35,this.model.rotation.z+step*2.8);
@@ -160,7 +171,9 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
      },
      dispose(){this.footPlant?.reset();this.mixer.stopAllAction();this.mixer.uncacheRoot(this.model);this.model.parent?.remove(this.model);for(const m of tintedMaterials)m.dispose();this.model=null;}
    };
-   enemy.spiderVisual=visual;visual.play('Idle');return true;
+   enemy.spiderVisual=visual;visual.play('Idle');
+   if(enemy.enraged)visual.enrage({intro:false});
+   return true;
  }
  function attach(e){if(!e||e.type!=='spider')return false;active.add(e);if(!asset&&!failed)void preload();return mount(e);}
  function defeat(e){if(!e?.spiderVisual||corpses.has(e))return false;e.spiderVisual.die();corpses.set(e,1.5);return true;}

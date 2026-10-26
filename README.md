@@ -1,3 +1,7 @@
+## Madruga Survival v2.14.0 — Refinamento da caverna e Rainha
+
+Câmera com colisões e limite da arena, iluminação subterrânea, visual de fase 2, barra de vida da Rainha, animação de transição e testes. Veja `RELATORIO-REV214.md`.
+
 ## Madruga Survival v2.12.0 — Ninhos, ovos e teias
 
 - Três ninhos procedurais por semente do mundo (Bosque, Ravina e Tecelãs), com objetos 3D low poly e ovos visíveis.

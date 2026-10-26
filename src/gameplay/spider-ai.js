@@ -4,6 +4,7 @@ import {getSpiderVariant} from './spider-variants.js?v=2.13.0';
 export const SPIDER_ATTACK_PHASE=0.48/SPIDER_DURATIONS.Attack;
 export const SPIDER_WEB_PHASE=0.49/SPIDER_DURATIONS.WebShot;
 export const SPIDER_JUMP_DAMAGE_PHASE=.79;
+export const QUEEN_RAGE_COOLDOWN_FACTOR=.78;
 export const SPIDER_WEB_FAN_SPREAD=Object.freeze([-.23,0,.23]);
 // Golpe forte interrompe somente o wind-up anterior ao impacto; nunca depois.
 export function spiderInterruptWindup(brain,strength=1){
@@ -18,7 +19,7 @@ export function spiderInterruptWindup(brain,strength=1){
 
 const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 
-export function spiderDecision(distance,visible,timer,random=0.5,variant='shadow'){
+export function spiderDecision(distance,visible,timer,random=0.5,variant='shadow',enraged=false){
   if(timer>0||!visible)return null;
   const profile=getSpiderVariant(variant);
   const biteRange=variant==='matriarch'?3.25:variant==='weaver'?2.5:variant==='hunter'?1.85:2.2;
@@ -26,7 +27,7 @@ export function spiderDecision(distance,visible,timer,random=0.5,variant='shadow
   // Caçadoras perseguem com saltos; tecelãs mantêm distância e controlam o chão.
   if(variant==='hunter'&&distance<7.5&&random<profile.jumpChance)return 'Jump';
   if(distance>(variant==='matriarch'?3.6:variant==='weaver'?3.5:variant==='hunter'?7.5:5)&&distance<(variant==='matriarch'?24:variant==='weaver'?19:15))
-    return random<profile.burstChance?'WebBurst':'WebShot';
+    return random<Math.min(1,profile.burstChance+(variant==='matriarch'&&enraged?.08:0))?'WebBurst':'WebShot';
   if(distance>=biteRange&&distance<(variant==='weaver'?4.3:5)&&random<profile.jumpChance)return 'Jump';
   return null;
 }
@@ -95,10 +96,11 @@ export function createSpiderAI({player,getGroundHeight,resolveCollision,damagePl
      }
      if(ai.actionTime>=duration){ai.action=null;ai.actionTime=0;}
    }
-   const decision=ai.action?null:spiderDecision(dist,visible,ai.cooldown,Math.abs(Math.sin(elapsed+mesh.id)),enemy.spiderVariant||'shadow');
+   const decision=ai.action?null:spiderDecision(dist,visible,ai.cooldown,Math.abs(Math.sin(elapsed+mesh.id)),enemy.spiderVariant||'shadow',!!enemy.enraged);
    if(decision){
      ai.action=decision;ai.actionTime=0;ai.hit=false;
      ai.cooldown=decision==='WebBurst'?profile.burstCooldown:decision==='WebShot'?profile.webCooldown:decision==='Jump'?profile.jumpCooldown:profile.biteCooldown;
+     if(enemy.spiderVariant==='matriarch'&&enemy.enraged)ai.cooldown*=QUEEN_RAGE_COOLDOWN_FACTOR;
      onSpiderSound(decision==='WebBurst'||decision==='WebShot'?'charge':decision==='Jump'?'jump':'attack',dist,enemy);
      if(decision==='Jump'){
        ai.jumpX=dx/(dist||1);ai.jumpZ=dz/(dist||1);ai.jumpYaw=Math.atan2(dx,dz);

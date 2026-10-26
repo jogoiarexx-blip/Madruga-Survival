@@ -1,6 +1,6 @@
-// Madruga Survival v2.13.0 — caverna, aranha rainha e cristais de crafting.
+// Madruga Survival v2.14.0 — caverna, aranha rainha e cristais de crafting.
 import { createNatureAssets } from './world/nature-assets.js';
-import { createCameraRig } from './render/camera-rig.js';
+import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
 import { readSave, writeSave, clearSave } from './gameplay/save-system.js?v=2.13.0';
 import { createTerrain } from './world/terrain.js';
@@ -14,8 +14,8 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import {createSpiderModelManager} from './characters/spider-model.js?v=2.13.0-cave';
-import {createSpiderAI} from './gameplay/spider-ai.js?v=2.13.0';
+import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
+import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
 import {chooseSpiderVariant} from './gameplay/spider-variants.js?v=2.13.0';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
 import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting';
@@ -31,7 +31,7 @@ import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRe
 import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
 import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
-import {createArachnidCave,CAVE_CENTER} from './world/arachnid-cave.js?v=2.13.0';
+import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
 import {createSurvivalUI} from './ui/survival-ui.js?v=2.13.0';
 import {createTouchControls} from './input/touch-controls.js';
@@ -264,7 +264,14 @@ function updateHUD() {
       'Construa um telhado, um canteiro e fabrique uma vara de pesca'  : 'Reúna 4 madeiras e 4 pedras para a fogueira';
     document.getElementById('equipment-display').textContent = `Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`;
     document.getElementById('target-hint').textContent = placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · C furtividade · Y pescar · I mochila · U habilidades';
-    document.getElementById('boss-bar-wrapper').classList.add('hidden');
+    const bossWrapper=document.getElementById('boss-bar-wrapper');
+    const showQueen=arachnidCave.inside&&!!queen&&queen.hp>0;
+    bossWrapper.classList.toggle('hidden',!showQueen);
+    if(showQueen){
+      document.getElementById('boss-name').textContent=queen.enraged?'🕷 RAINHA DAS ARANHAS · FASE 2':'🕷 Rainha das Aranhas · Fase 1';
+      document.getElementById('boss-bar').style.width=`${Math.max(0,Math.min(100,queen.hp/queen.maxHp*100))}%`;
+      bossWrapper.classList.toggle('rage',!!queen.enraged);
+    }
     survivalUI.update();
     skillsUI.update();
     document.getElementById('skill-hud').textContent=`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`;
@@ -500,6 +507,7 @@ function initWorld() {
     exploration.generate(worldSeed);
     spiderNests.generate(worldSeed);
     arachnidCave.generate(spiderNests.nests);
+    cameraRig.setArena(null);
     resources.generate(worldSeed,graphicsQuality);
     wildlife.generate(worldSeed,graphicsQuality);
     void zombieModels.preload();
@@ -565,6 +573,7 @@ function restoreProgress(data) {
     exploration.restore(data.exploration);
     spiderNests.restore(data.spiderNests);
     arachnidCave.restore(data.arachnidCave);
+    cameraRig.setArena(arachnidCave.inside?{...CAVE_CENTER,radius:CAVE_RADIUS-.20}:null,arachnidCave.cameraBlockers);
     unlockedWeaponCount=survival.crafted.spear?3:survival.crafted.hammer?2:1;
     const location=resolveCollision(data.player.x,data.player.z,.46);
     player.position.set(location.x,getGroundHeight(location.x,location.z),location.z);
@@ -579,7 +588,7 @@ function restoreProgress(data) {
         enemy.mesh.position.set(savedEnemy.x,getGroundHeight(savedEnemy.x,savedEnemy.z)+enemy.size/2,savedEnemy.z);
         enemy.hp=Math.min(enemy.maxHp,savedEnemy.hp);enemy.raider=!!savedEnemy.raider;
         if(savedEnemy.type==='spider'&&savedEnemy.spiderVariant==='matriarch'&&savedEnemy.enraged){
-            enemy.enraged=true;enemy.speed*=1.2;
+            enemy.enraged=true;enemy.speed*=1.2;enemy.spiderVisual?.enrage({intro:false});
         }
         if(savedEnemy.type==='boss'&&savedEnemy.enraged){
             enemy.enraged=true;enemy.speed*=1.28;enemy.mesh.material.color.setHex(0xe24629);
@@ -747,6 +756,8 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
         alertZombie(enemy,player.position,elapsed);
         if(enemy.spiderVariant==='matriarch'&&enemy.hp>0&&enemy.hp<=enemy.maxHp*.5&&!enemy.enraged){
             enemy.enraged=true;enemy.speed*=1.2;
+            enemy.spiderVisual?.enrage();
+            enemy.spiderBrain={cooldown:1.65,action:null,actionTime:0,hit:false};
             showToast('⚠ A RAINHA ESTÁ FURIOSA! Sua velocidade aumentou.');
             for(let i=0;i<2&&enemies.length<12;i++){
                 spawnEnemy('spider','hunter');const minion=enemies.at(-1);
@@ -963,6 +974,7 @@ function deconstructNear(){
 function harvestNear(){
     if(arachnidCave.nearPortal(player.position)){
         const where=arachnidCave.enter();if(!where)return false;
+        cameraRig.setArena({...CAVE_CENTER,radius:CAVE_RADIUS-.20},arachnidCave.cameraBlockers);
         player.position.set(where.x,getGroundHeight(where.x,where.z),where.z);
         showToast('⛏ Caverna das Aranhas! Procure cristais e enfrente a Rainha.');
         if(!arachnidCave.state.bossDefeated&&!enemies.some(e=>e.spiderVariant==='matriarch')){
@@ -972,7 +984,8 @@ function harvestNear(){
         saveProgress();updateHUD();return true;
     }
     if(arachnidCave.nearExit(player.position)){
-        const where=arachnidCave.leave();player.position.set(where.x,getGroundHeight(where.x,where.z),where.z);
+        const where=arachnidCave.leave();cameraRig.setArena(null);
+        player.position.set(where.x,getGroundHeight(where.x,where.z),where.z);
         showToast('🌲 Você voltou à floresta.');saveProgress();updateHUD();return true;
     }
     if(arachnidCave.nearestCrystal(player.position)){
@@ -1380,10 +1393,13 @@ function animate() {
         const intensity=Math.max(0.08,Math.sin(sunAngle-Math.PI/2)*.5+.5);
         const graveDist=Math.hypot(player.position.x-CEMETERY_POS.x,player.position.z-CEMETERY_POS.z);
         const graveAtmosphere=THREE.MathUtils.clamp((26-graveDist)/14,0,1);
-        sun.intensity=(.13+intensity*1.35)*(1-graveAtmosphere*.47);
-        ambient.intensity=(.12+intensity*.49)*(1-graveAtmosphere*.30);
+        sun.intensity=arachnidCave.inside?.08:(.13+intensity*1.35)*(1-graveAtmosphere*.47);
+        ambient.intensity=arachnidCave.inside?.18:(.12+intensity*.49)*(1-graveAtmosphere*.30);
         scene.background.setHSL(.59,.38-graveAtmosphere*.21,.065+intensity*.55-graveAtmosphere*.075);
-        scene.fog.color.copy(scene.background);
+        scene.fog.density=arachnidCave.inside?.025:(graphicsQuality==='low'?.012:graphicsQuality==='high'?.006:.008);
+        if(arachnidCave.inside){scene.background.setHex(0x130e20);scene.fog.color.setHex(0x1d1828);}
+        else scene.fog.color.copy(scene.background);
+        arachnidCave.update(elapsed,enemies.find(e=>e.spiderVariant==='matriarch'&&e.hp>0));
 
         shrine.update(dt,elapsed);
         combat.tickEffects(dt);

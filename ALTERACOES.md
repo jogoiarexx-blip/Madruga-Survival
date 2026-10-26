@@ -1,3 +1,7 @@
+## v2.14.0 — Caverna e Rainha
+- Câmera restrita à arena com raycast de paredes, iluminação e decoração rochosa, barra de chefe e telegraph de fase 2.
+- Melhoria visual sem substituir nenhum GLB. Ver relatório técnico da revisão.
+
 ## v2.12.0 — Ninhos e exploração de aranhas
 - Ninhos determinísticos; ovos coletáveis e eclosões finitas; teias no chão e minimapa.
 - Novo loot de seda e quitina, curativo de seda e proteção de quitina na bancada.
