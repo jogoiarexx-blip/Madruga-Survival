@@ -13,7 +13,7 @@ const sample=()=>({seed:2026,graphicsQuality:'medium',level:2,xp:2,kills:1,
  enemies:[{type:'spider',spiderVariant:'weaver',x:11,z:9,hp:12,enraged:false}]});
 const storage=()=>{const map=new Map();return {getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};};
 test('três espécies com parâmetros físicos finitos',()=>{
- assert.deepEqual(Object.keys(SPIDER_VARIANTS),['shadow','hunter','weaver']);
+ assert.deepEqual(Object.keys(SPIDER_VARIANTS).filter(id=>id!=='matriarch'),['shadow','hunter','weaver']);
  for(const p of Object.values(SPIDER_VARIANTS))for(const key of ['size','speed','hp','damage','webSpeed','webDamage','webSlow','fanSpread','webCooldown','burstCooldown','jumpCooldown','biteCooldown'])
    assert.ok(Number.isFinite(p[key])&&p[key]>0,`${p.name} ${key}`);
 });
@@ -106,8 +106,8 @@ test('cada modelo compartilha esqueleto mas clona materiais tintos',()=>{
 });
 test('nome da revisão, execução dos novos testes e sem download extra de GLB',()=>{
  const p=JSON.parse(source('../package.json'));
- assert.ok(['2.11.0','2.12.0'].includes(p.version));assert.match(p.scripts.test,/v211-spider-variants\.mjs/);
- assert.match(source('../index.html'),/(?:2\.11\.0-spider|2\.12\.0-nests)/);
+ assert.ok(['2.11.0','2.12.0','2.13.0'].includes(p.version));assert.match(p.scripts.test,/v211-spider-variants\.mjs/);
+ assert.match(source('../index.html'),/(?:2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave)/);
  assert.equal(source('../src/characters/spider-model.js').includes('SPIDER_GLB=\'./assets/models/aranha_sombria_animada.glb\''),true);
 });
 console.log(`v2.11: ${tests} verificações novas aprovadas`);

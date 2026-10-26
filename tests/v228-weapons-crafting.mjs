@@ -112,6 +112,6 @@ check('integração mantém modificadores e UI de estoque conectados',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  for(const k of ['armoredBroom','hardenedSpear','spikedHammer','attackProgress:combat.isAttacking'])assert.ok(main.includes(k),k);
  for(const k of ['craftBatchPreview(','craft-ready-filter','Mochila + baús próximos','Só possíveis'])assert.ok(ui.includes(k),k);
- assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests/.test(html));
+ assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave/.test(html));
 });
 console.log('QA v2.2.8:',passed,'testes adicionais');

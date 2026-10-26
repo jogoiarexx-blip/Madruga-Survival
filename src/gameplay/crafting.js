@@ -1,6 +1,6 @@
 // Craft integrado: regras puras, feedback de requisitos e transação atômica.
 // Estruturas continuam usando commitPlacement, com prévia antes do pagamento.
-import {RECIPES,RESOURCES,addResource} from './survival.js?v=2.6.0-crafting';
+import {RECIPES,RESOURCES,addResource} from './survival.js?v=2.13.0';
 import {validChestItems} from './storage.js';
 import {isStructureRecipe} from './placement.js';
 import {TOOL_MAX,makeTool,restoreTool} from './tools.js';
@@ -57,10 +57,10 @@ export function reserveCraftMaterials(state,cost,chests=[]){
 
 const COOKING=new Set(['cooked','grilledFish','stew']);
 const REPAIRS={repairHammer:'hammer',repairSpear:'spear',repairPickaxe:'pickaxe'};
-const UPGRADES={reinforcedVest:'body',trailBoots:'feet',chitinPadding:'body',ironSpear:'spear',ironHammer:'hammer',reinforcedGrip:'spear',spikedHammer:'hammer',hardenedSpear:'spear',armoredBroom:'broom'};
+const UPGRADES={reinforcedVest:'body',trailBoots:'feet',chitinPadding:'body',crystalSpear:'spear',ironSpear:'spear',ironHammer:'hammer',reinforcedGrip:'spear',spikedHammer:'hammer',hardenedSpear:'spear',armoredBroom:'broom'};
 export const CRAFT_STATIONS=Object.freeze({
   pickaxe:'workbench',ironSpear:'workbench',ironHammer:'workbench',reinforcedGrip:'workbench',
-  spikedHammer:'workbench',hardenedSpear:'workbench',armoredBroom:'workbench',
+  spikedHammer:'workbench',hardenedSpear:'workbench',crystalSpear:'workbench',armoredBroom:'workbench',
   reinforcedVest:'workbench',trailBoots:'workbench',chitinPadding:'workbench',silkDressing:'workbench',medicalKit:'workbench',repairKit:'workbench',
   repairHammer:'workbench',repairSpear:'workbench',repairPickaxe:'workbench',
   cooked:'campfire',grilledFish:'campfire',stew:'campfire'
@@ -82,6 +82,7 @@ function requirement(state,id){
  if(id==='reinforcedGrip'&&(!c.hammer||!c.spear))return 'Fabrique marreta e lança primeiro';
  if(id==='spikedHammer'&&!c.ironHammer)return 'Instale primeiro a cabeça de ferro da marreta';
  if(id==='hardenedSpear'&&!c.ironSpear)return 'Instale primeiro a ponta de ferro da lança';
+ if(id==='crystalSpear'&&!c.hardenedSpear)return 'Instale primeiro a lança temperada';
  if(Object.hasOwn(UPGRADES,id)&&c[id])return 'Melhoria já instalada';
  if(Object.hasOwn(REPAIRS,id)){
   const tool=REPAIRS[id];

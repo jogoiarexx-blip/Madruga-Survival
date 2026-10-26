@@ -93,8 +93,8 @@ test('áudio procedural gera efeitos de passos, ataque, teia, ferimento e morte'
 test('entrada do jogo envia eventos e versão está atualizada',()=>{
  const main=file('../src/main.js'),index=file('../index.html'),pkg=JSON.parse(file('../package.json'));
  assert.match(main,/onSpiderSound:/);
- assert.match(index,/data-build="(?:2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests)"/);
- assert.ok(['2.10.0','2.11.0','2.12.0'].includes(pkg.version));
+ assert.match(index,/data-build="(?:2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave)"/);
+ assert.ok(['2.10.0','2.11.0','2.12.0','2.13.0'].includes(pkg.version));
  assert.ok(pkg.scripts.test.includes('v210-spider-feedback.mjs'));
 });
 console.log('v2.10:',passed,'novas verificações aprovadas');

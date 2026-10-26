@@ -358,3 +358,6 @@ Novidade v1.5: zumbis low-poly integrados ao ciclo noturno, invasões e salvamen
 - Testes em `tests/v20-performance.mjs`. Para medição real, use F3 e compare draw calls com 100 paredes/pisos nas mesmas condições gráficas.
 
 **Limitação:** não há benchmark WebGL real neste ambiente; FPS efetivo no hardware deve ser medido separadamente.
+
+## v2.13 — Caverna das Aranhas
+Entre na caverna pelo portal próximo à Colônia das Tecelãs (F). Vença a Rainha e recolha cristais. Fabrique a Ponta de Cristal na bancada após a lança temperada. Consulte `RELATORIO-REV213.md`.

@@ -1,6 +1,6 @@
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 import {ZOMBIE_TYPES,isZombieType} from '../gameplay/zombie-variants.js';
-import {getSpiderVariant,isSpiderVariant} from '../gameplay/spider-variants.js';
+import {getSpiderVariant,isSpiderVariant} from '../gameplay/spider-variants.js?v=2.13.0';
 // Construção procedural de inimigos, centralizada e testável.
 export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn=()=>{},getQuality=()=> 'medium'}) {
 function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {

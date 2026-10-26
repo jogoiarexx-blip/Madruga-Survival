@@ -1,4 +1,5 @@
 import {withinCemetery} from '../gameplay/zombie-variants.js';
+import {CAVE_CENTER,CAVE_RADIUS} from './arachnid-cave.js';
 // Floresta estática: gerada de uma semente persistida para restaurar os checkpoints.
 // Não depende de bundler, CDN ou chamadas de rede.
 import {createSeededRandom} from './random.js';
@@ -10,6 +11,7 @@ export function createForest({THREE,scene,natureAssets,getGroundHeight,shrinePos
     const rockMeshes=[];
     const visibility=createDistanceVisibility({trees,rocks:rockMeshes});
 function createRock(x, z, scale = 1) {
+    if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3)return;
     const rock = new THREE.Mesh(natureAssets.rockGeometry,
                 natureAssets.rockMaterials[Math.floor(random() * natureAssets.rockMaterials.length)]);
             const rockSize = 0.35 + random() * 0.7;
@@ -27,6 +29,7 @@ function createRock(x, z, scale = 1) {
 
 
 function createTree(x, z) {
+    if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3)return;
     const g = new THREE.Group();
     const heightVar = 0.7 + random() * 0.6;
     const trunkH = 2.4 * heightVar;

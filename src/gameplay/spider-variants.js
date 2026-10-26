@@ -8,7 +8,10 @@ export const SPIDER_VARIANTS=Object.freeze({
     burstChance:0,jumpChance:.76,webCooldown:7.0,burstCooldown:8.0,jumpCooldown:2.25,biteCooldown:1.20}),
   weaver:Object.freeze({name:'Aranha Tecelã',size:1.94,speed:2.65,hp:12,damage:15,
     tint:0x9ac4e5,glow:0x22577b,webSpeed:7.2,webDamage:4,webSlow:3.6,fanSpread:.28,
-    burstChance:.72,jumpChance:.09,webCooldown:3.7,burstCooldown:5.3,jumpCooldown:4.5,biteCooldown:2.0})
+    burstChance:.72,jumpChance:.09,webCooldown:3.7,burstCooldown:5.3,jumpCooldown:4.5,biteCooldown:2.0}),
+  matriarch:Object.freeze({name:'Rainha das Aranhas',size:2.9,speed:2.6,hp:48,damage:19,
+    tint:0xd99ce7,glow:0x602268,webSpeed:9,webDamage:6,webSlow:4.2,fanSpread:.35,
+    burstChance:.9,jumpChance:.2,webCooldown:2.9,burstCooldown:4.5,jumpCooldown:3.4,biteCooldown:1.6})
 });
 export const isSpiderVariant=id=>typeof id==='string'&&Object.hasOwn(SPIDER_VARIANTS,id);
 export function getSpiderVariant(id){return SPIDER_VARIANTS[isSpiderVariant(id)?id:'shadow'];}

@@ -60,7 +60,7 @@ function damageEnemy(enemy, amount, knockback = 0.35, credited = true, impactStr
         const drop = {x: enemy.mesh.position.x, z: enemy.mesh.position.z};
         removeMesh(enemy.mesh,true);
         enemies.splice(enemies.indexOf(enemy), 1);
-        if(credited){onEnemyKilled(enemy.type,drop);
+        if(credited){onEnemyKilled(enemy.type,drop,enemy);
         gainXP(enemy.type === 'boss' ? 22 : enemy.type === 'tank' ? 5 : enemy.type==='shaman'?4:2);}
         if (enemy.type === 'boss') { onBossDefeated(); showToast('🏆 Guardião derrotado! Termine de juntar as peças!'); }
         advanceQuestIfReady();

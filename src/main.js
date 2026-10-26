@@ -1,8 +1,8 @@
-// Madruga Survival v2.12.0 — ninhos, eclosão, teias e crafting de quitina.
+// Madruga Survival v2.13.0 — caverna, aranha rainha e cristais de crafting.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js';
-import { createForest } from './world/forest.js';
-import { readSave, writeSave, clearSave } from './gameplay/save-system.js';
+import { createForest } from './world/forest.js?v=2.13.0';
+import { readSave, writeSave, clearSave } from './gameplay/save-system.js?v=2.13.0';
 import { createTerrain } from './world/terrain.js';
 import { createMinimap } from './ui/minimap.js';
 import { weaponTypes } from './gameplay/equipment.js';
@@ -14,32 +14,33 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import {createSpiderModelManager} from './characters/spider-model.js?v=2.11.0-spider';
-import {createSpiderAI} from './gameplay/spider-ai.js?v=2.11.0-spider';
-import {chooseSpiderVariant} from './gameplay/spider-variants.js';
+import {createSpiderModelManager} from './characters/spider-model.js?v=2.13.0-cave';
+import {createSpiderAI} from './gameplay/spider-ai.js?v=2.13.0';
+import {chooseSpiderVariant} from './gameplay/spider-variants.js?v=2.13.0';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
 import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.4.0-combat';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.3.0-perception';
-import { createCombatSystem } from './gameplay/combat.js?v=2.11.0-spider';
-import { createProjectileSystem } from './gameplay/projectiles.js?v=2.11.0-spider';
+import { createCombatSystem } from './gameplay/combat.js?v=2.13.0';
+import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
-import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.6.0-crafting';
+import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.13.0';
 import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
 import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
+import {createArachnidCave,CAVE_CENTER} from './world/arachnid-cave.js?v=2.13.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js?v=2.6.0-crafting';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.13.0';
 import {createTouchControls} from './input/touch-controls.js';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
-import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.6.0-crafting';
+import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.13.0';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
@@ -199,6 +200,7 @@ const exploration=createExplorationWorld({THREE,scene,getGroundHeight,
     addCollider:collider=>collisionWorld.add(collider)});
 const spiderNests=createSpiderNestWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)});
+const arachnidCave=createArachnidCave({THREE,scene,getGroundHeight});
 const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality,mergeGeometries});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
@@ -249,7 +251,11 @@ function updateHUD() {
     explorationStatus.textContent=!explorationGoal.ready?'🧭 Procure suprimentos nas casas abandonadas':
       explorationGoal.complete?'🗺 Todos os locais vasculhados!':
       `🧭 Explorar: ${explorationGoal.site.discovered?explorationGoal.site.label:'Local desconhecido'} · ${explorationGoal.direction} · ${explorationGoal.meters}m · caixas ${explorationGoal.opened}/${explorationGoal.total}`;
+    const queen=enemies.find(e=>e.spiderVariant==='matriarch');
     const nestCount=spiderNests.nests.reduce((sum,n)=>sum+n.eggs,0);
+    document.getElementById('cave-status').textContent=arachnidCave.inside?
+      (arachnidCave.state.bossDefeated?'💎 Caverna segura · recolha os cristais e procure a saída':queen?`🕷 Rainha das Aranhas: ${Math.max(0,Math.ceil(queen.hp))}/${queen.maxHp} PV · FASE ${queen.enraged?2:1}`:'🕷 Caverna perigosa: aproxime-se da Rainha!'):
+      (arachnidCave.state.bossDefeated?'💎 Rainha derrotada · recursos restantes na caverna':'⛏ Encontre a entrada da caverna perto da Colônia das Tecelãs');
     document.getElementById('spider-nest-status').textContent=nestCount?
       `🕸 Ninhos: ${nestCount} ovos restantes · F recolhe seda e quitina · cuidado com as teias!`:
       '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens';
@@ -276,6 +282,12 @@ function updateHUD() {
     }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=guard.hp===0?'[F] Reanimar aldeão com 2 frutas e 1 água':'[F] Recrutar aldeão para defender sua base';
         prompt.classList.remove('hidden');
+    }else if(arachnidCave.nearPortal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent='[F] Entrar na Caverna das Aranhas';prompt.classList.remove('hidden');
+    }else if(arachnidCave.nearExit(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent='[F] Sair da Caverna';prompt.classList.remove('hidden');
+    }else if(arachnidCave.nearestCrystal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent='[F] Recolher cristal subterrâneo';prompt.classList.remove('hidden');
     }else if(nearNest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] Recolher ovo · ${nearNest.label} (${nearNest.eggs} restantes)`;
         prompt.classList.remove('hidden');
@@ -416,9 +428,15 @@ function spawnParticle(pos, color, count = 8) {
 
 
 function isPositionFree(x, z, radius = 0.9) {
-    return collisionWorld.isPositionFree(x,z,radius)&&!buildings.isBlocked(x,z,radius);
+    return Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)>12.9+radius &&
+      collisionWorld.isPositionFree(x,z,radius)&&!buildings.isBlocked(x,z,radius);
 }
 function resolveCollision(x, z, radius = 0.45) {
+    // A câmara é uma instância fechada: a criatura não atravessa a parede de rocha.
+    if(arachnidCave.inside&&Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<18){
+        const dx=x-CAVE_CENTER.x,dz=z-CAVE_CENTER.z,d=Math.hypot(dx,dz);
+        const max=11.2-radius;if(d>max){x=CAVE_CENTER.x+dx/d*max;z=CAVE_CENTER.z+dz/d*max;}
+    }
     const staticPoint=collisionWorld.resolveCollision(x,z,radius);
     const builtPoint=buildings.resolveCollision(staticPoint.x,staticPoint.z,radius);
     return collisionWorld.resolveCollision(builtPoint.x,builtPoint.z,radius);
@@ -481,6 +499,7 @@ function initWorld() {
     forest.updateVisibility(player.position,graphicsQuality,0,true);
     exploration.generate(worldSeed);
     spiderNests.generate(worldSeed);
+    arachnidCave.generate(spiderNests.nests);
     resources.generate(worldSeed,graphicsQuality);
     wildlife.generate(worldSeed,graphicsQuality);
     void zombieModels.preload();
@@ -512,6 +531,7 @@ function serializeProgress() {
         currentWeapon,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
         wildlife:wildlife.serialize(),exploration:exploration.serialize(),spiderNests:spiderNests.serialize(),
+        arachnidCave:arachnidCave.serialize(),
         healthPacks:healthPacks.map(item=>({x:item.position.x,z:item.position.z})),
         speedBoosts:speedBoosts.map(item=>({x:item.position.x,z:item.position.z})),
         enemies:enemies.map(enemy=>({type:enemy.type,x:enemy.mesh.position.x,z:enemy.mesh.position.z,
@@ -544,6 +564,7 @@ function restoreProgress(data) {
     resources.restore(data.resources);
     exploration.restore(data.exploration);
     spiderNests.restore(data.spiderNests);
+    arachnidCave.restore(data.arachnidCave);
     unlockedWeaponCount=survival.crafted.spear?3:survival.crafted.hammer?2:1;
     const location=resolveCollision(data.player.x,data.player.z,.46);
     player.position.set(location.x,getGroundHeight(location.x,location.z),location.z);
@@ -557,6 +578,9 @@ function restoreProgress(data) {
         const enemy=enemies[enemies.length-1];
         enemy.mesh.position.set(savedEnemy.x,getGroundHeight(savedEnemy.x,savedEnemy.z)+enemy.size/2,savedEnemy.z);
         enemy.hp=Math.min(enemy.maxHp,savedEnemy.hp);enemy.raider=!!savedEnemy.raider;
+        if(savedEnemy.type==='spider'&&savedEnemy.spiderVariant==='matriarch'&&savedEnemy.enraged){
+            enemy.enraged=true;enemy.speed*=1.2;
+        }
         if(savedEnemy.type==='boss'&&savedEnemy.enraged){
             enemy.enraged=true;enemy.speed*=1.28;enemy.mesh.material.color.setHex(0xe24629);
         }
@@ -707,15 +731,30 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
-    onEnemyKilled:(type)=>{kills++;if(type==='spider'){addResource(survival,'spiderSilk',1);if(Math.random()<.65)addResource(survival,'chitin',1);showToast('🕸 Aranha derrotada · +1 seda');}else if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
-    getWeaponBonus:()=>currentWeapon===2?(survival.crafted.ironSpear?3:0)+(survival.crafted.hardenedSpear?2:0):
+    onEnemyKilled:(type,drop,enemy)=>{kills++;if(type==='spider'){
+        if(enemy?.spiderVariant==='matriarch'&&arachnidCave.defeatBoss()){
+            showToast('🏆 Rainha derrotada! O grande cristal da caverna foi revelado.');
+            saveProgress();
+        }addResource(survival,'spiderSilk',1);if(Math.random()<.65)addResource(survival,'chitin',1);showToast('🕸 Aranha derrotada · +1 seda');}else if(type.startsWith('zombie')&&Math.random()<.55){addResource(survival,'fiber',1);showToast('🧟 Zumbi derrotado · +1 fibra');}else if(type!=='boss'&&!type.startsWith('zombie')&&Math.random()<.42){addResource(survival,'meat',1);showToast('🥩 +1 carne crua · asse na fogueira');}},
+    getWeaponBonus:()=>currentWeapon===2?(survival.crafted.ironSpear?3:0)+(survival.crafted.hardenedSpear?2:0)+(survival.crafted.crystalSpear?3:0):
        currentWeapon===1?(survival.crafted.ironHammer?2:0)+(survival.crafted.spikedHammer?2:0):
        survival.crafted.armoredBroom?1:0,
     onSwing:(range,arc,damage,yaw)=>wildlife.attack(player.position,yaw,range,arc,damage),
     onAttackStart:()=>{playerNoise(24,'attack');playerRev5.setComboStep(combat.comboStep);return playerRev5.attack();},
     onHitFeedback:({hits,step})=>{cameraImpact=Math.min(.045,Math.max(cameraImpact,(step===2?.026:.012)+Math.min(4,hits)*.002));},
     onSpecialStart:()=>{playerNoise(36,'special');return playerRev5.special();},
-    onEnemyDamaged:enemy=>alertZombie(enemy,player.position,elapsed),
+    onEnemyDamaged:enemy=>{
+        alertZombie(enemy,player.position,elapsed);
+        if(enemy.spiderVariant==='matriarch'&&enemy.hp>0&&enemy.hp<=enemy.maxHp*.5&&!enemy.enraged){
+            enemy.enraged=true;enemy.speed*=1.2;
+            showToast('⚠ A RAINHA ESTÁ FURIOSA! Sua velocidade aumentou.');
+            for(let i=0;i<2&&enemies.length<12;i++){
+                spawnEnemy('spider','hunter');const minion=enemies.at(-1);
+                const x=CAVE_CENTER.x+(i?2:-2),z=CAVE_CENTER.z+2;
+                minion.mesh.position.set(x,getGroundHeight(x,z)+minion.size/2,z);
+            }
+        }
+    },
     onWeaponHit:()=>{const tool=currentWeapon===1?'hammer':currentWeapon===2?'spear':null;
         if(!tool)return;
         if(survival.crafted.reinforcedGrip){
@@ -922,6 +961,26 @@ function deconstructNear(){
 }
 
 function harvestNear(){
+    if(arachnidCave.nearPortal(player.position)){
+        const where=arachnidCave.enter();if(!where)return false;
+        player.position.set(where.x,getGroundHeight(where.x,where.z),where.z);
+        showToast('⛏ Caverna das Aranhas! Procure cristais e enfrente a Rainha.');
+        if(!arachnidCave.state.bossDefeated&&!enemies.some(e=>e.spiderVariant==='matriarch')){
+            spawnEnemy('spider','matriarch');const queen=enemies.at(-1);
+            queen.mesh.position.set(CAVE_CENTER.x+4,getGroundHeight(CAVE_CENTER.x+4,CAVE_CENTER.z)+queen.size/2,CAVE_CENTER.z);
+        }
+        saveProgress();updateHUD();return true;
+    }
+    if(arachnidCave.nearExit(player.position)){
+        const where=arachnidCave.leave();player.position.set(where.x,getGroundHeight(where.x,where.z),where.z);
+        showToast('🌲 Você voltou à floresta.');saveProgress();updateHUD();return true;
+    }
+    if(arachnidCave.nearestCrystal(player.position)){
+        const found=arachnidCave.harvest(player.position,survival.inventory);
+        if(!found.ok){showToast('🎒 '+found.reason);return false;}
+        showToast(`💎 +${found.amount} cristal subterrâneo`);earnSkill('mining',35);sfx.collect();saveProgress();updateHUD();return true;
+    }
+    if(arachnidCave.inside){showToast('Explore os cristais ou volte ao portal de saída [F].');return false;}
     if(interactWithBuilding())return true;
     if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)){
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
@@ -1070,6 +1129,7 @@ const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
   player, treeColliders, rockColliders, collectibles:[], healthPacks, speedBoosts,
   enemies, shrinePosition, playerYaw, resources:resources.nodes, structures:buildings.structures,
   explorationSites:exploration.sites,spiderNests:spiderNests.nests,
+  caveEntrance:arachnidCave.entry(),caveInside:arachnidCave.inside,
   cemeteryPosition:CEMETERY_POS,guardPosition:guard.alive?guard.position:null
 }));
 

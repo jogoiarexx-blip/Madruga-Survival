@@ -1,4 +1,4 @@
-import {getSpiderVariant} from './spider-variants.js';
+import {getSpiderVariant} from './spider-variants.js?v=2.13.0';
 // Projéteis de xamãs e guardião, com atualização e limpeza isoladas.
 export function createProjectileSystem({THREE,scene,player,allColliders,isPositionFree,damagePlayer,removeMesh,isGameActive,onWebHit=()=>{}}) {
 const projectiles=[];

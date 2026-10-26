@@ -1,5 +1,5 @@
 import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.11.0-spider';
-import {getSpiderVariant} from '../gameplay/spider-variants.js';
+import {getSpiderVariant} from '../gameplay/spider-variants.js?v=2.13.0';
 
 // Aranha Sombria: modelo original do usuário, com 72 ossos e cinco clipes.
 // O mesmo GLB é reutilizado por todos os inimigos; cada aranha recebe seu próprio rig e mixer.

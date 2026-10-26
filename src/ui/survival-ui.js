@@ -90,6 +90,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
     '/100 · 🗡 '+state.durability.spear+'/90'+(state.crafted.ironSpear?' · Lança de ferro':'')+
     (state.crafted.ironHammer?' · Marreta de ferro':'')+(state.crafted.reinforcedGrip?' · Empunhadura reforçada':'')+
     (state.crafted.spikedHammer?' · Marreta cravada':'')+(state.crafted.hardenedSpear?' · Lança temperada':'')+
+    (state.crafted.crystalSpear?' · Ponta de cristal':'')+
     (state.crafted.armoredBroom?' · Vassoura reforçada':'')+
     (state.crafted.reinforcedVest?' · Colete equipado':'')+(state.crafted.chitinPadding?' · Reforço de quitina':'')+(state.crafted.trailBoots?' · Botas equipadas':'');
   el('survival-goal').textContent='Fogueiras '+state.firesBuilt+' · Abrigos '+state.sheltersBuilt+' · Sobreviveu '+state.days+' '+(state.days===1?'dia':'dias');
