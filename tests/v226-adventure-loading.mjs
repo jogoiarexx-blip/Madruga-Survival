@@ -59,7 +59,7 @@ await test('HTML oferece loading acessível, retomada e confirmação para point
  }
  assert.match(html,/aria-modal="true"[^>]*aria-labelledby="loading-title"/);
  assert.match(html,/role="progressbar"[^>]*aria-valuemin="0"[^>]*aria-valuemax="100"/);
- assert.match(html,/data-build="2\.26\.1-hud-nullfix"/);
+ assert.match(html,/data-build="2\.27\.0-recovery"/);
 });
 await test('main bloqueia simulação no loading e libera o mouse somente via clique final',async()=>{
  const code=read('src/main.js');
@@ -72,7 +72,7 @@ await test('main bloqueia simulação no loading e libera o mouse somente via cl
  assert.ok(enter.indexOf('gameActive=true')<enter.indexOf('controls.lock()'));
  const loading=code.slice(code.indexOf('async function beginAdventure('),code.indexOf("document.getElementById('start-btn').onclick"));
  assert.ok(loading.indexOf('menuPreview?.dispose()')<loading.indexOf('initWorld()'));
- assert.ok(loading.indexOf('await adventureLoader.start(stages)')<loading.indexOf('clearSave(progressStorage)'));
+ assert.doesNotMatch(loading,/clearSave\(progressStorage\)/);
  assert.ok(!loading.includes('frameDriver.start()'));
  assert.match(code,/if\(adventureLoading\)\{e\.preventDefault\(\);return;\}/);
 });
@@ -83,7 +83,7 @@ await test('estilos mantêm loading legível em celular e sem assets ou animaç�
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  const pkg=JSON.parse(read('package.json'));
- assert.equal(pkg.version,'2.26.1');
+ assert.equal(pkg.version,'2.27.0');
  assert.match(pkg.scripts.test,/v226-adventure-loading/);
 });
 console.log(`v2.26: ${n} cenários de loading aprovados`);

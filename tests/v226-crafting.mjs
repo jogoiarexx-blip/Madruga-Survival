@@ -97,7 +97,7 @@ check('UI, craft e combate estão conectados',()=>{
  for(const item of ['craftItem(survival','craftingStatus(','setWeaponUpgrades(survival.crafted)','reinforcedGrip','getCraftStatus'])
   assert.ok(main.includes(item),item);
  for(const item of ['use-bandage','recipe-list'])assert.ok(html.includes(item),item);
- assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.26\.1-hud-nullfix/.test(html));
+ assert.ok(/2\.2\.8-weapons-craft|2\.3\.0-perception|2\.4\.0-combat|2\.5\.0-exploration|2\.6\.0-craft-progression|2\.7\.0-spider|2\.8\.0-spider|2\.9\.0-spider|2\.10\.0-spider|2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery/.test(html));
  assert.match(rev,/SwordAttack_Refined/);assert.match(rev,/swingIndex/);
 });
 console.log('v2.2.6: '+done+' grupos de regressão aprovados');

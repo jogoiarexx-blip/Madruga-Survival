@@ -1,8 +1,8 @@
-// Madruga Survival v2.26.1 — correção HUD de interação sem acessar crop nulo.
+// Madruga Survival v2.27.0 — recuperação de falhas, save seguro e progresso REV5.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
-import { readSave, writeSave, clearSave } from './gameplay/save-system.js?v=2.13.0';
+import { readSave, writeSave } from './gameplay/save-system.js?v=2.13.0';
 import { createTerrain } from './world/terrain.js';
 import { createMinimap } from './ui/minimap.js';
 import { weaponTypes } from './gameplay/equipment.js';
@@ -142,6 +142,11 @@ const modelRetry=document.getElementById('player-model-retry');
 function showPlayerModelStatus(message,state){
     console.info('[Player REV5]',state,message);
     modelMessage.textContent=message;
+    // Acompanhar as 17 partes reais do REV5 no loading, sem porcentagem inventada.
+    if(adventureLoading&&!adventureReady&&!gameActive &&
+       loadingStage?.textContent==='Preparando Seu Madruga e animações'){
+        loadingDetail.textContent=message;
+    }
     modelBanner.style.display=(state==='ready'||!gameActive)?'none':'block';
     modelBanner.dataset.state=state;
     modelRetry.style.display=state==='error'?'inline-block':'none';
@@ -748,7 +753,12 @@ const adventureLoader=createAdventureLoader({
             loadingRetry.classList.remove('hidden');loadingRetry.focus();
             return;
         }
+        const previousLabel=loadingStage.textContent;
         loadingStage.textContent=status==='ready'?'Pronto para explorar':label;
+        // Ao mudar de etapa, não conservar uma mensagem de download REV5 antiga.
+        if(status==='loading' && label!==previousLabel){
+            loadingDetail.textContent='Preparando os recursos desta etapa, sem avançar a simulação.';
+        }
         loadingCount.textContent=`Etapa ${done} de ${total}`;
         loadingPercent.textContent=`${percent}%`;
         loadingBar.setAttribute('aria-valuenow',String(percent));
@@ -925,8 +935,8 @@ async function beginAdventure(restore=false) {
     ];
     try{
         await adventureLoader.start(stages);
-        // Nova partida só descarta o save depois do mundo estar pronto.
-        if(!save){clearSave(progressStorage);availableSave=null;}
+        // Não apagar o save anterior durante o loading. Um novo checkpoint válido
+        // só o substitui em saveProgress(), depois que a partida estiver ativa.
         loadingTitle.textContent='Tudo pronto para sobreviver';
         loadingDetail.textContent='A floresta está preparada. Entre para começar a jogar.';
         loadingScreen.dataset.state='ready';
@@ -1790,6 +1800,24 @@ function loseGame() {
     frameDriver?.stop();
 }
 
+// Se algum subsistema lançar no RAF, pare a simulação e preserve o último
+// checkpoint. O erro fica visível e o jogador pode voltar ao menu com segurança.
+function recoverFromFrameError(error){
+    console.error('[Madruga Survival] Falha durante quadro do jogo:',error);
+    gameActive=false;
+    frameDriver?.stop();
+    Object.keys(keys).forEach(key=>{keys[key]=false;});
+    controls.unlock();
+    const hasCheckpoint=!!readSave(progressStorage);
+    document.getElementById('go-title').textContent='Partida interrompida';
+    document.getElementById('go-title').style.color='#f7bf83';
+    document.getElementById('go-msg').textContent=hasCheckpoint?
+        'Um erro interrompeu o jogo. O último checkpoint salvo está preservado; volte ao menu para continuar.':
+        'Um erro interrompeu o jogo. Volte ao menu para tentar novamente.';
+    document.getElementById('restart-btn').textContent='↻ Voltar ao menu';
+    document.getElementById('gameover').classList.remove('hidden');
+}
+
 window.addEventListener('pagehide',()=>saveProgress());
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveProgress();frameDriver?.wake();});
 window.addEventListener('focus',()=>frameDriver?.wake());
@@ -1802,7 +1830,8 @@ frameDriver=createFrameDriver({
     setTimer:(callback,ms)=>setTimeout(callback,ms),
     clearTimer:id=>clearTimeout(id),
     getMode:()=>!gameActive||document.hidden?'off':controls.isLocked&&health>0?'play':'pause',
-    onFrame:animate
+    onFrame:animate,
+    onError:recoverFromFrameError
 });
 updateHUD();
 window.__madrugaReady = true;

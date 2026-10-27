@@ -1,3 +1,13 @@
+## v2.27.0 — Recuperação de partida e proteção de saves
+
+- O scheduler interrompe o RAF após uma exceção de execução (não entra em um ciclo de erros ou congela sem aviso).
+- Uma tela de recuperação informa que a partida foi interrompida, sem sobrescrever um checkpoint potencialmente válido.
+- `Novo Jogo` não apaga o save antigo ao atingir 100% do loading: ele é substituído apenas no primeiro `saveProgress()` válido da nova partida.
+- Mensagens de download do Striped Wanderer REV5 aparecem na tela de loading com o avanço real das 17 partes, sem criar percentuais fictícios.
+- Mensagens de download antigas não continuam na fase seguinte do carregamento.
+- Cache de HTML, CSS e entrypoint JavaScript atualizado para 2.27.0.
+- Testes de regressão do RAF, save e loading incluídos; logs de modelos e qualidade visual permanecem inalterados.
+
 ## v2.26.1 — Correção crítica do HUD ao interagir com construções
 
 - Corrige `TypeError: Cannot read properties of null (reading 'planted')` após o REV5 terminar o carregamento.

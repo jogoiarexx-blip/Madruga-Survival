@@ -1,6 +1,6 @@
 // Scheduler independente do DOM. Nenhum frame é pedido antes de start().
 export const PAUSED_RENDER_MS=250;
-export function createFrameDriver({requestFrame,cancelFrame,setTimer,clearTimer,getMode,onFrame}){
+export function createFrameDriver({requestFrame,cancelFrame,setTimer,clearTimer,getMode,onFrame,onError=null}){
   let started=false,raf=null,timer=null;
   function cancel(){
     if(raf!==null){cancelFrame(raf);raf=null;}
@@ -16,7 +16,15 @@ export function createFrameDriver({requestFrame,cancelFrame,setTimer,clearTimer,
   function tick(){
     raf=null;
     if(!started||getMode()==='off')return;
-    onFrame();
+    try { onFrame(); }
+    catch(error){
+      // A exceção não pode destruir o loop silenciosamente nem criar outro frame.
+      started=false;
+      cancel();
+      if(onError)onError(error);
+      else throw error;
+      return;
+    }
     schedule();
   }
   return {
