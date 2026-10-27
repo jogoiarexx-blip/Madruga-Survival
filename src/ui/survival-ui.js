@@ -325,8 +325,13 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
   }
 
   let shown=0,ready=0;
-  for(const [id,recipe] of Object.entries(RECIPES)){
-    const c=recipeCards[id],cost=getRecipeCost(id)||recipe.cost,available=getStatus(id);
+  // A bancada tem receitas próprias e não cria cartões na mochila.
+  // Iterar somente os cartões montados evita acessar undefined.item ao abrir
+  // a mochila, inclusive durante a atualização do HUD a cada frame.
+  for(const [id,c] of Object.entries(recipeCards)){
+    const recipe=RECIPES[id];
+    if(!recipe)continue;
+    const cost=getRecipeCost(id)||recipe.cost,available=getStatus(id);
     const isBuild=isStructureRecipe(id),single=isBuild||!batchable(id);
     const rawCount=single?1:batchMode==='max'?available.maxBatch:Number(batchMode);
     const count=rawCount>0?rawCount:1;

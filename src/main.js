@@ -1,4 +1,4 @@
-// Madruga Survival v2.35.0 — saves com recuperação, navegação econômica e HUD mais leve.
+// Madruga Survival v2.36.0 — mochila sem crash e fauna animada com comportamento próprio.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -41,7 +41,7 @@ import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js?v=2.18.0';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.36.0-fix-inventory';
 import {createConsumableHotbarUI} from './ui/consumable-hotbar-ui.js?v=2.16.0';
 import {defaultHotbar,assignHotbarSlot,hotbarIndexFromCode} from './gameplay/consumable-hotbar.js?v=2.15.0';
 import {canPlaceOnHotbar,getQuickSlot} from './gameplay/inventory-ui-logic.js';
@@ -60,7 +60,7 @@ import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
 import {tryFish} from './gameplay/fishing.js';
-import {createWildlifeWorld} from './world/wildlife.js';
+import {createWildlifeWorld} from './world/wildlife.js?v=2.36.0-fauna';
 import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
 import {CRAFT_STATIONS} from './gameplay/crafting.js';
 import {createWorkbenchUI} from './ui/workbench-ui.js';

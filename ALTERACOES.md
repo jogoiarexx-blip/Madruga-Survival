@@ -1,3 +1,14 @@
+## v2.36.0 — Mochila estável e fauna renovada
+
+- Corrigido crash `Cannot read properties of undefined (reading 'item')`: a mochila não cria cartões de receitas exclusivas da bancada, portanto a atualização itera apenas cartões existentes.
+- Coberto com testes dinâmicos de abertura, atualização no HUD e fechamento repetido da mochila.
+- Cache busting específico no módulo da mochila (`v2.36.0-fix-inventory`) e da fauna, além do HTML e JS do jogo; evita reutilização dos módulos antigos.
+- Coelho low-poly melhorado: orelhas com interior, olhos, focinho, patas articuladas, cauda e saltos durante a fuga.
+- Javali low-poly melhorado: corpo robusto, cascos, focinho, presas, crina e animações de cabeça, pernas e cauda.
+- Javali defende território ao perceber jogador próximo em vez de fugir automaticamente; coelhos fogem após perceber ameaça, respeitando colisões e linha de visão.
+- Modelos preservam o formato de save e compartilham geometrias e materiais; não foram adicionados downloads externos.
+- Compatibilidade de caça, drops de carne, qualidade gráfica, Chaves e saves preservada.
+
 ## v2.35.0 — Continuidade de salvamento, navegação e interface
 
 - Backup automático do checkpoint válido anterior antes de gravar um novo; leitura recupera pelo backup somente se o principal estiver ausente ou inválido.
