@@ -2,6 +2,7 @@
 // collider e tipo antigo; substitui somente a representação simplificada.
 import {createGoblinFootPlant} from './goblin-foot-plant.js';
 import {GOBLIN_MOVES} from '../gameplay/goblin-combat.js';
+import {readModelCache,writeModelCache} from '../render/model-binary-cache.js';
 
 export const GOBLIN_GLB_URL='./assets/models/goblin_animado.glb';
 export const GOBLIN_PARTS_MANIFEST='./assets/models/goblin-parts/manifest.json';
@@ -21,10 +22,13 @@ export async function loadGoblinParts({GLTFLoader,fetcher=fetch,atobFn=atob,
     manifest.encoding!=='gzip+b64')throw Error('Manifesto do goblin inválido');
   if(manifest.parts.some(name=>!/^part\d{3}\.b64$/.test(name))||new Set(manifest.parts).size!==manifest.parts.length)
     throw Error('Partes do goblin inválidas');
-  const compressed=new Uint8Array(manifest.byteLength);
+  const cached=await readModelCache('goblin-gzip',manifest,manifest.byteLength,{
+    validate:bytes=>bytes[0]===0x1f&&bytes[1]===0x8b
+  });
+  const compressed=cached||new Uint8Array(manifest.byteLength);
   let cursor=0;
   // 4 downloads por vez; os dados retornam em ordem para reconstrução exata.
-  for(let start=0;start<manifest.parts.length;start+=4){
+  if(!cached)for(let start=0;start<manifest.parts.length;start+=4){
     const entries=await Promise.all(manifest.parts.slice(start,start+4).map(async name=>{
       const p=await fetcher(manifestUrl.replace(/manifest\.json$/,name));
       if(!p.ok)throw Error('Parte do goblin não encontrada: '+name);
@@ -35,12 +39,13 @@ export async function loadGoblinParts({GLTFLoader,fetcher=fetch,atobFn=atob,
       for(let k=0;k<bytes.length;k++)compressed[cursor++]=bytes.charCodeAt(k);
     }
   }
-  if(cursor!==compressed.length)throw Error('Goblin incompleto');
+  if(!cached&&cursor!==compressed.length)throw Error('Goblin incompleto');
   if(typeof crypto!=='undefined'&&crypto.subtle&&/^[0-9a-f]{64}$/.test(manifest.sha256||'')){
     const digest=await crypto.subtle.digest('SHA-256',compressed);
     const actual=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
     if(actual!==manifest.sha256)throw Error('Checksum do goblin inválido');
   }
+  if(!cached)await writeModelCache('goblin-gzip',manifest,compressed);
   const bytes=await decompress(compressed);
   const glb=bytes instanceof ArrayBuffer?bytes:bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
   if(glb.byteLength!==manifest.glbByteLength||new Uint8Array(glb,0,4).some((b,i)=>b!==[103,108,84,70][i]))

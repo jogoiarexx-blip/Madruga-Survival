@@ -83,9 +83,9 @@ test('projétil não atravessa paredes finas em quadros longos',()=>{
 test('cache-busting da v2.8 aplicado ao HTML e imports',()=>{
   const index=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-  assert.match(index,/data-build="(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery)"/);
+  assert.match(index,/data-build="(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery|2\.28\.0-model-cache)"/);
   assert.match(main,/spider-model\.js\?v=(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0)/);
-  assert.match(main,/projectiles\.js\?v=(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery)/);
+  assert.match(main,/projectiles\.js\?v=(?:2\.(?:8|9|10|11)\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery|2\.28\.0-model-cache)/);
 });
 {
   // Concurrency: GLB sintético com 8 fragmentos e fetches de latência artificial.

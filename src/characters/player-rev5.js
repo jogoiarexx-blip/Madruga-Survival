@@ -5,6 +5,7 @@ import {createPlayerGearVisuals} from './player-gear-visual.js';
 import {WandererAnimator} from './wanderer/WandererAnimator.js';
 import {PLAYER_ATTACK_DURATIONS,sampleRiggedWeaponMotion} from './player-attack-pose.js?v=2.2.8-weapons-craft';
 import {repairRev5GlbMetadata} from './rev5-glb-compat.js?v=2.2.3-material-fix';
+import {isGlb,readModelCache,writeModelCache} from '../render/model-binary-cache.js';
 
 export const PLAYER_REV5_URL='./assets/models/Striped_Wanderer_REV5_Optimized.glb';
 export const PLAYER_REV5_ORIGINAL_URL='./assets/models/Striped_Wanderer_REV5.glb';
@@ -25,6 +26,11 @@ export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
   if(!Number.isInteger(manifest.byteLength)||manifest.byteLength<1_000_000||manifest.byteLength>20_000_000||
     !Array.isArray(manifest.parts)||!manifest.parts.length||manifest.parts.length>32)
     throw Error('Manifesto REV5 inválido');
+  const cached=await readModelCache('rev5',manifest,manifest.byteLength,{validate:isGlb});
+  if(cached){
+    onProgress(manifest.parts.length,manifest.parts.length);
+    return new GLTFLoader().parseAsync(repairRev5GlbMetadata(cached.buffer),'./assets/models/');
+  }
   const parts=new Array(manifest.parts.length);
   let nextIndex=0,completed=0;
   async function readPart(index){
@@ -65,6 +71,7 @@ export async function loadPlayerRev5Parts({GLTFLoader,fetcher=fetch,atobFn=atob,
     const hex=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
     if(hex!==manifest.sha256)throw Error('SHA-256 REV5 não confere');
   }
+  await writeModelCache('rev5',manifest,bytes);
   return new GLTFLoader().parseAsync(repairRev5GlbMetadata(bytes.buffer),'./assets/models/');
 }
 // Three independent locations for the same 17 published binary fragments.

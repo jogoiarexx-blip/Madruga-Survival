@@ -94,7 +94,7 @@ await test('menu informa carregamento sob demanda, mantém seletores e resume sa
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const css=readFileSync(new URL('../styles/main.css',import.meta.url),'utf8');
  for(const id of ['start-btn','load-btn','gfx-low','gfx-med','gfx-high','asset-loading-status','menu-performance-tip'])assert.ok(html.includes(`id="${id}"`),id);
- assert.match(html,/data-build="(?:2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery)"/);
+ assert.match(html,/data-build="(?:2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.27\.0-recovery|2\.28\.0-model-cache)"/);
  assert.match(css,/#menu-performance-tip/);
 });
 console.log('v2.21: '+count+' novos cenários aprovados');

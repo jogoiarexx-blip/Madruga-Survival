@@ -1,5 +1,6 @@
 import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.11.0-spider';
 import {getSpiderVariant} from '../gameplay/spider-variants.js?v=2.13.0';
+import {isGlb,readModelCache,writeModelCache} from '../render/model-binary-cache.js';
 
 // Aranha Sombria: modelo original do usuário, com 72 ossos e cinco clipes.
 // O mesmo GLB é reutilizado por todos os inimigos; cada aranha recebe seu próprio rig e mixer.
@@ -20,6 +21,8 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
   if(!Number.isInteger(manifest.byteLength)||manifest.byteLength<100000||manifest.byteLength>25000000||
      !Array.isArray(manifest.parts)||manifest.parts.length<1||manifest.parts.length>60)
     throw new Error('Manifesto da aranha inválido');
+  const cached=await readModelCache('spider-glb',manifest,manifest.glbByteLength||manifest.byteLength,{validate:isGlb});
+  if(cached)return new GLTFLoader().parseAsync(cached.buffer,'./assets/models/');
   // Baixar até cinco partes em paralelo: evita dezenas de esperas em série no Pages.
   // Guardar a posição original para reconstruir o arquivo sem reordenar seus bytes.
   const parts=new Array(manifest.parts.length);
@@ -55,6 +58,7 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
     const hash=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
     if(hash!==manifest.sha256)throw new Error('Checksum da aranha não confere');
   }
+  await writeModelCache('spider-glb',manifest,glb);
   return new GLTFLoader().parseAsync(glb.buffer,'./assets/models/');
 }
 

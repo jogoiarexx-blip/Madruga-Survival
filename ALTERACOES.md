@@ -1,3 +1,14 @@
+## v2.28.0 — Cache real para modelos 3D no GitHub Pages
+
+- Guarda os bytes reconstruídos do REV5, zumbi, goblin e aranha em CacheStorage, identificados por SHA-256.
+- Em aberturas seguintes, consulta o manifesto pequeno e lê o modelo localmente; não precisa baixar todas as partes quando houver cache válido.
+- Valida tamanho, assinatura GLB/gzip e SHA-256 antes de reutilizar; cache inválido é descartado.
+- Limpeza de versões antigas do mesmo personagem para liberar espaço.
+- Navegação privada, falta de quota ou indisponibilidade da API não impedem o jogo de iniciar: usa downloads normais.
+- Mantém GLTFLoader, rigs, animações, qualidade gráfica, save e sistema de loading existentes.
+- Não prometemos aceleração no primeiro acesso: cache só beneficia acessos seguintes.
+- Nova regressão unitária para integridade, cache hit, invalidação, fallback e sem efeitos no menu.
+
 ## v2.27.0 — Recuperação de partida e proteção de saves
 
 - O scheduler interrompe o RAF após uma exceção de execução (não entra em um ciclo de erros ou congela sem aviso).

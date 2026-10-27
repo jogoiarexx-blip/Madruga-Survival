@@ -1,4 +1,4 @@
-// Madruga Survival v2.27.0 — recuperação de falhas, save seguro e progresso REV5.
+// Madruga Survival v2.28.0 — cache persistente de modelos 3D por SHA, com fallback seguro.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';

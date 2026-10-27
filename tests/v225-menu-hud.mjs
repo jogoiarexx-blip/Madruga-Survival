@@ -33,8 +33,8 @@ test('menu não executa IA, terreno ou física até iniciar',()=>{
   assert.match(main,/getMode:\(\)=>!gameActive\|\|document\.hidden\?'off'/);
 });
 test('cache busting dos arquivos da revisão',()=>{
-  assert.match(html,/data-build="2\.27\.0-recovery"/);
-  assert.match(html,/main\.js\?v=2\.27\.0-recovery/);
-  assert.match(html,/main\.css\?v=2\.27\.0-recovery/);
+  assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache"/);
+  assert.match(html,/main\.js\?v=2\.27\.0-recovery|2\.28\.0-model-cache/);
+  assert.match(html,/main\.css\?v=2\.27\.0-recovery|2\.28\.0-model-cache/);
 });
 console.log('v2.25: '+count+' novas verificações aprovadas');

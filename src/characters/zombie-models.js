@@ -2,6 +2,7 @@
 // colisões e dano do MadrugaCraft. O modelo é carregado uma vez e clonado.
 import {isZombieType,ZOMBIE_TYPES} from '../gameplay/zombie-variants.js';
 import {createZombieFootPlant} from './zombie-foot-plant.js';
+import {isGlb,readModelCache,writeModelCache} from '../render/model-binary-cache.js';
 
 export const ZOMBIE_GLB_URL='./assets/models/zumbi_animado_REV2.glb';
 // GitHub Pages pode hospedar o GLB em partes: evita limite de upload por requisição
@@ -14,6 +15,8 @@ export async function loadRev2Parts({GLTFLoader,fetcher=fetch,atobFn=atob,manife
   if(!Number.isInteger(manifest.byteLength)||manifest.byteLength<1000000||manifest.byteLength>20000000||
       !Array.isArray(manifest.parts)||manifest.parts.length<1||manifest.parts.length>40)
     throw new Error('Manifesto de zumbi inválido');
+  const cached=await readModelCache('zombie-rev2',manifest,manifest.byteLength,{validate:isGlb});
+  if(cached)return new GLTFLoader().parseAsync(cached.buffer,'./assets/models/');
   const bytes=new Uint8Array(manifest.byteLength);
   let cursor=0;
   // Downloads sequenciais mantêm consumo de memória previsível em celulares.
@@ -33,6 +36,7 @@ export async function loadRev2Parts({GLTFLoader,fetcher=fetch,atobFn=atob,manife
     const hex=Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('');
     if(hex!==manifest.sha256)throw new Error('Checksum do zumbi REV2 não confere');
   }
+  await writeModelCache('zombie-rev2',manifest,bytes);
   return new GLTFLoader().parseAsync(bytes.buffer,'./assets/models/');
 }
 
