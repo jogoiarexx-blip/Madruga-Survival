@@ -1,3 +1,12 @@
+## v2.34.0 — Chaves: cobertura, mira e estado discreto
+
+- Quando o inimigo está atrás de uma parede, Chaves procura um ponto de tiro com linha de visão livre e dentro do território da ordem atual. O planejador tenta no máximo 36 pontos a cada 0,65 s.
+- Navega até o ponto encontrado usando o desvio com colisão da v2.33.0. Se não houver caminho, não atravessa a estrutura e informa o bloqueio.
+- Nunca atira através de parede: o disparo ainda valida alcance, vida do alvo e linha de visão no instante do impacto.
+- Indicador discreto no HUD: seguindo, patrulhando, defendendo, procurando caminho, procurando ângulo de tiro, caminho obstruído ou em combate.
+- Limita buscas e mantém compatibilidade com saves anteriores, modos do Chaves e dispositivos móveis.
+- Testes novos de linha de visão, escolha de posição, limites de patrulha e HUD.
+
 ## v2.33.0 — Chaves: navegação por obstáculos e terrenos
 
 - Nova navegação local em A* para o aliado contornar paredes, bancadas, portas fechadas e obstáculos naturais.

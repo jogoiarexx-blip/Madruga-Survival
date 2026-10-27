@@ -75,9 +75,9 @@ test('HUD, tecla, toque, F e dados salvos integram comandos',()=>{
 });
 test('rev32 está no cache do HTML, CSS e ponto de entrada',()=>{
   const html=source('index.html'),pkg=JSON.parse(source('package.json'));
-  assert.equal(pkg.version,'2.33.0');
-  assert.match(html,/data-build="2\.33\.0-chaves-navigation"/);
-  assert.match(html,/main\.js\?v=2\.33\.0-chaves-navigation/);
-  assert.match(html,/main\.css\?v=2\.33\.0-chaves-navigation/);
+  assert.equal(pkg.version,'2.34.0');
+  assert.match(html,/data-build="2\.34\.0-chaves-combat"/);
+  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat/);
+  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat/);
 });
 console.log('v2.32:',passed,'testes aprovados');

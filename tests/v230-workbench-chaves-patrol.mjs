@@ -71,7 +71,7 @@ test('Chaves substitui visual e mantém recrutamento salvo',()=>{
   assert.match(main,/guard\.setState\(data\.guard\)/);
 });
 test('versão e nomes de cache invalidados',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'2.33.0');
-  assert.match(read('index.html'),/data-build="2\.30\.0-chaves-workbench|2\.32\.0-chaves-orders|2\.33\.0-chaves-navigation"/);
+  assert.equal(JSON.parse(read('package.json')).version,'2.34.0');
+  assert.match(read('index.html'),/data-build="2\.30\.0-chaves-workbench|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat"/);
 });
 console.log('v2.30: '+passed+' novos testes aprovados');

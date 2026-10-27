@@ -1,4 +1,4 @@
-// Madruga Survival v2.33.0 — navegação do Chaves ao redor de estruturas e terrenos.
+// Madruga Survival v2.34.0 — Chaves encontra linha de tiro e informa atividade sem poluir o HUD.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -296,6 +296,15 @@ function updateHUD() {
     document.getElementById('quest-display').textContent = `🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`;
     document.getElementById('wave-display').textContent = `Perigo: ${wave}/6 · Invasões: ${raidState.waves}`;
     document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)';
+    const activityNode=document.getElementById('guard-activity');
+    if(activityNode){
+      const activities={idle:'Aguardando',down:'Precisa de ajuda',shooting:'Em combate',engaging:'Protegendo área',blocked:'Caminho obstruído',repositioning:'Procurando ângulo de tiro',pathfinding:'Procurando caminho',following:'Acompanhando',patrolling:'Em ronda',defending:'Guardando a base'};
+      const active=gameActive&&guard.recruited;
+      activityNode.classList.toggle('hidden',!active);
+      if(active){const key=guard.activity;const title=activities[key]||'Aguardando';
+        if(activityNode.textContent!==title)activityNode.textContent=title;
+        activityNode.dataset.activity=key;}
+    }
     const orderBtn=document.getElementById('guard-order');
     if(orderBtn){orderBtn.classList.toggle('hidden',!gameActive||!guard.recruited||!guard.alive);orderBtn.textContent=`🛡 ${guard.mode==='follow'?'Seguir':guard.mode==='patrol'?'Patrulhar':'Defender'} [O]`;}
     document.getElementById('poison-status').textContent = poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'';

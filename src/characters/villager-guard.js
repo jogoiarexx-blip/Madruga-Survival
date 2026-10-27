@@ -1,5 +1,6 @@
 import {loadChaves} from './chaves-loader.js';
 import {createGuardNavigator} from '../gameplay/guard-navigation.js';
+import {findGuardFiringPosition} from '../gameplay/guard-firing-position.js';
 import {guardTarget,createGuardShotController,CHAVES_SHOT_RANGE} from '../gameplay/guard-combat.js';
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
 import {DEFAULT_GUARD_ORDER,normalizeGuardOrder,nextGuardOrder,GUARD_ORDER_NAMES,guardWaypoint,canEngageInOrder,distanceXZ} from '../gameplay/guard-orders.js';
@@ -24,6 +25,7 @@ export function interactGuard(state,inventory){
 }
 export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,onStatus=()=>{},onBeforeMount=async()=>{}}){
  let state=createGuardState(),step=0,patrolIndex=0,patrolPause=0,shotFxTime=0;
+ let activity='idle',firingSpot=null,repositionEnemy=null,repositionCooldown=0,blockedDuration=0,lastSeenEnemy=null,lastSeenAge=Infinity;
  const model=new THREE.Group();
  const tunic=new THREE.MeshStandardMaterial({color:0x4b79a6,roughness:.9});
  const skin=new THREE.MeshStandardMaterial({color:0xe2b58c,roughness:.88});
@@ -114,7 +116,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  fallbackVisuals.push(...model.children);
  model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);scene.add(model);
  function getState(){return {...state};}
- function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;shotController.cancel();navigator.reset();patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
+ function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;shotController.cancel();navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;activity='idle';patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
   model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function nearby(pos,radius=2.9){return Math.hypot(model.position.x-pos.x,model.position.z-pos.z)<radius;}
  function interact(inventory){const message=interactGuard(state,inventory);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return message;}
@@ -122,12 +124,12 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    state.hp=Math.max(0,state.hp-Math.max(0,Math.round(amount)));if(state.hp===0)shotController.cancel();model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function cycleOrder(){
    if(!state.recruited||state.hp<=0)return null;
-   state.mode=nextGuardOrder(state.mode);navigator.reset();patrolIndex=0;patrolPause=0;shotController.cancel();
+   state.mode=nextGuardOrder(state.mode);navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;patrolIndex=0;patrolPause=0;shotController.cancel();
    return GUARD_ORDER_NAMES[state.mode];
  }
  function update(dt,elapsed,playerPosition){
    shotFxTime=Math.max(0,shotFxTime-dt);if(tracer)tracer.visible=shotFxTime>0;if(muzzleFlash)muzzleFlash.visible=shotFxTime>.04;
-   if(state.hp<=0){shotController.cancel();if(mixer)mixer.update(dt);return;}
+   if(state.hp<=0){activity='down';shotController.cancel();if(mixer)mixer.update(dt);return;}
    // Um disparo marcado atinge somente quando o clipe chega ao gatilho.
    // A linha de visão, o alcance e a vida do inimigo são checados NOVAMENTE.
    shotController.update(dt,model.position,{canSee:canSee||(()=>true),
@@ -143,20 +145,52 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    }
    // O aliado só enfrenta inimigos próximos ao jogador ou à base comandada.
    // Assim não sai perseguindo alvos que aparecem do outro lado do mundo.
-   const target=state.recruited?guardTarget(getEnemies(),model.position,
-     {detectionRange:13,canSee:(from,to)=>(!canSee||canSee(from,to))&&
+   const candidates=state.recruited?getEnemies():[];
+   const allowed=enemy=>enemy?.hp>0&&enemy.type!=='boss'&&enemy.mesh?.position&&
+     canEngageInOrder(enemy.mesh.position,order,playerPosition,structures);
+   const sight=(a,b)=>!canSee||canSee(a,b);
+   const target=state.recruited?guardTarget(candidates,model.position,
+     {detectionRange:13,canSee:(from,to)=>sight(from,to)&&
        canEngageInOrder(to,order,playerPosition,structures)}):null;
-   const destination=target?.mesh.position||patrol;
+   // Uma parede não torna o alvo invisível para sempre: buscar um ângulo de
+   // disparo *caminhável* na mesma região que o aliado está autorizado a defender.
+   repositionCooldown=Math.max(0,repositionCooldown-Math.min(.1,Math.max(0,dt)));
+   lastSeenAge=Math.min(20,lastSeenAge+Math.max(0,dt));
+   if(target){lastSeenEnemy=target;lastSeenAge=0;firingSpot=null;repositionEnemy=null;}
+   else if(state.recruited&&!shotController.isShooting){
+     const hidden=candidates.filter(enemy=>allowed(enemy)&&
+       (enemy===lastSeenEnemy&&lastSeenAge<5.5||distanceXZ(model.position,enemy.mesh.position)<5.5)&&
+       distanceXZ(model.position,enemy.mesh.position)<=13)
+       .sort((a,b)=>distanceXZ(model.position,a.mesh.position)-distanceXZ(model.position,b.mesh.position))[0];
+     if(!hidden){firingSpot=null;repositionEnemy=null;}
+     else if(hidden!==repositionEnemy||repositionCooldown===0){
+       repositionEnemy=hidden;repositionCooldown=.65;
+       firingSpot=findGuardFiringPosition(model.position,hidden.mesh.position,{
+         isFree:isPositionFree||((x,z,r)=>{const q=resolveCollision(x,z,r);return Math.hypot(q.x-x,q.z-z)<.015;}),
+         canSee:sight,withinTerritory:spot=>canEngageInOrder(spot,order,playerPosition,structures),
+         maxTravel:11.5});
+     }
+   }
+   const repositioning=!!(firingSpot&&repositionEnemy?.hp>0&&!target);
+   const destination=target?.mesh.position||(repositioning?firingSpot:patrol);
    const dx=destination.x-state.x,dz=destination.z-state.z,dist=Math.hypot(dx,dz);
-   const moveLimit=target?7.8:2.5;
-   const moving=dist>(target?moveLimit:order==='follow'?1.8:order==='patrol'?1.1:2.5) &&
-     !shotController.isShooting && !(order==='patrol'&&!target&&patrolPause>0);
+   const moving=dist>(target?7.8:repositioning?1:order==='follow'?1.8:order==='patrol'?1.1:2.5) &&
+     !shotController.isShooting && !(order==='patrol'&&!target&&!repositioning&&patrolPause>0);
    const beforeX=state.x,beforeZ=state.z;
+   let navResult=null;
    if(moving&&dist>.001){
-     const next=navigator.navigate(state,destination,dt,target?4.1:3.3,
-       {stopAt:target?7.5:order==='follow'?1.5:order==='patrol'?.6:2.2});
-     state.x=next.x;state.z=next.z;
+     navResult=navigator.navigate(state,destination,dt,target?4.1:repositioning?3.7:3.3,
+       {stopAt:target?7.5:repositioning?.75:order==='follow'?1.5:order==='patrol'?.6:2.2});
+     state.x=navResult.x;state.z=navResult.z;
    }else navigator.reset();
+   blockedDuration=navResult?.blocked?Math.min(3,blockedDuration+dt):Math.max(0,blockedDuration-dt*2);
+   if(!state.recruited)activity='idle';
+   else if(shotController.isShooting)activity='shooting';
+   else if(target)activity='engaging';
+   else if(blockedDuration>.75)activity='blocked';
+   else if(repositioning)activity='repositioning';
+   else if(navResult?.moved&&navigator.pendingPoints>1)activity='pathfinding';
+   else activity=order==='follow'?'following':order==='patrol'?'patrolling':'defending';
    // Adere ao solo, com suavização apenas visual (não altera o save/collider).
    const groundY=getGroundHeight(state.x,state.z);
    const followY=Number.isFinite(model.position.y)?model.position.y:groundY;
@@ -181,5 +215,5 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    limbs[2].rotation.x=target?-.85:-limbs[3].rotation.x*.4;
  }
 
- return {model,getState,setState,nearby,interact,cycleOrder,damage,update,preload,get mode(){return normalizeGuardOrder(state.mode)},get visualLoaded(){return !!chavesVisual},get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
+ return {model,getState,setState,nearby,interact,cycleOrder,damage,update,preload,get mode(){return normalizeGuardOrder(state.mode)},get activity(){return activity},get visualLoaded(){return !!chavesVisual},get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
 }

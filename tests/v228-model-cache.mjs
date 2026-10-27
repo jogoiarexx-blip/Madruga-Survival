@@ -71,7 +71,7 @@ await test('quatro modelos utilizam cache sem pré-carregamento no menu',()=>{
  const main=read('src/main.js');
  assert.match(main,/await adventureLoader\.start\(stages\)/);
  assert.match(main,/onError:recoverFromFrameError/);
- assert.match(read('index.html'),/2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders|2\.33\.0-chaves-navigation|2\.32\.0-chaves-orders|2\.33\.0-chaves-navigation/);
- assert.equal(JSON.parse(read('package.json')).version,'2.33.0');
+ assert.match(read('index.html'),/2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat/);
+ assert.equal(JSON.parse(read('package.json')).version,'2.34.0');
 });
 console.log(`v2.28: ${count} verificações de cache aprovadas`);
