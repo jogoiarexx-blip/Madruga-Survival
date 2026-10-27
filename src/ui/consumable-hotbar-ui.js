@@ -57,10 +57,13 @@ export function createConsumableHotbarUI({getSlots,getInventory,onUse,onAssign,g
       button.classList.toggle('empty',!item);
       if(selectors[i].value!==(item||''))selectors[i].value=item||'';
       const target=dropTargets[i];
-      target.textContent=description?`${description.icon} ${qty} un.`:'+ Soltar item';
+      const targetLabel=description?`${description.icon} ${qty} un.`:'+ Soltar item';
+      if(target.textContent!==targetLabel)target.textContent=targetLabel;
       target.classList.toggle('is-selected',Boolean(getSelectedItem()));
       const tooltip=description?`Atalho ${i+4}: ${description.label} (${qty} disponíveis)`:`Atalho ${i+4}: vazio`;
-      target.title=getSelectedItem()?`Inserir ${RESOURCES[getSelectedItem()]?.label||'item'} no atalho ${i+4}`:tooltip;
+      const selected=getSelectedItem();
+      const targetTitle=selected?`Inserir ${RESOURCES[selected]?.label||'item'} no atalho ${i+4}`:tooltip;
+      if(target.title!==targetTitle)target.title=targetTitle;
     }
   }
   update();

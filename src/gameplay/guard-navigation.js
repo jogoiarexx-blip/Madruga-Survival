@@ -70,7 +70,9 @@ export function findGuardPath(start,destination,{isFree,getGroundHeight=()=>0,
   const route=[];let anchor=start;
   for(let i=0;i<points.length;){
     let far=i;
-    for(let j=i+1;j<points.length;j++)if(segmentIsWalkable(anchor,points[j],options))far=j;
+    for(let j=points.length-1;j>i;j--){
+      if(segmentIsWalkable(anchor,points[j],options)){far=j;break;}
+    }
     route.push(points[far]);anchor=points[far];i=far+1;
   }
   if(nearest<=step*.75 && segmentIsWalkable(anchor,goal,options))route.push(goal);
@@ -92,7 +94,9 @@ export function createGuardNavigator({isFree,resolveCollision,getGroundHeight=()
     if(lastPosition && movedEarlier<.006)blocked+=interval;
     else blocked=Math.max(0,blocked-interval*.8);
     const changed=!destination||hypot(destination,to)>1.8;
-    const needPlan=changed||(elapsed>.28 && (!route.length||blocked>.23))||elapsed>.8;
+    // Não executar A* novamente a cada 0,8 s quando a rota ainda está livre.
+    // A validação dos passos e a troca de alvo detectam paredes novas sem atraso.
+    const needPlan=changed||(elapsed>.42 && (!route.length||blocked>.23))||elapsed>2.4;
     if(needPlan){
       route=findGuardPath(from,to,geometry);destination={x:to.x,z:to.z};
       elapsed=0;plans++;

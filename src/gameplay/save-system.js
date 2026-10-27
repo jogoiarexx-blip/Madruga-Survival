@@ -15,6 +15,10 @@ import {validExplorationSave} from '../world/exploration.js';
 import {validSpiderNestSave} from '../world/spider-nests.js';
 import {validCaveSave} from '../world/arachnid-cave.js';
 export const SAVE_KEY='madrugacraft.survival.v2';
+export const SAVE_BACKUP_KEY=SAVE_KEY+'.backup';
+// Salvações longas com construções/baús/NPCs não devem falhar no limite antigo de 60 KB.
+// O limite continua finito para impedir leitura de blobs abusivos/corrompidos.
+export const SAVE_MAX_BYTES=240000;
 const number=(n,min,max)=>typeof n==='number'&&Number.isFinite(n)&&n>=min&&n<=max;
 const integer=(n,min,max)=>Number.isInteger(n)&&number(n,min,max);
 const point=p=>p&&number(p.x,-109,109)&&number(p.z,-109,109);
@@ -58,11 +62,35 @@ export function validateSave(data){
  if(data.poisonTimer!==undefined&&!number(data.poisonTimer,0,30))return null;
  return {...data,survival,hotbar,inventorySlots,raid,...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
 }
-export function readSave(storage){try{const raw=storage?.getItem(SAVE_KEY);
- if(!raw||raw.length>60000)return null;
- return validateSave(JSON.parse(raw));}catch(_){return null;}}
-export function writeSave(storage,data){try{
- const parsed=validateSave({version:2,...data});if(!parsed||!storage)return false;
- storage.setItem(SAVE_KEY,JSON.stringify(parsed));return true;
- }catch(_){return false;}}
-export function clearSave(storage){try{storage?.removeItem(SAVE_KEY);return true;}catch(_){return false;}}
+function parseCheckpoint(raw){
+  if(typeof raw!=='string'||raw.length> SAVE_MAX_BYTES || raw.length===0)return null;
+  try{return validateSave(JSON.parse(raw));}catch(_){return null;}
+}
+// Primário íntegro prevalece; backup é usado apenas quando o primário se perdeu.
+// Jamais substituímos a cópia de segurança por um dado ainda não validado.
+export function readSave(storage){
+  try{
+    const current=parseCheckpoint(storage?.getItem(SAVE_KEY));
+    return current||parseCheckpoint(storage?.getItem(SAVE_BACKUP_KEY));
+  }catch(_){return null;}
+}
+export function writeSave(storage,data){
+  try{
+    const parsed=validateSave({version:2,...data});if(!parsed||!storage)return false;
+    const serialized=JSON.stringify(parsed);
+    if(serialized.length> SAVE_MAX_BYTES)return false;
+    const original=storage.getItem(SAVE_KEY);
+    if(parseCheckpoint(original)){
+      // O localStorage.setItem é atômico por chave; uma falha aqui não elimina o último primário.
+      // Sem espaço para backup, ainda tentamos salvar o novo progresso normalmente.
+      try{storage.setItem(SAVE_BACKUP_KEY,original);}catch(_){}
+    }
+    storage.setItem(SAVE_KEY,serialized);
+    return true;
+  }catch(_){return false;}
+}
+export function clearSave(storage){
+  if(!storage)return false;
+  try{storage.removeItem(SAVE_KEY);storage.removeItem(SAVE_BACKUP_KEY);return true;}
+  catch(_){return false;}
+}

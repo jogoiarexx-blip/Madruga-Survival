@@ -1,4 +1,4 @@
-// Madruga Survival v2.34.0 — Chaves encontra linha de tiro e informa atividade sem poluir o HUD.
+// Madruga Survival v2.35.0 — saves com recuperação, navegação econômica e HUD mais leve.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';

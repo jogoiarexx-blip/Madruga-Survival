@@ -66,7 +66,7 @@ t('AI uses navigation for repositioning instead of shooting across buildings',()
 t('version cache and test suite updated',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
- assert.equal(pkg.version,'2.34.0');assert.match(html,/2\.34\.0-chaves-combat/);
+ assert.equal(pkg.version,'2.35.0');assert.match(html,/2\.34\.0-chaves-combat|2\.35\.0-stability/);
  assert.match(pkg.scripts.test,/v234-chaves-firing\.mjs/);
 });
 console.log(`v2.34: ${passed} verificações aprovadas`);

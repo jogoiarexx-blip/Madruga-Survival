@@ -1,3 +1,13 @@
+## v2.35.0 — Continuidade de salvamento, navegação e interface
+
+- Backup automático do checkpoint válido anterior antes de gravar um novo; leitura recupera pelo backup somente se o principal estiver ausente ou inválido.
+- Saves antigos preservados na mesma chave v2; limpeza remove as duas cópias; tamanho máximo validado passa de 60 KB para 240 KB para sessões longas.
+- Se a gravação do backup não tiver espaço, o salvamento principal ainda é tentado; falha em storage não trava a partida.
+- Navegação do Chaves simplifica primeiro para o waypoint mais distante alcançável, reduzindo número de verificações em caminhos livres e espaçando replanejamentos de rotas válidas (2,4 s).
+- Barra rápida evita reescrever textos e títulos idênticos em cada atualização do HUD.
+- Sem mudanças de formato em inimigos, equipamentos, mapa ou modelo 3D.
+- Testes de regressão de backup, falha de gravação, proteção de save, rota e HUD.
+
 ## v2.34.0 — Chaves: cobertura, mira e estado discreto
 
 - Quando o inimigo está atrás de uma parede, Chaves procura um ponto de tiro com linha de visão livre e dentro do território da ordem atual. O planejador tenta no máximo 36 pontos a cada 0,65 s.
