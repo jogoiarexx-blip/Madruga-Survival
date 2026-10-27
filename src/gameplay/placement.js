@@ -1,5 +1,5 @@
 // Planejamento de construção puro: prévia, ímã, confirmação e custo somente no commit.
-import {preparePlacement,STRUCTURE_TYPES,orientation} from '../world/building-rules.js';
+import {preparePlacement,STRUCTURE_TYPES,orientation} from '../world/building-rules.js?v=2.41.0-ecosystem';
 import {snapTargets} from '../world/build-snapping.js';
 export const isStructureRecipe=id=>STRUCTURE_TYPES.includes(id);
 export function beginPlacement(type,yaw=0,rotationOffset=0){

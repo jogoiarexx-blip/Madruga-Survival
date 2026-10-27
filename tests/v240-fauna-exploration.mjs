@@ -62,8 +62,8 @@ test('campanha salva os objetivos de exploração sem mudar versão de checkpoin
   assert.match(text('src/main.js'),/clinicDiscovered:exploration.sites.some/);
 });
 test('v2.40.0 isola atualização de fauna, UI de missões e cache',()=>{
-  assert.equal(JSON.parse(text('package.json')).version,'2.40.0');
-  assert.match(text('index.html'),/2\.40\.0-fauna-exploration/);
+  assert.equal(JSON.parse(text('package.json')).version,'2.41.0');
+  assert.match(text('index.html'),/2\.41\.0-ecosystem/);
   assert.match(text('src/world/wildlife.js'),/startBoarHitReaction\(a\)/);
   assert.match(text('src/world/wildlife.js'),/chooseRabbitEscape/);
 });

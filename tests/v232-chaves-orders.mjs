@@ -8,10 +8,10 @@ let passed=0;
 const test=(name,fn)=>{fn();console.log('v2.32 ✓',++passed,name);};
 const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('três ordens exclusivas e alternância determinística',()=>{
-  assert.deepEqual(GUARD_ORDERS,['follow','defend','patrol']);
+  assert.deepEqual(GUARD_ORDERS,['follow','defend','patrol','gather']);
   assert.equal(nextGuardOrder('follow'),'defend');
   assert.equal(nextGuardOrder('defend'),'patrol');
-  assert.equal(nextGuardOrder('patrol'),'follow');
+  assert.equal(nextGuardOrder('patrol'),'gather');
   assert.equal(normalizeGuardOrder('invalid'),'defend');
   assert.equal(GUARD_ORDER_NAMES.patrol,'Patrulhar');
 });
@@ -75,9 +75,9 @@ test('HUD, tecla, toque, F e dados salvos integram comandos',()=>{
 });
 test('rev32 está no cache do HTML, CSS e ponto de entrada',()=>{
   const html=source('index.html'),pkg=JSON.parse(source('package.json'));
-  assert.equal(pkg.version,'2.40.0');
-  assert.match(html,/data-build="2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration"/);
-  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration/);
-  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration/);
+  assert.equal(pkg.version,'2.41.0');
+  assert.match(html,/data-build="2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem"/);
+  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem/);
+  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem/);
 });
 console.log('v2.32:',passed,'testes aprovados');

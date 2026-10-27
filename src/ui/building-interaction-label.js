@@ -4,6 +4,7 @@ export function buildingInteractionLabel(structure,maturity=125){
     if(!structure)return '';
     switch(structure.type){
         case 'door':return structure.open?'Fechar porta':'Abrir porta';
+        case 'window':return structure.open?'Fechar janela':'Abrir janela';
         case 'bed':return 'Dormir até amanhecer';
         case 'chest':return 'Abrir baú';
         case 'workbench':return 'Usar bancada';

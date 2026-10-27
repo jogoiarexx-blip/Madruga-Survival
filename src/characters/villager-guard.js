@@ -2,8 +2,9 @@ import {loadChaves} from './chaves-loader.js';
 import {createGuardNavigator} from '../gameplay/guard-navigation.js';
 import {findGuardFiringPosition} from '../gameplay/guard-firing-position.js';
 import {guardTarget,createGuardShotController,CHAVES_SHOT_RANGE} from '../gameplay/guard-combat.js';
+import {selectGuardWork} from '../gameplay/guard-work.js';
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
-import {DEFAULT_GUARD_ORDER,normalizeGuardOrder,nextGuardOrder,GUARD_ORDER_NAMES,guardWaypoint,canEngageInOrder,distanceXZ} from '../gameplay/guard-orders.js';
+import {DEFAULT_GUARD_ORDER,normalizeGuardOrder,nextGuardOrder,GUARD_ORDER_NAMES,guardWaypoint,canEngageInOrder,distanceXZ} from '../gameplay/guard-orders.js?v=2.41.0-ecosystem';
 // NPC aliado: recruta com F, patrulha as construções, defende e pode ser reanimado.
 export const GUARD_MAX_HP=80;
 export function validGuard(data){
@@ -23,8 +24,9 @@ export function interactGuard(state,inventory){
  }
  return `🛡 Chaves de prontidão · ${state.hp}/${GUARD_MAX_HP} de vida`;
 }
-export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,onStatus=()=>{},onBeforeMount=async()=>{}}){
+export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,getWorkTarget=()=>null,onWork=()=>false,onStatus=()=>{},onBeforeMount=async()=>{}}){
  let state=createGuardState(),step=0,patrolIndex=0,patrolPause=0,shotFxTime=0;
+ let workCooldown=0;
  let activity='idle',firingSpot=null,repositionEnemy=null,repositionCooldown=0,blockedDuration=0,lastSeenEnemy=null,lastSeenAge=Infinity;
  const model=new THREE.Group();
  const tunic=new THREE.MeshStandardMaterial({color:0x4b79a6,roughness:.9});
@@ -134,6 +136,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    // A linha de visão, o alcance e a vida do inimigo são checados NOVAMENTE.
    shotController.update(dt,model.position,{canSee:canSee||(()=>true),
      onHit:target=>{showShot(target);attackEnemy(target,2);},range:CHAVES_SHOT_RANGE});
+   workCooldown=Math.max(0,workCooldown-dt);
    const structures=state.recruited?getStructures():[];
    const order=normalizeGuardOrder(state.mode);
    let patrol=state.recruited?guardWaypoint(order,playerPosition,structures,patrolIndex):{x:4,z:2};
@@ -172,7 +175,13 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
      }
    }
    const repositioning=!!(firingSpot&&repositionEnemy?.hp>0&&!target);
-   const destination=target?.mesh.position||(repositioning?firingSpot:patrol);
+   const work=order==='gather'&&state.recruited&&!target&&!repositioning&&workCooldown<=0?
+     getWorkTarget(model.position):null;
+   const destination=target?.mesh.position||(repositioning?firingSpot:work||patrol);
+   if(work&&distanceXZ(model.position,work)<2.4&&!shotController.isShooting){
+     if(onWork(work)){workCooldown=4.5;activity='gathering';}
+     else workCooldown=1.5;
+   }
    const dx=destination.x-state.x,dz=destination.z-state.z,dist=Math.hypot(dx,dz);
    const moving=dist>(target?7.8:repositioning?1:order==='follow'?1.8:order==='patrol'?1.1:2.5) &&
      !shotController.isShooting && !(order==='patrol'&&!target&&!repositioning&&patrolPause>0);
@@ -189,8 +198,9 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    else if(target)activity='engaging';
    else if(blockedDuration>.75)activity='blocked';
    else if(repositioning)activity='repositioning';
+   else if(work)activity='gathering';
    else if(navResult?.moved&&navigator.pendingPoints>1)activity='pathfinding';
-   else activity=order==='follow'?'following':order==='patrol'?'patrolling':'defending';
+   else activity=order==='follow'?'following':order==='patrol'?'patrolling':order==='gather'?'gathering':'defending';
    // Adere ao solo, com suavização apenas visual (não altera o save/collider).
    const groundY=getGroundHeight(state.x,state.z);
    const followY=Number.isFinite(model.position.y)?model.position.y:groundY;

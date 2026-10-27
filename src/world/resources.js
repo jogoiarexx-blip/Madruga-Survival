@@ -103,6 +103,13 @@ export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,
    node.group.visible=false;
    return {type:node.type,amount};
  }
+ function harvestTarget(node,position,radius=2.5){
+   if(!nodes.includes(node)||node.cooldown>0||node.type==='iron'||
+      Math.hypot(node.x-position.x,node.z-position.z)>radius)return null;
+   const type=node.type,amount=type==='water'?2:type==='wood'?3:type==='stone'?2:type==='berries'?2:3;
+   node.cooldown=type==='water'?6:65+Math.random()*35;node.group.visible=false;
+   return {type,amount};
+ }
  function update(dt,playerPosition=null,quality='medium'){
    const distance=quality==='low'?52:quality==='high'?100:75;
    for(const node of nodes){
@@ -117,5 +124,5 @@ export function createResourceWorld({THREE,scene,getGroundHeight,isPositionFree,
    nodes.forEach((n,i)=>{const d=saved[i];if(!d||n.type!==d.type)return;
      n.x=d.x;n.z=d.z;n.group.position.set(d.x,getGroundHeight(d.x,d.z),d.z);
      n.cooldown=d.cooldown;n.group.visible=n.cooldown===0;});return true;}
- return {nodes,generate,findNearby,harvest,update,serialize,restore};
+ return {nodes,generate,findNearby,harvest,harvestTarget,update,serialize,restore};
 }

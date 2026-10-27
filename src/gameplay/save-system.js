@@ -1,18 +1,18 @@
 import {ZOMBIE_TYPES} from './zombie-variants.js';
 import {SPIDER_VARIANTS,isSpiderVariant} from './spider-variants.js?v=2.13.0';
-import {restoreGuard} from '../characters/villager-guard.js';
+import {restoreGuard} from '../characters/villager-guard.js?v=2.41.0-ecosystem';
 // Save v2 separado do save da campanha v1 para não destruir a partida antiga.
 import {restoreSurvival} from './survival.js';
 import {restoreHotbar} from './consumable-hotbar.js';
 import {restoreBag} from './inventory-slots.js';
-import {STRUCTURE_TYPES,MODULAR_TYPES,MAX_STRUCTURES} from '../world/building-rules.js';
+import {STRUCTURE_TYPES,MODULAR_TYPES,MAX_STRUCTURES} from '../world/building-rules.js?v=2.41.0-ecosystem';
 import {validChestItems} from './storage.js';
-import {maxBuildingHP} from './base-defense.js';
+import {maxBuildingHP} from './base-defense.js?v=2.41.0-ecosystem';
 import {restoreRaid} from './raids.js';
 import {validCrop} from './farming.js';
 import {validWildlife} from '../world/wildlife.js';
 import {restoreMissionProgress} from './mission-progress.js';
-import {validExplorationSave} from '../world/exploration.js';
+import {validExplorationSave} from '../world/exploration.js?v=2.41.0-ecosystem';
 import {validSpiderNestSave} from '../world/spider-nests.js';
 import {validCaveSave} from '../world/arachnid-cave.js';
 export const SAVE_KEY='madrugacraft.survival.v2';
@@ -52,7 +52,7 @@ export function validateSave(data){
  if(!Array.isArray(data.buildings)||data.buildings.length>MAX_STRUCTURES||
    !data.buildings.every(b=>point(b)&&STRUCTURE_TYPES.includes(b.type)&&
      (!MODULAR_TYPES.includes(b.type)||(Number.isInteger(b.rotation)&&b.rotation>=0&&b.rotation<=3))&&
-     (b.type!=='door'||typeof b.open==='boolean')&&
+     (!['door','window'].includes(b.type)||typeof b.open==='boolean')&&
      (b.type!=='chest'||validChestItems(b.items))&&
      (b.type!=='farmPlot'||b.crop===undefined||validCrop(b.crop))&&
      (b.hp===undefined||integer(b.hp,1,maxBuildingHP(b.type)))))return null;

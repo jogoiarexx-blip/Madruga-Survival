@@ -19,6 +19,7 @@ export const RECIPES = Object.freeze({
   shelter:{label:'Abrigo',cost:{wood:8,fiber:6},hint:'Protege do frio noturno'},
   floor:{label:'Piso de madeira',cost:{wood:3},hint:'Base encaixável de 3 metros'},
   wall:{label:'Parede',cost:{wood:5,fiber:1},hint:'Bloqueia passagem e criaturas'},
+  window:{label:'Janela com veneziana',cost:{wood:4,fiber:2},hint:'Abre e fecha com F; ventila e permite visão'},
   door:{label:'Porta',cost:{wood:4,stone:1},hint:'Abre e fecha usando F'},
   bed:{label:'Cama',cost:{wood:5,fiber:4},hint:'Dormir até amanhecer; usa F'},
   chest:{label:'Baú',cost:{wood:6,stone:2},hint:'Guarda 80 itens; usa F'},

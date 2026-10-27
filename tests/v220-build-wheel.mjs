@@ -9,8 +9,8 @@ const source=path=>readFileSync(new URL(path,import.meta.url),'utf8');
 
 test('roda exibe exatamente os tipos físicos de construção',()=>{
  assert.deepEqual(BUILD_WHEEL_TYPES,STRUCTURE_TYPES);
- assert.equal(BUILD_WHEEL_TYPES.length,10);
- assert.equal(new Set(BUILD_WHEEL_TYPES).size,10);
+ assert.equal(BUILD_WHEEL_TYPES.length,11);
+ assert.equal(new Set(BUILD_WHEEL_TYPES).size,11);
 });
 test('todas as estruturas têm descrição, ícone e custo válido',()=>{
  for(const type of BUILD_WHEEL_TYPES){
@@ -19,8 +19,8 @@ test('todas as estruturas têm descrição, ícone e custo válido',()=>{
  }
 });
 test('navegação roda nos dois sentidos sem sair da faixa',()=>{
- assert.equal(wheelStep(0,-1),9);assert.equal(wheelStep(9,1),0);
- assert.equal(wheelStep(4,-27),7);
+ assert.equal(wheelStep(0,-1),10);assert.equal(wheelStep(10,1),0);
+ assert.equal(wheelStep(4,-27),10);
 });
 test('custo apresenta quantidade real e quantidade requerida',()=>{
  assert.match(buildCostText({wood:4,stone:2},{wood:3,stone:9}),/3\/4/);
@@ -52,8 +52,8 @@ function mount(getAvailability=(type)=>({ok:type==='floor',reason:'Sem itens',co
 }
 test('construtor insere dez botões com etiquetas e posições radiais únicas',()=>{
  const t=mount();try{
-  assert.equal(t.buttons.length,10);
-  assert.equal(new Set(t.buttons.map(b=>b.style.left+','+b.style.top)).size,10);
+  assert.equal(t.buttons.length,11);
+  assert.equal(new Set(t.buttons.map(b=>b.style.left+','+b.style.top)).size,11);
   assert.ok(t.buttons.every(b=>b.attrs['aria-label'].startsWith('Construir')));
  }finally{t.restore()}
 });

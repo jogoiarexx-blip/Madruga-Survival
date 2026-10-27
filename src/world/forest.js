@@ -3,15 +3,17 @@ import {CAVE_CENTER,CAVE_RADIUS} from './arachnid-cave.js';
 // Floresta estática: gerada de uma semente persistida para restaurar os checkpoints.
 // Não depende de bundler, CDN ou chamadas de rede.
 import {createSeededRandom} from './random.js';
-import {createDistanceVisibility} from '../render/visibility.js';
+import {createDistanceVisibility} from '../render/visibility.js?v=2.41.0-ecosystem';
+import {insideLake} from './fishing-lake.js';
 
 export function createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosition,
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees}) {
     let random = Math.random;
     const rockMeshes=[];
     const visibility=createDistanceVisibility({trees,rocks:rockMeshes});
+    const distantLeafGeometry=new THREE.ConeGeometry(1,1,6);
 function createRock(x, z, scale = 1) {
-    if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3)return;
+    if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3||insideLake(x,z,2))return;
     const rock = new THREE.Mesh(natureAssets.rockGeometry,
                 natureAssets.rockMaterials[Math.floor(random() * natureAssets.rockMaterials.length)]);
             const rockSize = 0.35 + random() * 0.7;
@@ -29,7 +31,7 @@ function createRock(x, z, scale = 1) {
 
 
 function createTree(x, z) {
-    if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3)return;
+    if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3||insideLake(x,z,2))return;
     const g = new THREE.Group();
     const heightVar = 0.7 + random() * 0.6;
     const trunkH = 2.4 * heightVar;
@@ -39,6 +41,7 @@ function createTree(x, z) {
     trunk.castShadow = true;
     g.add(trunk);
     const layers = 2 + Math.floor(random() * 2);
+    const detailedLeaves=[];
     for (let i = 0; i < layers; i++) {
         const leafSize = (1.4 - i * 0.25) * heightVar;
         const leafH = 2.2 * heightVar;
@@ -47,8 +50,14 @@ function createTree(x, z) {
         leaves.scale.set(leafSize, leafH, leafSize);
         leaves.position.y = trunkH + leafH * 0.35 - i * 0.8;
         leaves.castShadow = true;
-        g.add(leaves);
+        g.add(leaves);detailedLeaves.push(leaves);
     }
+    // Copa LOD distante: apenas um cone de 6 faces reutilizado por todas as árvores.
+    const distant=new THREE.Mesh(distantLeafGeometry,natureAssets.leafMaterials[0]);
+    distant.position.y=trunkH+1.1*heightVar;
+    distant.scale.set(1.25*heightVar,2.5*heightVar,1.25*heightVar);
+    distant.visible=false;distant.castShadow=false;g.add(distant);
+    g.userData.lod={detailedLeaves,distant,far:false};
     g.position.set(x, getGroundHeight(x, z), z);
     g.rotation.y = random() * Math.PI * 2;
     scene.add(g);
@@ -67,7 +76,7 @@ function createBushes(count) {
     const dummy=new THREE.Object3D();
     for(let i=0;i<count;i++) {
         const x=(random()-.5)*185,z=(random()-.5)*185;
-        if(Math.hypot(x,z)<=4) continue;
+        if(Math.hypot(x,z)<=4||insideLake(x,z,2)) continue;
         const size=.4+random()*.5;
         const materialIndex=Math.floor(random()*materials.length);
         dummy.position.set(x,getGroundHeight(x,z)+size*.7,z);
@@ -94,6 +103,7 @@ function createGrassTufts(count) {
     const dummy = new THREE.Object3D();
     for (let i = 0; i < count; i++) {
         const x = (random()-0.5)*195, z = (random()-0.5)*195;
+        if(insideLake(x,z,2))continue;
         const scale = 0.65 + random();
         dummy.position.set(x, getGroundHeight(x,z) + 0.2*scale, z);
         dummy.scale.set(scale, scale, scale);
@@ -113,7 +123,7 @@ function createFlowers(count) {
     const dummy=new THREE.Object3D();
     for(let i=0;i<count;i++) {
         const x=(random()-.5)*175,z=(random()-.5)*175;
-        if(Math.hypot(x,z)<=5) continue;
+        if(Math.hypot(x,z)<=5||insideLake(x,z,2)) continue;
         const y=getGroundHeight(x,z),index=Math.floor(random()*colors.length);
         dummy.scale.set(1,1,1);dummy.rotation.set(0,0,0);
         dummy.position.set(x,y+.12,z);dummy.updateMatrix();stems.push(dummy.matrix.clone());

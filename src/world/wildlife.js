@@ -21,7 +21,7 @@ export function wildlifeDecision(type,distance,canSeePlayer=true){
  if(type==='boar')return distance<BOAR_DEFENSE_RADIUS&&canSeePlayer?'defend':'wander';
  return 'wander';
 }
-export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,onHunt,onHurt=()=>{},canSee=()=>true}){
+export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,onHunt,onHurt=()=>{},canSee=()=>true,hearSound=()=>null}){
  const animals=[];
  let respawnElapsed=0, rabbitGeo=new THREE.SphereGeometry(1,12,9);
  const boxGeo=new THREE.BoxGeometry(1,1,1);
@@ -101,7 +101,7 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
   const rig=type==='rabbit'?rabbit(g):boar(g);
   g.position.set(x,getGroundHeight(x,z),z);g.rotation.y=heading+Math.PI;scene.add(g);
   const a={type,x,z,heading,hp:hp??(type==='boar'?5:2),group:g,rig,
-   pace:1,attackDelay:0,wander:0,step:0,alert:false,behavior:'wander',
+   pace:1,attackDelay:0,wander:0,step:0,alert:false,behavior:'wander',heardId:0,noiseLeft:0,noiseAt:null,
    chargePhase:'idle',chargeLeft:0,chargeHit:false,staggerLeft:0,escapeBurst:1.2,escapeRest:0,escapeReplan:0,escapeHeading:heading,escapeBlocked:false};
   animals.push(a);return a;
  }
@@ -142,13 +142,22 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
    if(dist>radius)continue;
    const close=dist<(a.type==='rabbit'?RABBIT_ALERT_RADIUS:BOAR_DEFENSE_RADIUS);
    // A detecção depende da linha de visão a distâncias não imediatas.
-   const hasVisual=dist<2.5||(!close?false:canSee(a.group.position,player));
+   const hasVisual=close&&canSee(a.group.position,player);
+   a.noiseLeft=Math.max(0,(a.noiseLeft||0)-frame);
+   const heard=hearSound(a,player);
+   if(heard&&heard.id>a.heardId){a.heardId=heard.id;
+     a.noiseAt={x:heard.x,z:heard.z};a.noiseLeft=a.type==='rabbit'?2.8:3.8;
+     a.escapeReplan=0;
+   }
+   // O som dá posição aproximada; só visão real permite ataque do javali.
    const behavior=wildlifeDecision(a.type,dist,hasVisual);
-   a.behavior=behavior;a.alert=behavior==='flee'||behavior==='defend';
+   const informed=a.noiseLeft>0;
+   const effectiveBehavior=a.type==='rabbit'&&informed?'flee':a.type==='boar'&&informed&&!hasVisual?'investigate':behavior;
+   a.behavior=effectiveBehavior;a.alert=effectiveBehavior==='flee'||effectiveBehavior==='defend'||effectiveBehavior==='investigate';
    const boar=a.type==='boar'?advanceBoarCharge(a,{dt:frame,distance:dist,
      playerDx:-dx,playerDz:-dz,canSee:hasVisual}):null;
    let desired=a.heading;
-   if(a.type==='rabbit'&&behavior==='flee'){
+   if(a.type==='rabbit'&&effectiveBehavior==='flee'){
      a.escapeBurst=Math.max(0,a.escapeBurst-frame);
      a.escapeRest=Math.max(0,a.escapeRest-frame);
      if(a.escapeBurst===0&&dist>6&&a.escapeRest===0){
@@ -158,21 +167,22 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
      // Calcular a fuga antes de correr: não esperar o animal ficar preso na parede.
      const lookX=a.x+Math.sin(a.escapeHeading)*1.25,lookZ=a.z+Math.cos(a.escapeHeading)*1.25;
      if(a.escapeReplan===0 || !isPositionFree(lookX,lookZ,.46)){
-       const route=chooseRabbitEscape({position:a,player,isFree:isPositionFree});
+       const route=chooseRabbitEscape({position:a,player:hasVisual?player:a.noiseAt||player,isFree:isPositionFree});
        a.escapeHeading=route.heading;a.escapeBlocked=route.blocked;
        a.escapeReplan=.26;
      }
      desired=a.escapeHeading;
-   }else if(behavior==='defend'&&dist>1.1)desired=Math.atan2(-dx,-dz);
+   }else if(effectiveBehavior==='defend'&&dist>1.1)desired=Math.atan2(-dx,-dz);
+   else if(effectiveBehavior==='investigate'&&a.noiseAt)desired=Math.atan2(a.noiseAt.x-a.x,a.noiseAt.z-a.z);
    else if(a.wander<=0){desired=a.heading+(Math.random()-.5)*1.8;a.heading=desired;a.wander=3+Math.random()*3;}
-   if(a.type==='rabbit'&&behavior!=='flee'){a.escapeBurst=1.2;a.escapeRest=0;a.escapeReplan=0;a.escapeBlocked=false;}
+   if(a.type==='rabbit'&&effectiveBehavior!=='flee'){a.escapeBurst=1.2;a.escapeRest=0;a.escapeReplan=0;a.escapeBlocked=false;}
    a.wander=Math.max(0,a.wander-frame);
    // Durante a investida a direção fica fixada: o jogador pode desviar.
    if(boar&&['windup','charge'].includes(boar.phase))desired=boar.heading;
-   a.heading=turnTowards(a.heading,desired,frame*(boar?.phase==='charge'?14:behavior==='flee'?9:behavior==='forage'||behavior==='wander'?1.3:5.2));
+   a.heading=turnTowards(a.heading,desired,frame*(boar?.phase==='charge'?14:effectiveBehavior==='flee'?9:effectiveBehavior==='forage'||effectiveBehavior==='wander'?1.3:5.2));
    const speed=boar?boar.phase==='windup'||boar.phase==='rest'?0:
-      boar.phase==='charge'?boar.speed:behavior==='defend'?(dist>1.25?2.45:0):.44:
-      behavior==='flee'?(a.escapeRest>0||a.escapeBlocked?0:5.2):.58;
+      boar.phase==='charge'?boar.speed:effectiveBehavior==='defend'?(dist>1.25?2.45:0):effectiveBehavior==='investigate'?1.2:.44:
+      effectiveBehavior==='flee'?(a.escapeRest>0||a.escapeBlocked?0:5.2):.58;
    const nx=a.x+Math.sin(a.heading)*speed*frame;
    const nz=a.z+Math.cos(a.heading)*speed*frame;
    let moved=false;

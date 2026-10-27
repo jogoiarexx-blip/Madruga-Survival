@@ -1,6 +1,6 @@
 // Comandos de Chaves — calculados sem dependências de Three.js e compatíveis com saves antigos.
-export const GUARD_ORDERS=Object.freeze(['follow','defend','patrol']);
-export const GUARD_ORDER_NAMES=Object.freeze({follow:'Seguir',defend:'Defender base',patrol:'Patrulhar'});
+export const GUARD_ORDERS=Object.freeze(['follow','defend','patrol','gather']);
+export const GUARD_ORDER_NAMES=Object.freeze({follow:'Seguir',defend:'Defender base',patrol:'Patrulhar',gather:'Coletar e cuidar da horta'});
 export const DEFAULT_GUARD_ORDER='defend';
 export function normalizeGuardOrder(value){return GUARD_ORDERS.includes(value)?value:DEFAULT_GUARD_ORDER;}
 export function nextGuardOrder(value){const i=GUARD_ORDERS.indexOf(normalizeGuardOrder(value));return GUARD_ORDERS[(i+1)%GUARD_ORDERS.length];}

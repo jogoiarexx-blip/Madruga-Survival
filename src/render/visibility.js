@@ -27,6 +27,16 @@ export function createDistanceVisibility({trees, rocks=[]}) {
             const d2=dx*dx+dz*dz;
             entry.visible=shouldBeVisible(d2,entry.visible,profile.trees);
             if (entry.visible) {
+                // Histerese evita trocar a geometria em cada oscilação de distância.
+                const lod=entry.userData?.lod;
+                if(lod){
+                  const limit=lod.far?29:35;
+                  const far=d2>limit*limit;
+                  if(far!==lod.far){
+                    lod.far=far;for(const leaf of lod.detailedLeaves)leaf.visible=!far;
+                    lod.distant.visible=far;
+                  }
+                }
                 stats.visibleTrees++;
                 const shadows=d2 <= profile.shadow*profile.shadow;
                 // Sombras dos galhos somente perto do jogador, preservando o modelo.

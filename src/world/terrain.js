@@ -1,3 +1,4 @@
+import {lakeTerrainDrop} from './fishing-lake.js';
 // Terreno procedural criado uma vez; sem arquivos de textura externos.
 export function createTerrain(THREE, scene, getGroundHeight) {
     // Textura procedural: não depende de servidor externo e nunca fica faltando.
@@ -31,7 +32,7 @@ export function createTerrain(THREE, scene, getGroundHeight) {
         // Plano XY rotacionado -90°: X local->X mundial, Y local->-Z,
         // Z local->altura mundial. Alterar Y deformava a posição horizontal!
         const x = posAttr.getX(i), z = -posAttr.getY(i);
-        posAttr.setZ(i, Math.sin(x * 0.08) * Math.cos(z * 0.08) * 0.6 + Math.sin(x * 0.3) * 0.15);
+        posAttr.setZ(i, Math.sin(x * 0.08) * Math.cos(z * 0.08) * 0.6 + Math.sin(x * 0.3) * 0.15 - lakeTerrainDrop(x,z));
     }
     ground.geometry.computeVertexNormals();
     scene.add(ground);

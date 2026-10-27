@@ -1,6 +1,6 @@
 // Geometria pura do modo construção: encaixe, orientação e colisão sem Three.js.
 export const BUILD_GRID=3;
-export const MODULAR_TYPES=Object.freeze(['floor','wall','door','bed','chest','workbench','roof','farmPlot']);
+export const MODULAR_TYPES=Object.freeze(['floor','wall','door','window','bed','chest','workbench','roof','farmPlot']);
 export const STRUCTURE_TYPES=Object.freeze(['campfire','shelter',...MODULAR_TYPES]);
 export const MAX_STRUCTURES=160;
 export const orientation=angle=>((Math.round(angle)%4)+4)%4;
@@ -22,6 +22,7 @@ function shape(s){
   switch(s.type){
     case 'wall':return {x:1.5,z:.14};
     case 'door':return s.open?null:{x:1.5,z:.14};
+    case 'window':return {x:1.5,z:.14};
     case 'chest':return {x:.72,z:.48};
     case 'workbench':return {x:1.16,z:.62};
     case 'bed':return {x:.79,z:1.09};
@@ -72,7 +73,7 @@ export function canPlaceAmong(structures,candidate){
      if(dist<r(s.type)+r(candidate.type))return false;
      continue;
    }
-   if(['wall','door'].includes(candidate.type)&&['wall','door'].includes(s.type)){
+   if(['wall','door','window'].includes(candidate.type)&&['wall','door','window'].includes(s.type)){
      if(wallOverlap(s,candidate))return false;
      continue;
    }
@@ -83,7 +84,7 @@ export function canPlaceAmong(structures,candidate){
 }
 export function nearestInteractive(structures,position,radius=2.85){
   let closest=null,shortest=radius;
-  for(const s of structures){if(!['door','chest','bed','workbench','farmPlot'].includes(s.type))continue;
+  for(const s of structures){if(!['door','window','chest','bed','workbench','farmPlot'].includes(s.type))continue;
     const dist=Math.hypot(position.x-s.x,position.z-s.z);
     if(dist<shortest){closest=s;shortest=dist;}}
   return closest;
@@ -91,7 +92,7 @@ export function nearestInteractive(structures,position,radius=2.85){
 
 // Visibilidade para IA: portas fechadas e paredes bloqueiam ataques através da base.
 export function lineBlockedByStructure(s,from,to){
-  if(s.type!=='wall'&&(s.type!=='door'||s.open))return false;
+  if(!['wall','door','window'].includes(s.type)||(s.type!=='wall'&&s.open))return false;
   const a=localOf(s,from.x,from.z),b=localOf(s,to.x,to.z);
   const dx=b.x-a.x,dz=b.z-a.z;
   let t0=0,t1=1;

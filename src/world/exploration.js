@@ -57,6 +57,8 @@ export function validExplorationSave(data){
   return data.every(s=>{
     const spec=EXPLORATION_SITES.find(entry=>entry.id===s?.id);
     if(!spec||ids.has(s.id)||typeof s.discovered!=='boolean'||typeof s.ambushed!=='boolean'||
+       (s.doorOpen!==undefined&&typeof s.doorOpen!=='boolean')||
+       (s.windowOpen!==undefined&&typeof s.windowOpen!=='boolean')||
        !Array.isArray(s.opened)||s.opened.length>spec.containers.length)return false;
     ids.add(s.id);
     const used=new Set();return s.opened.every(id=>{
@@ -104,12 +106,24 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
       const material=spec.kind==='clinic'?mats.clinic:spec.kind==='workshop'?mats.metal:mats.wood;
       mesh(g,0,.10,0,5.7,.20,5.2,mats.aged);
       // Fachada aberta ao sul (+Z), permitindo acesso por fora e por dentro.
-      mesh(g,0,1.35,-2.52,5.7,2.6,.19,material);
+      // Parede de trás com vão real para a janela (sem painel opaco por trás).
+      mesh(g,-2.27,1.35,-2.52,1.16,2.6,.19,material);
+      mesh(g,1.05,1.35,-2.52,3.6,2.6,.19,material);
+      mesh(g,-1.31,.43,-2.52,1.15,.78,.19,material);
+      mesh(g,-1.31,2.27,-2.52,1.15,.77,.19,material);
       for(const side of [-1,1]){
         mesh(g,side*2.77,1.18,0,.22,2.35,5.2,material);
         mesh(g,side*2.03,1.28,2.53,1.64,2.5,.19,material);
       }
       mesh(g,0,2.48,2.53,2.58,.20,.24,mats.wood);
+      // Portas e janelas móveis em todas as ruínas, preservando a entrada antiga.
+      const doorPivot=new THREE.Group();doorPivot.position.set(-1.18,0,2.53);g.add(doorPivot);
+      mesh(doorPivot,1.13,1.18,0,2.25,2.27,.12,mats.aged);
+      mesh(doorPivot,2.05,1.13,.09,.15,.18,.17,mats.metal);
+      const windowPivot=new THREE.Group();windowPivot.position.set(-1.32,1.34,-2.67);g.add(windowPivot);
+      mesh(windowPivot,.61,.52,0,1.2,1.05,.12,mats.accent);
+      mesh(g,-1.32,1.38,-2.53,1.40,.11,.27,mats.metal);
+      mesh(g,-2.06,1.38,-2.53,.11,1.2,.27,mats.metal);
       // Telhado parcial deixa um lado aberto como ruína, sem obstruir a visão interna.
       mesh(g,-1.48,2.65,-1.4,2.75,.21,2.75,mats.roof);
       if(spec.kind==='clinic'){
@@ -136,7 +150,7 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
       }
       for(let x=-2.5;x<=2.5;x+=1){addCollider({x:candidate.x+x,z:candidate.z-2.52,radius:.34});}
       for(const side of [-1,1])addCollider({x:candidate.x+side*2.13,z:candidate.z+2.53,radius:.38});
-      sites.push({...candidate,label:spec.label,threat:spec.threat,group:g,containers,discovered:false,ambushed:false});
+      sites.push({...candidate,label:spec.label,threat:spec.threat,group:g,containers,doorPivot,windowPivot,doorOpen:false,windowOpen:false,discovered:false,ambushed:false});
     }
     return sites;
   }
@@ -150,6 +164,54 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
       if(d<closest){closest=d;found={site,container:item,distance:d};}
     }
     return found;
+  }
+  function nearestFixture(position,range=2.6){
+    let best=null,closest=range;
+    for(const site of sites){
+      const parts=[{kind:'door',x:site.x,z:site.z+2.55},
+        {kind:'window',x:site.x-1.32,z:site.z-2.65}];
+      for(const part of parts){const distance=Math.hypot(part.x-position.x,part.z-position.z);
+        if(distance<closest){closest=distance;best={site,...part};}}
+    }
+    return best;
+  }
+  function toggleFixture(position){
+    const hit=nearestFixture(position);if(!hit)return null;
+    const {site,kind}=hit,key=kind==='door'?'doorOpen':'windowOpen';
+    site[key]=!site[key];
+    (kind==='door'?site.doorPivot:site.windowPivot).rotation.y=site[key]?-Math.PI*.60:0;
+    return {kind,open:site[key],site:site.label};
+  }
+  // Fachadas reais: visibilidade só passa pela porta aberta ou pelo vão
+  // da janela aberta. Colisões permanecem físicas mesmo para a janela aberta.
+  function blocksWalls(from,to){
+    if(!from||!to)return false;
+    const cut=(axis,value,other,min,max)=>{
+      const diff=to[axis]-from[axis];if(Math.abs(diff)<.00001)return null;
+      const t=(value-from[axis])/diff;
+      if(t<=.001||t>=.999)return null;
+      const v=from[other]+(to[other]-from[other])*t;
+      return v>=min&&v<=max?v:null;
+    };
+    return sites.some(s=>{
+      if(cut('x',s.x-2.77,'z',s.z-2.52,s.z+2.53)!==null||
+         cut('x',s.x+2.77,'z',s.z-2.52,s.z+2.53)!==null)return true;
+      const rear=cut('z',s.z-2.52,'x',s.x-2.85,s.x+2.85);
+      if(rear!==null&&!(s.windowOpen&&Math.abs(rear-(s.x-1.32))<.57))return true;
+      const front=cut('z',s.z+2.53,'x',s.x-2.85,s.x+2.85);
+      if(front!==null&&!(s.doorOpen&&Math.abs(front-s.x)<1.17))return true;
+      return false;
+    });
+  }
+  const blocksDoorAtSight=blocksWalls;
+  function blocksDoor(x,z,r=.46){
+    return sites.some(s=>!s.doorOpen&&Math.abs(x-s.x)<1.18+r&&Math.abs(z-s.z-2.53)<.11+r);
+  }
+  function resolveDoor(x,z,r=.46){
+    for(const s of sites){if(s.doorOpen||Math.abs(x-s.x)>=1.18+r||Math.abs(z-s.z-2.53)>=.11+r)continue;
+      z=s.z+2.53+(z>=s.z+2.53?1:-1)*(.11+r+.01);
+    }
+    return {x,z};
   }
   function search(position,inventory){
     const target=nearest(position);
@@ -188,13 +250,15 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
       total:sites.reduce((sum,s)=>sum+s.containers.length,0)};
   }
   function serialize(){return sites.map(s=>({id:s.id,discovered:s.discovered,ambushed:s.ambushed,
-    opened:s.containers.filter(c=>c.opened).map(c=>c.id)}));}
+    opened:s.containers.filter(c=>c.opened).map(c=>c.id),doorOpen:s.doorOpen,windowOpen:s.windowOpen}));}
   function restore(data){
     if(!validExplorationSave(data))return false;
     const byId=new Map((data||[]).map(item=>[item.id,item]));
     for(const site of sites){
       const saved=byId.get(site.id);
       site.discovered=!!saved?.discovered;site.ambushed=!!saved?.ambushed;
+      site.doorOpen=!!saved?.doorOpen;site.windowOpen=!!saved?.windowOpen;
+      site.doorPivot.rotation.y=site.doorOpen?-Math.PI*.60:0;site.windowPivot.rotation.y=site.windowOpen?-Math.PI*.60:0;
       const opened=new Set(saved?.opened||[]);
       for(const container of site.containers){
         container.opened=opened.has(container.id);
@@ -204,5 +268,5 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
     }
     return true;
   }
-  return {sites,generate,nearest,search,update,objective,serialize,restore};
+  return {sites,generate,nearest,nearestFixture,toggleFixture,blocksDoor,blocksDoorAtSight,resolveDoor,search,update,objective,serialize,restore};
 }

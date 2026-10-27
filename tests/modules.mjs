@@ -47,7 +47,7 @@ test('minimapa continua desenhando alvos e jogador',()=>{
     collectibles:[{position:{x:2,z:2}}],healthPacks:[],speedBoosts:[],enemies:[],
     shrinePosition:{x:32,z:-28},playerYaw:0};
   const draw=createMinimap(canvas,()=>state);
-  draw();assert.equal(canvas.width,140);assert.ok(arcs>=3);
+  draw();assert.equal(canvas.width,140);assert.ok(arcs>=2) // marcadores de recursos comuns foram removidos;
 });
 test('terreno reconstrói malha usando eixo local Z',()=>{
   const oldDocument=globalThis.document;

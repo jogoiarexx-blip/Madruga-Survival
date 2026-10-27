@@ -1,14 +1,18 @@
-// Madruga Survival v2.40.0 — javali com reação a impacto, coelho desvia de obstáculos e exploração recompensada.
+// Madruga Survival v2.41.0 — Chaves trabalhador, lagoa, LOD, casas interativas, animais atentos a som.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
-import { createForest } from './world/forest.js?v=2.13.0';
-import { readSave, writeSave } from './gameplay/save-system.js?v=2.13.0';
-import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js';
+import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
+import { readSave, writeSave } from './gameplay/save-system.js?v=2.41.0-ecosystem';
+import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js?v=2.41.0-ecosystem';
 import {createFrameProfiler} from './render/frame-profiler.js';
 import {createMissionProgress,restoreMissionProgress,recordMissionEvent,currentMission,advanceMission} from './gameplay/mission-progress.js';
+import {missionWaypoint} from './gameplay/mission-navigation.js';
 import {setTextIfChanged} from './ui/dom-patch.js';
-import { createTerrain } from './world/terrain.js';
-import { createMinimap } from './ui/minimap.js';
+import { createTerrain } from './world/terrain.js?v=2.41.0-ecosystem';
+import { createMinimap } from './ui/minimap.js?v=2.41.0-ecosystem';
+import {LAKE,insideLake,nearLakeShore,keepOutsideLake,lakeTerrainDrop,createFishingLake} from './world/fishing-lake.js';
+import {segmentBlockedByCircles} from './world/line-of-sight.js';
+import {selectGuardWork} from './gameplay/guard-work.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
 import { initAudio, sfx } from './audio/sfx.js?v=2.11.0-spider';
@@ -22,7 +26,7 @@ import {canDisposeEnemyGeometry} from './render/enemy-geometry-pool.js';
 import {createAdventureLoader} from './render/adventure-loader.js';
 import {createGpuWarmup} from './render/gpu-warmup.js';
 import {createMenuPreview} from './ui/menu-preview.js';
-import {buildingInteractionLabel} from './ui/building-interaction-label.js';
+import {buildingInteractionLabel} from './ui/building-interaction-label.js?v=2.41.0-ecosystem';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
 import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
@@ -39,37 +43,37 @@ import { createCombatSystem } from './gameplay/combat.js?v=2.13.0';
 import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
-import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.13.0';
-import {createResourceWorld} from './world/resources.js?v=1.9.0-geometry';
-import {createExplorationWorld} from './world/exploration.js?v=2.6.0';
+import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.41.0-ecosystem';
+import {createResourceWorld} from './world/resources.js?v=2.41.0-ecosystem';
+import {createExplorationWorld} from './world/exploration.js?v=2.41.0-ecosystem';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
-import {createBuildingWorld} from './world/buildings.js?v=2.0.0-performance';
-import {createSurvivalUI} from './ui/survival-ui.js?v=2.36.0-fix-inventory';
+import {createBuildingWorld} from './world/buildings.js?v=2.41.0-ecosystem';
+import {createSurvivalUI} from './ui/survival-ui.js?v=2.41.0-ecosystem';
 import {createConsumableHotbarUI} from './ui/consumable-hotbar-ui.js?v=2.16.0';
 import {defaultHotbar,assignHotbarSlot,hotbarIndexFromCode} from './gameplay/consumable-hotbar.js?v=2.15.0';
 import {canPlaceOnHotbar,getQuickSlot} from './gameplay/inventory-ui-logic.js';
 import {createBag,reconcileBag,validBag,moveBagStack,splitBagStack,sortBag} from './gameplay/inventory-slots.js';
 import {createTouchControls} from './input/touch-controls.js';
-import {createBuildWheelUI,BUILD_WHEEL_TYPES} from './ui/build-wheel-ui.js';
+import {createBuildWheelUI,BUILD_WHEEL_TYPES} from './ui/build-wheel-ui.js?v=2.41.0-ecosystem';
 import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {planStoreBagStack,planTakeFromChest} from './gameplay/bag-storage.js';
 import {isGearEquipped,setGearEquipped,equipNewCraft} from './gameplay/gear-loadout.js';
-import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js';
-import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js';
+import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js?v=2.41.0-ecosystem';
+import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js?v=2.41.0-ecosystem';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
-import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.13.0';
+import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
 import {tryFish} from './gameplay/fishing.js';
-import {createWildlifeWorld} from './world/wildlife.js?v=2.36.0-fauna';
+import {createWildlifeWorld} from './world/wildlife.js?v=2.41.0-ecosystem';
 import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
-import {CRAFT_STATIONS} from './gameplay/crafting.js';
+import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createCampfireUI} from './ui/campfire-ui.js';
-import {createVillagerGuard} from './characters/villager-guard.js';
+import {createVillagerGuard} from './characters/villager-guard.js?v=2.41.0-ecosystem';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
 import {SKILLS,awardSkill,skillLevel,fishingBonus,farmingBonus,huntingBonus,
@@ -264,6 +268,7 @@ const treeColliders = [];
 const forest = createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosition,
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
+const fishingLake=createFishingLake({THREE,scene,getGroundHeight});
 const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),findSpawnPoint:(min,max,r)=>findSpawnPoint(min,max,r)});
 const exploration=createExplorationWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),
@@ -274,7 +279,10 @@ const arachnidCave=createArachnidCave({THREE,scene,getGroundHeight});
 const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality,mergeGeometries});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
-    canSee:(from,to)=>!buildings.blocksLine(from,to),
+    canSee:(from,to)=>!buildings.blocksLine(from,to)&&!exploration.blocksDoorAtSight?.(from,to)&&
+      !segmentBlockedByCircles(from,to,treeColliders)&&!segmentBlockedByCircles(from,to,rockColliders),
+    hearSound:(animal)=>zombieSenses.hear(animal,elapsed,{afterId:animal.heardId,
+      blocked:(from,to)=>buildings.blocksLine(from,to)||(segmentBlockedByCircles(from,to,treeColliders)||segmentBlockedByCircles(from,to,rockColliders))}),
     onHurt:(amount,origin)=>{if(gameActive)damagePlayer(amount,origin);},
     onHunt:(type,amount)=>{
       recordMissionEvent(missionProgress,'hunt');
@@ -285,7 +293,7 @@ const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
 
 
 function getGroundHeight(x, z) {
-    return Math.sin(x * 0.08) * Math.cos(z * 0.08) * 0.6 + Math.sin(x * 0.3) * 0.15;
+    return Math.sin(x * 0.08) * Math.cos(z * 0.08) * 0.6 + Math.sin(x * 0.3) * 0.15-lakeTerrainDrop(x,z);
 }
 
 function hudText(id,value){return setTextIfChanged(document.getElementById(id),value);}
@@ -303,10 +311,10 @@ function updateHUD() {
     hudText('score-display',`🌲 Acampamento livre`);
     hudText('quest-display',`🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`);
     hudText('wave-display',`Perigo: ${wave}/6 · Invasões: ${raidState.waves}`);
-    hudText('guard-status',guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)');
+    hudText('guard-status',guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':guard.mode==='gather'?'coletando e plantando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)');
     const activityNode=document.getElementById('guard-activity');
     if(activityNode){
-      const activities={idle:'Aguardando',down:'Precisa de ajuda',shooting:'Em combate',engaging:'Protegendo área',blocked:'Caminho obstruído',repositioning:'Procurando ângulo de tiro',pathfinding:'Procurando caminho',following:'Acompanhando',patrolling:'Em ronda',defending:'Guardando a base'};
+      const activities={gathering:'Coletando recursos',idle:'Aguardando',down:'Precisa de ajuda',shooting:'Em combate',engaging:'Protegendo área',blocked:'Caminho obstruído',repositioning:'Procurando ângulo de tiro',pathfinding:'Procurando caminho',following:'Acompanhando',patrolling:'Em ronda',defending:'Guardando a base'};
       const active=gameActive&&guard.recruited;
       activityNode.classList.toggle('hidden',!active);
       if(active){const key=guard.activity;const title=activities[key]||'Aguardando';
@@ -369,7 +377,7 @@ function updateHUD() {
     hudText('mission-goal',mission?`${mission.description} · ${mission.count}/${mission.target} · +${mission.xp} XP`:
       'Continue sobrevivendo, explorando e melhorando sua base.');
     hudText('equipment-display',`Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`);
-    hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · C furtividade · Y pescar · I mochila · U habilidades');
+    hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · O ordens Chaves · Y pescar · I mochila · U habilidades');
     const bossWrapper=document.getElementById('boss-bar-wrapper');
     const showQueen=arachnidCave.inside&&!!queen&&queen.hp>0;
     bossWrapper.classList.toggle('hidden',!showQueen);
@@ -386,6 +394,7 @@ function updateHUD() {
     const closestBuilding=buildings.nearest(player.position,2.85);
     const closest=resources.findNearby(player.position);
     const closestLoot=exploration.nearest(player.position);
+    const closestFixture=exploration.nearestFixture(player.position);
     const nearNest=spiderNests.nearest(player.position);
     const prompt=document.getElementById('interact-hint');
     if(placement){
@@ -405,6 +414,9 @@ function updateHUD() {
         prompt.textContent='[F] Recolher cristal subterrâneo';prompt.classList.remove('hidden');
     }else if(nearNest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] Recolher ovo · ${nearNest.label} (${nearNest.eggs} restantes)`;
+        prompt.classList.remove('hidden');
+    }else if(closestFixture&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent=`[F] ${closestFixture.kind==='door'?'Abrir/fechar porta':'Abrir/fechar janela'} · ${closestFixture.site.label}`;
         prompt.classList.remove('hidden');
     }else if(closestLoot&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] Vasculhar ${closestLoot.container.label} · ${closestLoot.site.label}`;
@@ -543,7 +555,8 @@ function spawnParticle(pos, color, count = 8) {
 
 
 function isPositionFree(x, z, radius = 0.9) {
-    return Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)>12.9+radius &&
+    return !insideLake(x,z,radius)&&!exploration.blocksDoor(x,z,radius)&&
+      Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)>12.9+radius &&
       collisionWorld.isPositionFree(x,z,radius)&&!buildings.isBlocked(x,z,radius);
 }
 function resolveCollision(x, z, radius = 0.45) {
@@ -552,9 +565,12 @@ function resolveCollision(x, z, radius = 0.45) {
         const dx=x-CAVE_CENTER.x,dz=z-CAVE_CENTER.z,d=Math.hypot(dx,dz);
         const max=11.2-radius;if(d>max){x=CAVE_CENTER.x+dx/d*max;z=CAVE_CENTER.z+dz/d*max;}
     }
-    const staticPoint=collisionWorld.resolveCollision(x,z,radius);
+    const lakePoint=keepOutsideLake(x,z,radius);
+    const staticPoint=collisionWorld.resolveCollision(lakePoint.x,lakePoint.z,radius);
     const builtPoint=buildings.resolveCollision(staticPoint.x,staticPoint.z,radius);
-    return collisionWorld.resolveCollision(builtPoint.x,builtPoint.z,radius);
+    const entry=exploration.resolveDoor(builtPoint.x,builtPoint.z,radius);
+    const result=collisionWorld.resolveCollision(entry.x,entry.z,radius);
+    return keepOutsideLake(result.x,result.z,radius);
 }
 function findSpawnPoint(minRange = 10, maxRange = 70, radius = 1) {
     for (let i = 0; i < 100; i++) {
@@ -612,6 +628,29 @@ function ensureVisibleGoblinEncounter(){
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
 const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
+    getWorkTarget:position=>selectGuardWork(position,
+      buildings.structures[0]||{x:4,z:2},resources.nodes,buildings.structures,survival.inventory),
+    onWork:job=>{
+      if(!gameActive||!guard.recruited||guard.hp<=0||!job)return false;
+      if(job.kind==='farm'){
+        if(!buildings.structures.includes(job.target)||job.target.type!=='farmPlot')return false;
+        const result=workCrop(job.target.crop,survival.inventory);
+        if(!result.ok)return false;
+        buildings.updateCropVisual(job.target);
+        earnSkill('farming',result.action==='harvest'?14:5);
+        showToast('🌾 Chaves: '+result.message.replace(/^[^a-zA-ZÀ-ÿ]+/u,''));
+        saveProgress();return true;
+      }
+      if(job.kind==='resource'){
+        if((survival.inventory[job.target.type]||0)>990)return false;
+        const found=resources.harvestTarget(job.target,guard.position);
+        if(!found)return false;
+        addResource(survival,found.type,found.amount);
+        earnSkill('gathering',6);showToast(`🧺 Chaves coletou ${found.amount} ${RESOURCES[found.type]?.label||found.type}`);
+        saveProgress();return true;
+      }
+      return false;
+    },
     canSee:(a,b)=>!buildings.blocksLine(a,b),
     attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false),
     onStatus:(message,state)=>console.info('[Chaves]',state,message),
@@ -1418,12 +1457,12 @@ function interactWithBuilding(){
             earnSkill('farming',result.action==='harvest'?35:result.action==='plant'?12:10);
             buildings.updateCropVisual(item);sfx.collect();saveProgress();updateHUD();}
         showToast(result.message);return true;}
-    if(item.type==='door'){
+    if(['door','window'].includes(item.type)){
         if(item.open&&collidesWithStructure({...item,open:false},player.position.x,player.position.z,.48)){
-            showToast('Afaste-se do batente para fechar a porta.');return true;
+            showToast('Afaste-se da porta ou janela para fechar.');return true;
         }
         const isOpen=buildings.toggleDoor(item);
-        showToast(isOpen?'🚪 Porta aberta':'🚪 Porta fechada');sfx.collect();saveProgress();return true;
+        showToast(`${item.type==='window'?'🪟 Janela':'🚪 Porta'} ${isOpen?'aberta':'fechada'}`);sfx.collect();saveProgress();return true;
     }
     if(item.type==='chest'){
         storageUI.open(item);buildings.setChestOpen(item,true);
@@ -1503,6 +1542,12 @@ function harvestNear(){
         showToast(`🕸 Ovo recolhido: +${result.items.spiderSilk} seda · +${result.items.chitin} quitina`);
         saveProgress();updateHUD();return true;
     }
+    const fixture=exploration.nearestFixture(player.position);
+    if(fixture){
+      const status=exploration.toggleFixture(player.position);
+      showToast(`${status.kind==='door'?'🚪 Porta':'🪟 Janela'} da ${status.site} ${status.open?'aberta':'fechada'}`);
+      saveProgress();updateHUD();return true;
+    }
     if(exploration.nearest(player.position)){
         const loot=exploration.search(player.position,survival.inventory);
         if(!loot.ok){showToast(`🎒 ${loot.reason}`);return false;}
@@ -1534,7 +1579,7 @@ function harvestNear(){
 function fishNearby(){
     if(!gameActive)return false;
     const node=resources.nodes.find(n=>n.type==='water'&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<3.8);
-    const result=tryFish(survival,elapsed,!!node,fishingBonus(skillLevel(survival,'fishing')));
+    const result=tryFish(survival,elapsed,!!node||nearLakeShore(player.position),fishingBonus(skillLevel(survival,'fishing')));
     if(result.ok){earnSkill('fishing',28);sfx.collect();updateHUD();saveProgress();}
     showToast(result.message);
     return result.ok;
@@ -1662,7 +1707,13 @@ const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
   enemies, shrinePosition, playerYaw, resources:resources.nodes, structures:buildings.structures,
   explorationSites:exploration.sites,spiderNests:spiderNests.nests,
   caveEntrance:arachnidCave.entry(),caveInside:arachnidCave.inside,
-  cemeteryPosition:CEMETERY_POS,guardPosition:guard.alive?guard.position:null
+  cemeteryPosition:CEMETERY_POS,guardPosition:guard.alive?guard.position:null,lake:LAKE,
+  missionTarget:missionWaypoint(currentMission(missionProgress,{
+    firesBuilt:survival.firesBuilt>0,hasFarm:buildings.structures.some(s=>s.type==='farmPlot'),
+    guardRecruited:guard.recruited,sitesDiscovered:exploration.sites.filter(s=>s.discovered).length,
+    containersOpened:exploration.sites.reduce((n,s)=>n+s.containers.filter(c=>c.opened).length,0),
+    clinicDiscovered:exploration.sites.some(s=>s.id==='posto'&&s.discovered)
+  })?.id,{player:player.position,structures:buildings.structures,sites:exploration.sites,guard:guard.position,lake:LAKE})
 }));
 
 // ========== GAME LOOP ==========
@@ -1841,6 +1892,7 @@ function animate() {
 
         zombieSenses.prune(elapsed);
         resources.update(dt,player.position,graphicsQuality);
+        fishingLake.update(player.position,graphicsQuality);
         for(const event of exploration.update(player.position,graphicsQuality)){
             if(event.type==='discovered'){showToast(`🗺 Descoberto: ${event.site.label}. Vasculhe os móveis com F!`);saveProgress();}
             if(event.type==='danger'){

@@ -1,3 +1,13 @@
+# Madruga Survival v2.41.0
+
+- Nova ordem do Chaves: Coletar e cuidar da horta. Ele navega até nós válidos, coleta recursos não metálicos com cooldown, planta sementes, rega e colhe canteiros. Recursos entram no inventário com limite e save normal. Ao atacar, mantém prioridade de combate.
+- Janelas construíveis com veneziana que abre por F, custo de madeira/fibras, colisão sólida, linha de visão livre quando aberta e persistência. As ruínas existentes receberam portas de entrada e janelas interativas com F, com estado salvo.
+- Minimapa limpo: removidas dezenas de marcadores de recursos, árvores e pedras. Missão ativa aparece como seta direcional, com lagoa e locais de exploração.
+- Lagoa procedural grande com junco, praia e terreno rebaixado suavemente, preservando a física da margem e com pesca por Y. A superfície não exige assets/CDNs ou reflexo em tempo real.
+- LOD de árvores por distância com copa simplificada e histerese, sem alterar colisão, salvamento ou sombras na proximidade.
+- Animais reagem aos ruídos registrados pelo jogo (passos e atividades); paredes e árvores bloqueiam visão. Som indica posição aproximada sem conceder ataque através de objetos.
+- Testes de regressão; a sessão 3D completa segue exigindo validação visual no navegador.
+
 ## v2.40.0 — Fauna reagindo ao combate, fuga com obstáculos e novas missões
 
 - Javali interrompe a investida e apresenta recoil/squash visual temporário quando recebe golpe, com cooldown físico independente do frame rate.

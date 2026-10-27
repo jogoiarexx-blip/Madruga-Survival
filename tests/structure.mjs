@@ -36,7 +36,7 @@ assert.match(load('scripts/serve.ps1'),/TcpListener/);
 // Teste de inicialização: referências dos novos sistemas precisam estar importadas.
 // A ausência destes imports só falha em runtime, não em `node --check`.
 const imports=new Map([...main.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/gs)]
-  .map(([,names,path])=>[path,new Set(names.split(',').map(name=>name.trim().split(/\s+as\s+/)[0]))]));
+  .map(([,names,path])=>[path.split('?')[0],new Set(names.split(',').map(name=>name.trim().split(/\s+as\s+/)[0]))]));
 for(const [file,symbols] of [
   ['./world/cemetery.js',['createCemetery','CEMETERY_POS','withinCemetery']],
   ['./characters/villager-guard.js',['createVillagerGuard']],

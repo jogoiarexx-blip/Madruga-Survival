@@ -2,8 +2,8 @@ import {batchStaticMeshes} from '../render/static-batching.js';
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
 import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
-  resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js';
-import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding,repairBuildingWithKit} from '../gameplay/base-defense.js';
+  resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js?v=2.41.0-ecosystem';
+import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding,repairBuildingWithKit} from '../gameplay/base-defense.js?v=2.41.0-ecosystem';
 import {validChestItems} from '../gameplay/storage.js';
 import {makeCrop,advanceCrop,validCrop} from '../gameplay/farming.js';
 export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium',mergeGeometries=null}) {
@@ -53,6 +53,13 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
      block(doorPivot,2.40,2.3,.16,wood,1.2,1.29);
      for(const dx of [.2,1.15,2.15])block(doorPivot,.10,2.15,.21,darkWood,dx,1.3);
      block(doorPivot,.18,.15,.24,metal,2.13,1.25);
+   } else if(type==='window'){
+     for(const x of [-1.37,1.37])block(group,.18,2.75,.30,darkWood,x,1.39);
+     block(group,3,.73,.29,warmWood,0,.38);
+     block(group,3,.72,.29,warmWood,0,2.38);
+     for(const x of [-.73,.73])block(group,.10,1.40,.28,darkWood,x,1.4);
+     doorPivot=new THREE.Group();doorPivot.position.set(-1.26,1.05,0);group.add(doorPivot);
+     block(doorPivot,1.18,1.22,.12,cloth,.59,.61,0);
    } else if(type==='bed'){
      for(const x of [-.64,.64])for(const z of [-1,1])block(group,.16,.58,.16,darkWood,x,.30,z);
      block(group,1.48,.18,2.25,wood,0,.44);
@@ -145,7 +152,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    if(type!=='floor'&&Math.hypot(p.x-playerPos.x,p.z-playerPos.z)<(type==='shelter'?2.4:1.15))return false;
    if(!canPlaceAmong(structures,p))return false;
    // Conferir pontas e centro dos módulos para não atravessar árvores e pedras.
-   const offsets=['floor','wall','door','roof','farmPlot'].includes(type)?[-1.25,0,1.25]:[0];
+   const offsets=['floor','wall','door','window','roof','farmPlot'].includes(type)?[-1.25,0,1.25]:[0];
    const angle=(p.rotation||0)*Math.PI/2;
    const c=Math.cos(angle),s=Math.sin(angle);
    for(const ox of offsets){
@@ -157,7 +164,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  function covered(pos){return structures.some(s=>s.type==='roof'&&Math.abs(pos.x-s.x)<1.45&&Math.abs(pos.z-s.z)<1.45);}
  function near(type,pos,radius=4.6){return structures.some(s=>s.type===type&&Math.hypot(s.x-pos.x,s.z-pos.z)<radius);}
  function nearest(pos,r=2.85){return nearestInteractive(structures,pos,r);}
- function toggleDoor(s){if(s?.type!=='door')return false;s.open=!s.open;
+ function toggleDoor(s){if(!['door','window'].includes(s?.type))return false;s.open=!s.open;
    s.doorPivot.rotation.y=s.open?-Math.PI*.55:0;return s.open;}
  function setChestOpen(s,open){if(s?.type==='chest'&&s.lid)s.lid.rotation.x=open?-.85:0;}
  function damage(s,amount){
@@ -187,7 +194,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  function serialize(){return structures.map(s=>{
    const base={type:s.type,x:s.x,z:s.z};
    if(MODULAR_TYPES.includes(s.type))base.rotation=s.rotation;
-   if(s.type==='door')base.open=s.open;
+   if(['door','window'].includes(s.type))base.open=s.open;
    if(s.type==='chest')base.items={...s.items};
    if(s.type==='farmPlot')base.crop={...s.crop};
    base.hp=s.hp;

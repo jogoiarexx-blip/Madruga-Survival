@@ -1,8 +1,8 @@
 // Craft integrado: regras puras, feedback de requisitos e transação atômica.
 // Estruturas continuam usando commitPlacement, com prévia antes do pagamento.
-import {RECIPES,RESOURCES,addResource} from './survival.js?v=2.13.0';
+import {RECIPES,RESOURCES,addResource} from './survival.js?v=2.41.0-ecosystem';
 import {validChestItems} from './storage.js';
-import {isStructureRecipe} from './placement.js';
+import {isStructureRecipe} from './placement.js?v=2.41.0-ecosystem';
 import {TOOL_MAX,makeTool,restoreTool} from './tools.js';
 export const CRAFT_BATCH_LIMIT=20;
 export const CRAFT_STACK_LIMIT=999;

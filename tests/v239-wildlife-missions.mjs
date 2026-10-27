@@ -76,6 +76,6 @@ test('interface exibe missão e módulo de animais não aplica dano instantâneo
  assert.match(main,/advanceMission\(missionProgress,context\)/);
  assert.match(main,/missions:missionProgress/);assert.match(main,/recordMissionEvent\(missionProgress,'cook'/);
  assert.match(wild,/if\(boar\?\.hit\)onHurt\(8/);assert.doesNotMatch(wild,/onHurt\(5,a.group.position\)/);
- assert.match(html,/2\.40\.0-fauna-exploration/);
+ assert.match(html,/2\.41\.0-ecosystem/);
 });
 console.log('v2.39.0: '+n+' regressões aprovadas');

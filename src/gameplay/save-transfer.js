@@ -1,5 +1,5 @@
 // Transferência de checkpoints entre navegadores sem alterar o formato interno do save.
-import {validateSave,readSave,writeSave,SAVE_MAX_BYTES} from './save-system.js';
+import {validateSave,readSave,writeSave,SAVE_MAX_BYTES} from './save-system.js?v=2.41.0-ecosystem';
 export const EXPORT_FORMAT='madruga-survival-save';
 export const EXPORT_VERSION=1;
 export const MAX_IMPORT_BYTES=SAVE_MAX_BYTES+16384;

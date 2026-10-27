@@ -1,9 +1,9 @@
 // v2.20: seletor radial de construções, somente interface; nunca debita recursos.
-import {STRUCTURE_TYPES} from '../world/building-rules.js';
-import {RECIPES,RESOURCES} from '../gameplay/survival.js';
+import {STRUCTURE_TYPES} from '../world/building-rules.js?v=2.41.0-ecosystem';
+import {RECIPES,RESOURCES} from '../gameplay/survival.js?v=2.41.0-ecosystem';
 
 export const BUILD_WHEEL_ICONS=Object.freeze({
-  campfire:'🔥',shelter:'⛺',floor:'🪵',wall:'🧱',door:'🚪',bed:'🛏️',
+  campfire:'🔥',shelter:'⛺',floor:'🪵',wall:'🧱',door:'🚪',window:'🪟',bed:'🛏️',
   chest:'📦',workbench:'🛠️',roof:'🏠',farmPlot:'🌱'
 });
 export const BUILD_WHEEL_TYPES=Object.freeze([...STRUCTURE_TYPES]);
