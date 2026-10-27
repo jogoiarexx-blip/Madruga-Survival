@@ -20,15 +20,30 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  function block(group,w,h,d,mat,x=0,y=0,z=0){
    const p=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);p.position.set(x,y,z);p.castShadow=true;p.receiveShadow=true;group.add(p);return p;
  }
+ // Reforços decorativos usando a mesma geometria simples (compatível com LOD/batching).
+ // Não alteram colisores, dimensões nem transformações das portas.
+ function beam(group,x0,y0,z0,x1,y1,z1,thickness,material){
+   const dx=x1-x0,dy=y1-y0,dz=z1-z0;
+   const length=Math.hypot(dx,dy,dz);
+   const mesh=block(group,thickness,length,thickness,material,(x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
+   mesh.rotation.z=-Math.atan2(dx,dy);
+   return mesh;
+ }
  function createVisual(type,group){
    const detail=geometryDetail(getQuality());
    let flame=null,glow=null,doorPivot=null,lid=null;
+   const detailEnabled=getQuality()!=='low';
    if(type==='campfire'){
      for(let i=0;i<7;i++){const a=i*Math.PI*2/7;
        const p=new THREE.Mesh(new THREE.DodecahedronGeometry(.29,detail.rockSubdivision),stone);
        p.position.set(Math.cos(a)*.75,.15,Math.sin(a)*.75);p.scale.y=.65;group.add(p);}
      for(let i=0;i<3;i++){const p=new THREE.Mesh(new THREE.CylinderGeometry(.12,.14,1.25,detail.resourceCylinder),wood);
        p.rotation.z=Math.PI/2;p.rotation.y=i*Math.PI/3;p.position.y=.18;group.add(p);}
+     // Brasas visíveis entre as lenhas, sem efeitos de luz adicionais.
+     if(detailEnabled){
+       for(const z of [-.28,0,.28])block(group,.50,.055,.16,darkWood,0,.10,z);
+       for(const x of [-.49,.49])block(group,.13,.30,.13,metal,x,.20,0);
+     }
      flame=new THREE.Mesh(new THREE.ConeGeometry(.40,.95,detail.flame),flameMat.clone());
      flame.position.y=.72;group.add(flame);
      glow=new THREE.PointLight(0xffa44b,2.5,10,2);glow.position.y=1.2;group.add(glow);
@@ -36,6 +51,8 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
      block(group,3.3,.18,3.6,wood,0,.12);
      for(const side of [-1,1]){const p=block(group,2.55,.12,3.8,roof,side*.83,1.20);p.rotation.z=side*.82;}
      block(group,1.15,.18,1.75,straw,0,.33,-.25);
+     for(const x of [-1.35,1.35])for(const z of [-1.65,1.65])block(group,.13,1.25,.13,darkWood,x,.65,z);
+     if(detailEnabled)for(const z of [-1.54,1.54])block(group,2.75,.10,.12,warmWood,0,1.02,z);
      for(const z of [-1.72,1.72]){
        const p=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,2.30,detail.resourceCylinder),wood);
        p.position.set(0,1.17,z);group.add(p);
@@ -43,9 +60,18 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    } else if(type==='floor'){
      for(let i=0;i<6;i++)block(group,3,.12,.46,i%2?warmWood:wood,0,.105,-1.25+i*.5);
      for(const x of [-1.37,1.37])block(group,.18,.18,3,darkWood,x,.09);
+     if(detailEnabled){
+       for(const z of [-1.12,.12,1.18])for(const x of [-1.1,1.1])block(group,.07,.015,.07,metal,x,.18,z);
+       for(const z of [-1.51,1.51])block(group,3.0,.10,.12,darkWood,0,.085,z);
+     }
    } else if(type==='wall'){
      for(let i=0;i<10;i++)block(group,3,.25,.22,i%2?warmWood:wood,0,.20+i*.255);
      for(const x of [-1.40,1.40])block(group,.17,2.77,.32,darkWood,x,1.39);
+     block(group,2.95,.15,.32,darkWood,0,2.67);
+     if(detailEnabled){
+       beam(group,-1.23,.35,.15,1.20,2.30,.15,.10,darkWood);
+       for(const y of [.63,1.31,2.00])for(const x of [-1.34,1.34])block(group,.055,.06,.04,metal,x,y,.19);
+     }
    } else if(type==='door'){
      for(const x of [-1.38,1.38])block(group,.24,2.77,.30,darkWood,x,1.39);
      block(group,3,.28,.33,warmWood,0,2.67);
@@ -53,13 +79,30 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
      block(doorPivot,2.40,2.3,.16,wood,1.2,1.29);
      for(const dx of [.2,1.15,2.15])block(doorPivot,.10,2.15,.21,darkWood,dx,1.3);
      block(doorPivot,.18,.15,.24,metal,2.13,1.25);
+     for(const y of [.37,1.92]){
+       block(doorPivot,.20,.17,.26,metal,.16,y,.0);
+       block(doorPivot,.10,.16,.29,darkWood,.16,y,.01);
+     }
+     if(detailEnabled){
+       for(const y of [.50,1.93])block(doorPivot,2.14,.085,.065,warmWood,1.2,y,.12);
+       block(doorPivot,.10,.10,.06,metal,2.17,1.13,.13);
+       block(group,3,.14,.35,darkWood,0,2.85);
+     }
    } else if(type==='window'){
      for(const x of [-1.37,1.37])block(group,.18,2.75,.30,darkWood,x,1.39);
      block(group,3,.73,.29,warmWood,0,.38);
      block(group,3,.72,.29,warmWood,0,2.38);
      for(const x of [-.73,.73])block(group,.10,1.40,.28,darkWood,x,1.4);
      doorPivot=new THREE.Group();doorPivot.position.set(-1.26,1.05,0);group.add(doorPivot);
-     block(doorPivot,1.18,1.22,.12,cloth,.59,.61,0);
+     block(doorPivot,1.18,1.22,.12,warmWood,.59,.61,0);
+     for(const y of [.20,.61,1.02])block(doorPivot,1.12,.065,.15,darkWood,.59,y,.09);
+     if(detailEnabled){
+       block(group,3.0,.12,.47,darkWood,0,1.06,.12); // peitoril
+       for(const x of [-.73,.73])block(group,.14,1.42,.12,warmWood,x,1.40,.11);
+       block(group,.12,1.42,.12,warmWood,0,1.4,.11);
+       for(const y of [1.08,1.75])block(group,2.8,.09,.13,warmWood,0,y,.11);
+       block(doorPivot,.12,.12,.20,metal,1.03,.64,.15);
+     }
    } else if(type==='bed'){
      for(const x of [-.64,.64])for(const z of [-1,1])block(group,.16,.58,.16,darkWood,x,.30,z);
      block(group,1.48,.18,2.25,wood,0,.44);
@@ -70,28 +113,51 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
        pillow.position.set(0,.73,-.80);pillow.scale.set(.55,.12,.22);group.add(pillow);
      }
      block(group,1.55,.73,.15,darkWood,0,.69,-1.06);
+     if(detailEnabled){
+       for(const x of [-.69,.69])block(group,.095,.15,2.16,warmWood,x,.53,0);
+       block(group,1.29,.03,.26,straw,0,.735,-.76);
+     }
    } else if(type==='roof'){
      // Cobertura piramidal sem colisor: o jogador pode caminhar por baixo.
      for(const side of [-1,1]){const top=block(group,2.35,.16,3.34,roof,side*.80,3.30,0);top.rotation.z=side*.63;}
      for(const x of [-1.42,1.42])block(group,.12,.18,3.36,darkWood,x,2.57);
      block(group,.22,.24,3.32,warmWood,0,4.01);
+     if(detailEnabled){
+       for(const side of [-1,1])for(const z of [-1.1,-.34,.42,1.18]){
+         const slat=block(group,2.16,.052,.13,darkWood,side*.82,3.34,z);
+         slat.rotation.z=side*.63;
+       }
+     }
    } else if(type==='farmPlot'){
      block(group,2.75,.20,2.75,darkWood,0,.16);
      block(group,2.48,.10,2.48,stone,0,.29);
      for(const x of [-1.32,1.32])block(group,.13,.26,2.75,wood,x,.21);
      for(const z of [-1.32,1.32])block(group,2.75,.26,.13,wood,0,.21,z);
+     if(detailEnabled)for(const x of [-.7,0,.7])block(group,.07,.055,2.20,darkWood,x,.35,0);
    } else if(type==='workbench'){
      for(const x of [-.96,.96])for(const z of [-.43,.43])block(group,.18,1.02,.18,darkWood,x,.54,z);
      block(group,2.5,.22,1.32,warmWood,0,1.10);
      block(group,.56,.34,.60,metal,.76,1.38,0);
      block(group,.8,.14,.30,stone,-.58,1.30,-.23);
      block(group,.13,.62,.13,metal,-.62,1.53,-.30);
+     // Prateleira e pequenas ferramentas identificam visualmente a bancada.
+     block(group,2.05,.10,.69,wood,0,.43,0);
+     if(detailEnabled){
+       for(const x of [-.85,.85])beam(group,x,.48,-.35,x,1.02,.36,.09,darkWood);
+       block(group,.56,.07,.18,metal,-.38,1.28,.32);
+       block(group,.10,.32,.10,darkWood,-.50,1.45,.32);
+       block(group,.14,.08,.24,metal,.38,1.30,.29);
+     }
    } else if(type==='chest'){
      block(group,1.42,.86,.94,wood,0,.47);
      for(const x of [-.62,.62])block(group,.10,.87,1,metal,x,.47);
      lid=new THREE.Group();lid.position.set(0,.94,-.42);group.add(lid);
      block(lid,1.48,.21,1, warmWood,0,.08,.42);
      block(lid,.19,.23,.24,metal,0,.08,.9);
+     if(detailEnabled){
+       for(const y of [.26,.67])block(group,1.45,.07,1.02,metal,0,y,0);
+       for(const x of [-.61,.61])block(lid,.09,.06,1,metal,x,.16,.42);
+     }
      if(THREE.TorusGeometry){
        const keyhole=new THREE.Mesh(new THREE.TorusGeometry(.07,.018,Math.max(5,Math.floor(detail.decoration/2)),detail.decoration*2),metal);
        keyhole.position.set(0,.1,.995);lid.add(keyhole);

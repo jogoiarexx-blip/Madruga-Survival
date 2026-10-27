@@ -1,3 +1,12 @@
+## v2.44.0 — Correção do zumbido e visual das estruturas
+
+- Removido o oscilador senoidal noturno contínuo de 4200 Hz, provável origem do zumbido ouvido durante o jogo. Os grilos agora emitem chamados curtos e espaçados.
+- Vento e lagoa mais discretos, filtrados em frequências mais suaves, com buffer maior, bordas atenuadas para evitar emendas audíveis e fades que não reiniciam desnecessariamente a cada quadro.
+- Barramento ambiente agora silencia imediatamente na pausa, como já ocorria com os efeitos.
+- Adicionados detalhes geométricos low poly nas estruturas: travessas, pregos, molduras, ferragens, ripas, telhas, prateleira e ferramentas da bancada, cobertura, cama e baú; peças distantes e qualidade baixa continuam leves.
+- Portas e janelas permanecem funcionais; geometria decorativa não participa da física e os salvamentos não mudam.
+- Testes de regressão para áudio noturno, pausa, estética, abertura, LOD por qualidade e save.
+
 ## v2.43.0 — Foley CC0 sob demanda e fallback seguro
 
 - Eventos de passos, portas, combate, coleta e fabricação usam amostras OGG leves da Kenney (CC0), carregadas depois da primeira interação do usuário.

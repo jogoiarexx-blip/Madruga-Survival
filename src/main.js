@@ -1,4 +1,4 @@
-// Madruga Survival v2.42.0 — mixer de áudio ambiente, feedback sonoro e controles de volume.
+// Madruga Survival v2.44.0 — correção do zumbido e estruturas com detalhes leves.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -15,7 +15,7 @@ import {segmentBlockedByCircles} from './world/line-of-sight.js';
 import {selectGuardWork} from './gameplay/guard-work.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
-import { initAudio, sfx, setAudioSettings, getAudioSettings, setAudioPaused, updateSoundscape } from './audio/sfx.js?v=2.43.0-samples';
+import { initAudio, sfx, setAudioSettings, getAudioSettings, setAudioPaused, updateSoundscape } from './audio/sfx.js?v=2.44.0-quiet';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';

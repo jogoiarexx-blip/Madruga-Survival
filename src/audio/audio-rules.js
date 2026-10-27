@@ -21,5 +21,5 @@ export function canTrigger(last,now,cooldown=0){
 }
 export function soundscapeVolumes({nearWater=Infinity,night=false,active=true}={}){
  if(!active)return {wind:0,water:0,night:0};
- return {wind:night?.09:.13,water:.28*distanceVolume(Math.max(0,nearWater),55),night:night?.085:0};
+ return {wind:night?.038:.055,water:.095*distanceVolume(Math.max(0,nearWater),55),night:night?.016:0};
 }

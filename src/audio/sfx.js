@@ -11,7 +11,7 @@ function mix(){
  if(!master)return;
  master.gain.value=settings.muted?0:settings.master;
  effectBus.gain.value=paused?0:settings.effects;
- ambientBus.gain.value=settings.ambient;
+ ambientBus.gain.value=paused?0:settings.ambient;
 }
 export function getAudioSettings(){return {...settings};}
 export function setAudioSettings(patch){
@@ -97,34 +97,45 @@ function limited(name,cooldown,fn){
 }
 function buildLandscape(){
  if(!ctx||landscape)return;
- const size=Math.max(2048,Math.floor(ctx.sampleRate*1.3));
+ const size=Math.max(2048,Math.floor(ctx.sampleRate*5.1));
  const buffer=ctx.createBuffer(1,size,ctx.sampleRate),data=buffer.getChannelData(0);
- // Ruído fixo de baixa intensidade, filtrado para vento e margem da lagoa.
- for(let i=0;i<size;i++)data[i]=Math.random()*2-1;
+ // Ruído suave em loop: bordas zeradas para eliminar estalos de emenda.
+ // Loop longo evita a repetição perceptível a cada 1,3 segundo.
+ const edge=Math.min(Math.floor(size*.025),Math.floor(ctx.sampleRate*.09));
+ for(let i=0;i<size;i++){
+  const taper=Math.min(1,i/edge,(size-1-i)/edge);
+  data[i]=(Math.random()*2-1)*Math.max(0,taper);
+ }
  function channel(type,frequency){
   const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
   source.buffer=buffer;source.loop=true;filter.type=type;filter.frequency.value=frequency;
   gain.gain.value=0;source.connect(filter);filter.connect(gain);gain.connect(ambientBus);source.start();
   return {source,gain};
  }
- const wind=channel('lowpass',310),water=channel('bandpass',1120);
- const cricket=ctx.createOscillator(),cricketGain=ctx.createGain();
- cricket.type='sine';cricket.frequency.value=4200;cricketGain.gain.value=0;
- cricket.connect(cricketGain);cricketGain.connect(ambientBus);cricket.start();
- landscape={wind,water,cricket,cricketGain,elapsed:0,birdAt:0,chirpIndex:0};
+ // Sem oscilador permanente (o antigo grilo em 4200 Hz gerava zumbido contínuo).
+ // Vento e água têm filtros suaves e são silenciosos quando não há partida ativa.
+ const wind=channel('lowpass',185),water=channel('lowpass',550);
+ landscape={wind,water,elapsed:0,birdAt:0,chirpIndex:0,cricketAt:0,cricketIndex:0};
 }
+const landscapeTargets=new WeakMap();
 function fadeGain(node,value){
  if(!ctx||!node)return;
+ const target=Math.max(0,Math.min(.35,Number(value)||0));
+ // Atualizar somente quando o objetivo realmente mudou: evita reiniciar o fade
+ // a 60 FPS e produzir vibração de volume / chamadas desnecessárias.
+ const previousTarget=landscapeTargets.get(node);
+ if(previousTarget!==undefined&&Math.abs(previousTarget-target)<.008)return;
+ landscapeTargets.set(node,target);
  const t=ctx.currentTime;
  node.gain.cancelScheduledValues(t);
- node.gain.setTargetAtTime(value,t,.28);
+ node.gain.setTargetAtTime(target,t,.45);
 }
 function updateLandscapeGains({nearWater=Infinity,night=false,active=true}={}){
  if(!landscape)return;
  const levels=soundscapeVolumes({nearWater,night,active:active&&!paused&&!settings.muted});
  fadeGain(landscape.wind.gain,levels.wind);
  fadeGain(landscape.water.gain,levels.water);
- fadeGain(landscape.cricketGain,levels.night);
+ // Grilos são efeitos curtos em updateSoundscape, nunca um tom sustentado.
 }
 export function updateSoundscape({nearWater=Infinity,night=false,active=false,dt=0}={}){
  if(!ctx||ctx.state!=='running')return;
@@ -133,6 +144,14 @@ export function updateSoundscape({nearWater=Infinity,night=false,active=false,dt
  if(!landscape||!active||paused||settings.muted)return;
  const s=landscape;s.elapsed+=Math.max(0,Math.min(1,dt));
  // Pássaros distantes e espaçados, sem setTimeout e sem tocar no menu/pausa.
+if(night&&s.elapsed>s.cricketAt){
+  // Chamados naturais separados por silêncio, sem tom de 4200 Hz contínuo.
+  s.cricketIndex++;
+  const base=1500+(s.cricketIndex%3)*110;
+  tone(base,.045,'sine',.009,{to:base*.87,bus:'ambient'});
+  tone(base*1.08,.04,'sine',.007,{to:base*.92,delay:.11,bus:'ambient'});
+  s.cricketAt=s.elapsed+5.5+(s.cricketIndex%5)*1.55;
+ }
  if(!night&&s.elapsed>s.birdAt){
   const base=1030+(s.chirpIndex%4)*140;s.chirpIndex++;
   tone(base,.11,'sine',.032,{to:base*1.22,bus:'ambient'});
