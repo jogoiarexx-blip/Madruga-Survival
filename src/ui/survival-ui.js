@@ -174,7 +174,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
   ['build','🧱 Construção com prévia 3D'],
   ['gear','⚒ Ferramentas e equipamentos'],
   ['upgrade','🛠 Melhorias e reparos'],
-  ['food','🍲 Cozinha na fogueira'],
+  ['food','🍲 Refeições prontas'],
   ['healing','🩹 Primeiros socorros']
  ];
  const groups={};
@@ -184,7 +184,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
    groups[id]=make(section,'craft-grid');
  }
  for(const [id,recipe] of Object.entries(RECIPES)){
-   if(CRAFT_STATIONS[id]==='workbench')continue; // Exclusivos da bancada, nunca fabricados diretamente na mochila.
+   if(CRAFT_STATIONS[id] && CRAFT_STATIONS[id]!=='hand')continue; // Bancada e fogueira têm telas próprias; a mochila mantém itens prontos.
    const categoryId=craftCategory(id),item=make(groups[categoryId],'craft-card','button');
    item.type='button';item.classList.add('recipe-btn');
    const heading=make(item,'recipe-title');

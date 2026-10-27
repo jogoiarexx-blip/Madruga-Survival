@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createSurvivalUI} from '../src/ui/survival-ui.js';
 import {WORKBENCH_RECIPES} from '../src/ui/workbench-ui.js';
+import {CAMPFIRE_RECIPES} from '../src/ui/campfire-ui.js';
 import {RECIPES,createSurvival} from '../src/gameplay/survival.js';
 import {craftAvailability} from '../src/gameplay/crafting.js';
 import {createWildlifeWorld,validWildlife,wildlifeDecision} from '../src/world/wildlife.js';
@@ -52,7 +53,7 @@ check('mochila abre e atualiza sem consultar cartões exclusivos da bancada',()=
   assert.doesNotThrow(()=>ui.update(true));
   assert.equal(ui.isOpen,true);
   const cards=nodes.get('recipe-list').querySelectorAll('.craft-card');
-  assert.equal(cards.length,Object.keys(RECIPES).length-WORKBENCH_RECIPES.length);
+  assert.equal(cards.length,Object.keys(RECIPES).length-WORKBENCH_RECIPES.length-CAMPFIRE_RECIPES.length);
   assert.ok(cards.length>0);
   ui.close();assert.doesNotThrow(()=>ui.update());
  }finally{restore();}
@@ -65,7 +66,7 @@ check('mochila pode abrir e fechar várias vezes sem travar HUD',()=>{
 check('todas as receitas exclusivas continuam reservadas à bancada',()=>{
  const src=readFileSync(new URL('../src/ui/survival-ui.js',import.meta.url),'utf8');
  assert.match(src,/for\(const \[id,c\] of Object.entries\(recipeCards\)\)/);
- assert.match(src,/if\(CRAFT_STATIONS\[id\]==='workbench'\)continue/);
+ assert.match(src,/if\(CRAFT_STATIONS\[id\] && CRAFT_STATIONS\[id\]!=='hand'\)continue/);
  assert.ok(WORKBENCH_RECIPES.length>=10);
 });
 class Geom{constructor(...args){this.args=args;}dispose(){}}
@@ -116,6 +117,6 @@ check('versão e cache do módulo corrigido são novos',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/survival-ui\.js\?v=2\.36\.0-fix-inventory/);
  assert.match(main,/wildlife\.js\?v=2\.36\.0-fauna/);
- assert.match(html,/2\.36\.0-wildlife-inventory/);
+ assert.match(html,/2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui/);
 });
 console.log(`v2.36.0: ${count} regressões aprovadas`);

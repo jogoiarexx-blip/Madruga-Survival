@@ -1,4 +1,4 @@
-// Madruga Survival v2.36.0 — mochila sem crash e fauna animada com comportamento próprio.
+// Madruga Survival v2.37.0 — fogueira com receitas exclusivas e mochila simplificada.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -64,6 +64,7 @@ import {createWildlifeWorld} from './world/wildlife.js?v=2.36.0-fauna';
 import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
 import {CRAFT_STATIONS} from './gameplay/crafting.js';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
+import {createCampfireUI} from './ui/campfire-ui.js';
 import {createVillagerGuard} from './characters/villager-guard.js';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
@@ -352,6 +353,7 @@ function updateHUD() {
       bossWrapper.classList.toggle('rage',!!queen.enraged);
     }
     survivalUI.update();
+    campfireUI.update();
     consumableHotbarUI.update();
     skillsUI.update();
     document.getElementById('skill-hud').textContent=`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`;
@@ -848,7 +850,7 @@ loadingEnter.onclick=()=>{
     if(!loadingWarning.classList.contains('hidden'))showToast('⚠ Alguns modelos 3D usam o visual de reserva.');
 };
 function showPauseMenu(message = '') {
-    if (!gameActive || !helpPanel.classList.contains('hidden') || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || buildWheelUI.isOpen) return;
+    if (!gameActive || !helpPanel.classList.contains('hidden') || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || campfireUI.isOpen || buildWheelUI.isOpen) return;
     pauseMenu.classList.remove('hidden');
     if (message) pauseMenu.querySelector('p').textContent = message;
     frameDriver?.wake();
@@ -890,6 +892,7 @@ document.addEventListener('keydown', e => {
     if (e.code === 'KeyI' && !e.repeat && gameActive) {toggleInventory();return;}
     if (e.code === 'KeyU' && !e.repeat && gameActive) {toggleSkills();return;}
     if (e.code === 'Escape' && workbenchUI.isOpen) {workbenchUI.close();return;}
+    if (e.code === 'Escape' && campfireUI.isOpen) {campfireUI.close();return;}
     if (e.code === 'Escape' && survivalUI.isOpen) {closeInventory();return;}
     if (e.code === 'Escape' && storageUI.isOpen) {closeStorage();return;}
     if (e.code === 'Escape' && skillsUI.isOpen) {closeSkills();return;}
@@ -897,7 +900,7 @@ document.addEventListener('keydown', e => {
         showFps = !showFps;
         fpsDisplay.classList.toggle('hidden', !showFps);
     }
-    if (!gameActive || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || e.repeat) return;
+    if (!gameActive || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || campfireUI.isOpen || e.repeat) return;
     if (e.code === 'Space' && isGrounded) {
         playerNoise(12,'jump');
         verticalVelocity = jumpForce; isGrounded = false; sfx.boost(); playerRev5.jump();
@@ -1220,7 +1223,7 @@ const buildWheelUI=createBuildWheelUI({
   onClose:()=>closeBuildWheel()
 });
 function openBuildWheel(){
-  if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen)return false;
+  if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen || campfireUI.isOpen)return false;
   if(placement)releasePlacement();
   buildWheelUI.open();
   Object.keys(keys).forEach(key=>{keys[key]=false;});
@@ -1316,6 +1319,8 @@ const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume
     getSelectedItem:()=>selectedInventoryItem,onSelectItem:chooseInventoryItem,onQuickAssign:quickAssignInventoryItem});
 const workbenchUI=createWorkbenchUI({getStatus:(id)=>craftingStatus(id),onCraft:(id)=>craft(id),
     onClose:()=>{if(gameActive)resumeGame();}});
+const campfireUI=createCampfireUI({getStatus:id=>craftingStatus(id),onCraft:id=>craft(id),
+    onClose:()=>{if(gameActive)resumeGame();}});
 const storageUI=createStorageUI({getInventory:()=>survival.inventory,getBag:updateBagFromInventory,
  onTransfer:(chest,key,direction,amount,index)=>{
   if(!gameActive||!buildings.structures.includes(chest)||closestAccessibleChest()!==chest)return false;
@@ -1327,10 +1332,17 @@ const storageUI=createStorageUI({getInventory:()=>survival.inventory,getBag:upda
   return true;
  },onClose:closeStorage});
 function openWorkbench(){
-    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen)return;
+    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen || campfireUI.isOpen)return;
     if(!buildings.near('workbench',player.position,6))return;
     if(placement)releasePlacement();
     workbenchUI.open();controls.unlock();pauseMenu.classList.add('hidden');
+}
+function openCampfire(){
+    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen||campfireUI.isOpen)return false;
+    if(!buildings.near('campfire',player.position,6))return false;
+    if(placement)releasePlacement();
+    campfireUI.open();controls.unlock();pauseMenu.classList.add('hidden');
+    return true;
 }
 function closeStorage(){
     if(!storageUI.isOpen)return;
@@ -1340,6 +1352,7 @@ function interactWithBuilding(){
     const item=buildings.nearest(player.position,2.85);
     if(!item)return false;
     if(item.type==='workbench'){openWorkbench();return true;}
+    if(item.type==='campfire'){return openCampfire();}
     if(item.type==='farmPlot'){
         const result=workCrop(item.crop,survival.inventory,farmingBonus(skillLevel(survival,'farming')));
         if(result.ok){
@@ -1468,7 +1481,7 @@ function fishNearby(){
     return result.ok;
 }
 function useHotbarSlot(index){
-  if(!gameActive || placement || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen ||
+  if(!gameActive || placement || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || campfireUI.isOpen ||
      !document.getElementById('pause-menu').classList.contains('hidden'))return false;
   const item=hotbarSlots[index];
   return item?consume(item):false;
@@ -1522,6 +1535,9 @@ function craft(recipe,quantity=1){
   if(CRAFT_STATIONS[recipe]==='workbench'&&(!workbenchUI.isOpen||!buildings.near('workbench',player.position,6))){
     showToast('⚠ Use uma bancada próxima [F] para esta receita.');return false;
   }
+  if(CRAFT_STATIONS[recipe]==='campfire'&&(!campfireUI.isOpen||!buildings.near('campfire',player.position,6))){
+    showToast('⚠ Use uma fogueira próxima [F] para cozinhar.');return false;
+  }
   if(isStructureRecipe(recipe)){
     if(quantity!==1)return false;
     return startPlacement(recipe);
@@ -1546,7 +1562,7 @@ function craft(recipe,quantity=1){
   updateHUD();saveProgress();return true;
 }
 function openInventory(){
-    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen)return;
+    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen || campfireUI.isOpen)return;
     if(placement)releasePlacement();
     survivalUI.open();
     controls.unlock();

@@ -10,7 +10,7 @@ let passed=0;const test=(name,fn)=>{fn();console.log('OK v2.30 '+(++passed)+': '
 test('receitas exclusivas da bancada e sem acesso direto na mochila',()=>{
   assert.ok(WORKBENCH_RECIPES.length>=12);
   for(const id of WORKBENCH_RECIPES)assert.equal(CRAFT_STATIONS[id],'workbench');
-  assert.match(read('src/ui/survival-ui.js'),/CRAFT_STATIONS\[id\]==='workbench'\)continue/);
+  assert.match(read('src/ui/survival-ui.js'),/CRAFT_STATIONS\[id\] && CRAFT_STATIONS\[id\]!=='hand'\)continue/);
   assert.match(read('src/main.js'),/workbenchUI\.isOpen\|\|!buildings\.near\('workbench',player\.position,6\)/);
 });
 test('janela própria abre ao usar a bancada, não mais a mochila',()=>{
@@ -71,7 +71,7 @@ test('Chaves substitui visual e mantém recrutamento salvo',()=>{
   assert.match(main,/guard\.setState\(data\.guard\)/);
 });
 test('versão e nomes de cache invalidados',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'2.36.0');
-  assert.match(read('index.html'),/data-build="2\.30\.0-chaves-workbench|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory"/);
+  assert.equal(JSON.parse(read('package.json')).version,'2.37.0');
+  assert.match(read('index.html'),/data-build="2\.30\.0-chaves-workbench|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui"/);
 });
 console.log('v2.30: '+passed+' novos testes aprovados');

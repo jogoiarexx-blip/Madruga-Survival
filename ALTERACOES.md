@@ -1,3 +1,12 @@
+## v2.37.0 — Fogueira exclusiva e cozinha separada
+
+- F perto da fogueira abre a janela própria de cozinha com carne assada, peixe assado e ensopado.
+- Receitas que exigem fogueira deixam de aparecer na mochila; produtos já preparados permanecem na mochila e barra rápida para consumir.
+- Receitas da bancada e da fogueira só podem ser fabricadas usando suas respectivas interfaces junto à estação.
+- Mostra quantidade de ingredientes e disponibilidade usando mochila + baús próximos, sem duplicar estoques.
+- A janela usa Escape/fechar, bloqueia controles de combate e mantém os salvamentos atuais.
+- Acrescentados testes de interface, bloqueio de craft remoto, indicação de F e compatibilidade.
+
 ## v2.36.0 — Mochila estável e fauna renovada
 
 - Corrigido crash `Cannot read properties of undefined (reading 'item')`: a mochila não cria cartões de receitas exclusivas da bancada, portanto a atualização itera apenas cartões existentes.

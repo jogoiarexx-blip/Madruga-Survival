@@ -7,6 +7,7 @@ export function buildingInteractionLabel(structure,maturity=125){
         case 'bed':return 'Dormir até amanhecer';
         case 'chest':return 'Abrir baú';
         case 'workbench':return 'Usar bancada';
+        case 'campfire':return 'Cozinhar na fogueira';
         case 'farmPlot':{
             const crop=structure.crop;
             if(!crop || typeof crop.planted!=='boolean')return 'Verificar canteiro';
