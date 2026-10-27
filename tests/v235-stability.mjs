@@ -83,6 +83,6 @@ test('HUD só substitui texto de configuração quando conteúdo muda',()=>{
  assert.match(ui,/if\(target.textContent!==targetLabel\)target.textContent=targetLabel/);
  assert.match(ui,/if\(target.title!==targetTitle\)target.title=targetTitle/);
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- assert.match(html,/2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui/);
+ assert.match(html,/2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling/);
 });
 console.log(`v2.35.0: ${count} regressões aprovadas`);

@@ -86,8 +86,8 @@ test('não cozinha à distância ou pela mochila, nem mistura bancada com foguei
 test('fogão não altera inventário pronto; HTML, cache e scripts consistentes',()=>{
  const html=read('index.html');const pkg=JSON.parse(read('package.json'));
  for(const id of ['campfire-panel','campfire-recipes','campfire-close','campfire-stock','campfire-message'])assert.ok(html.includes(`id="${id}"`));
- assert.match(html,/data-build="2\.37\.0-campfire-ui"/);
- assert.equal(pkg.version,'2.37.0');
+ assert.match(html,/data-build="2\.37\.0-campfire-ui|2\.38\.0-save-profiling"/);
+ assert.equal(pkg.version,'2.38.0');
  assert.ok(pkg.scripts.test.includes('v237-campfire-ui.mjs'));
  assert.match(read('src/main.js'),/onClose:\(\)=>\{if\(gameActive\)resumeGame\(\);\}/);
  assert.match(html,/id="use-cooked"/);

@@ -1,3 +1,4 @@
+import {setTextIfChanged,setWidthIfChanged} from './dom-patch.js';
 import {RESOURCES,RECIPES,cycleClock,isNight} from '../gameplay/survival.js?v=2.6.0-crafting';
 import {isStructureRecipe} from '../gameplay/placement.js';
 import {craftCategory,batchable,missingCostLabel,craftBatchPreview,CRAFT_STATIONS} from '../gameplay/crafting.js?v=2.6.0-crafting';
@@ -248,10 +249,10 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
  function update(forcePanel=false){
   const state=getState();
   for(const key of ['hunger','thirst','stamina','warmth']){
-    el(key+'-bar').style.width=state[key].toFixed(1)+'%';
-    el(key+'-value').textContent=String(Math.round(state[key]));
+    setWidthIfChanged(el(key+'-bar'),state[key].toFixed(1)+'%');
+    setTextIfChanged(el(key+'-value'),Math.round(state[key]));
   }
-  el('clock-display').textContent='Dia '+state.days+' · '+cycleClock(state)+' · '+(isNight(state)?'🌙 Noite':'☀️ Dia');
+  setTextIfChanged(el('clock-display'),'Dia '+state.days+' · '+cycleClock(state)+' · '+(isNight(state)?'🌙 Noite':'☀️ Dia'));
   el('tool-status').textContent='⛏ Picareta '+state.durability.pickaxe+'/80 · 🔨 '+state.durability.hammer+
     '/100 · 🗡 '+state.durability.spear+'/90'+(state.crafted.ironSpear?' · Lança de ferro':'')+
     (state.crafted.ironHammer?' · Marreta de ferro':'')+(state.crafted.reinforcedGrip?' · Empunhadura reforçada':'')+

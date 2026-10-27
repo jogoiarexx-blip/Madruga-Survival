@@ -715,3 +715,10 @@ body.adventure-loading #asset-loading-status,body.adventure-loading #gpu-warmup-
 #campfire-stock{color:#ffdcaa;}
 #campfire-message{min-height:1.5em;color:#ffd684;}
 @media(max-width:600px){#campfire-panel{padding:8px;align-items:flex-start}.campfire-dialog{padding:14px;max-height:98dvh}#campfire-recipes{grid-template-columns:1fr}}
+
+/* v2.38: backups acessíveis sem alongar demais o menu principal. */
+#overlay .menu-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+#overlay .menu-actions #start-btn,#overlay .menu-actions #load-btn{grid-column:1/-1}
+#overlay .menu-actions #export-save-menu,#overlay .menu-actions #import-save-menu{font-size:13px;padding:10px 7px}
+#pause-menu{overflow-y:auto;padding:15px}
+#pause-menu #export-save-pause,#pause-menu #import-save-pause{font-size:13px;padding:10px 14px}

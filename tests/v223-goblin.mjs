@@ -121,8 +121,8 @@ await test('jogo substitui apenas o tipo normal; outros preservados',()=>{
 });
 await test('versão e testes atualizados, mantendo save e demais inimigos',()=>{
  const pkg=JSON.parse(text('../package.json'));
- assert.ok(['2.23.0','2.24.0','2.25.0','2.26.0','2.26.1','2.27.0','2.28.0','2.29.0','2.29.1','2.30.0','2.31.0','2.32.0','2.33.0','2.34.0','2.35.0','2.36.0','2.37.0'].includes(pkg.version));assert.match(pkg.scripts.test,/v223-goblin.mjs/);
- assert.match(text('../index.html'),/data-build="(?:2\.2[34]\.0-goblin(?:-ik)?|2\.25\.0-menu-hud|2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui)"/);
+ assert.ok(['2.23.0','2.24.0','2.25.0','2.26.0','2.26.1','2.27.0','2.28.0','2.29.0','2.29.1','2.30.0','2.31.0','2.32.0','2.33.0','2.34.0','2.35.0','2.36.0','2.37.0','2.38.0'].includes(pkg.version));assert.match(pkg.scripts.test,/v223-goblin.mjs/);
+ assert.match(text('../index.html'),/data-build="(?:2\.2[34]\.0-goblin(?:-ik)?|2\.25\.0-menu-hud|2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling)"/);
  assert.match(text('../src/gameplay/save-system.js'),/normal:2/);
  assert.match(text('../src/main.js'),/spawnEnemy\('spider'/);
 });

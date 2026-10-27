@@ -117,6 +117,6 @@ check('versão e cache do módulo corrigido são novos',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(main,/survival-ui\.js\?v=2\.36\.0-fix-inventory/);
  assert.match(main,/wildlife\.js\?v=2\.36\.0-fauna/);
- assert.match(html,/2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui/);
+ assert.match(html,/2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling/);
 });
 console.log(`v2.36.0: ${count} regressões aprovadas`);

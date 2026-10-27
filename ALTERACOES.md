@@ -1,3 +1,12 @@
+## v2.38.0 — Diagnóstico de frames, HUD e backup de saves
+
+- Adicionados botões **Exportar save / Importar save (.json)** no menu principal e pausa; apenas arquivos JSON com formato e dados validados são aceitos, com confirmação explícita antes da importação.
+- O save importado não é sobrescrito pelo auto-salvamento ao recarregar; a cópia anterior continua disponível na chave de backup.
+- Instrumentação F3: duração real dos frames, percentil p95, quadros ≥50ms, draw calls e geometrias reutilizadas. Relógio de física mantém o clamp original.
+- Atualização periódica do HUD reduzida de 8,3 para 4 vezes/s; ações importantes continuam atualizando imediatamente. Textos idênticos e indicadores de fome/sede não reescrevem nós DOM desnecessariamente.
+- Adicionados testes para formato de backup, importação inválida, perfil de frames e patches DOM, mais smoke test opcional do navegador. Em ambiente que bloqueia localhost, o teste Chromium valida o DOM isolado e declara que o runtime 3D não foi confirmado.
+- Asset pesquisado: violão acústico CC0 3DAssets.dev, 131,9 KB, 3264 triângulos, https://cdn.3dassets.dev/assets/33789/v1/model.glb . Não integrado ao mundo sem projeto de posicionamento/interação, pois isso afetaria a jogabilidade sem especificação.
+
 ## v2.37.0 — Fogueira exclusiva e cozinha separada
 
 - F perto da fogueira abre a janela própria de cozinha com carne assada, peixe assado e ensopado.

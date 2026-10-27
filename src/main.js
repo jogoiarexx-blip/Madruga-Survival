@@ -1,8 +1,11 @@
-// Madruga Survival v2.37.0 — fogueira com receitas exclusivas e mochila simplificada.
+// Madruga Survival v2.38.0 — recuperação portátil de saves e diagnósticos de frames.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
 import { readSave, writeSave } from './gameplay/save-system.js?v=2.13.0';
+import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js';
+import {createFrameProfiler} from './render/frame-profiler.js';
+import {setTextIfChanged} from './ui/dom-patch.js';
 import { createTerrain } from './world/terrain.js';
 import { createMinimap } from './ui/minimap.js';
 import { weaponTypes } from './gameplay/equipment.js';
@@ -282,9 +285,10 @@ function getGroundHeight(x, z) {
     return Math.sin(x * 0.08) * Math.cos(z * 0.08) * 0.6 + Math.sin(x * 0.3) * 0.15;
 }
 
+function hudText(id,value){return setTextIfChanged(document.getElementById(id),value);}
 function updateHUD() {
     document.getElementById('health-bar').style.width = Math.max(0, health / maxHealth * 100) + '%';
-    document.getElementById('level-display').textContent = `Nível ${level} · XP ${xp}/${xpRequired()} · KOs ${kills}`;
+    hudText('level-display',`Nível ${level} · XP ${xp}/${xpRequired()} · KOs ${kills}`);
     document.getElementById('xp-bar').style.width = `${100 * xp / xpRequired()}%`;
     playerRev5.setGear?.(survival.equippedGear);
     const ability = document.getElementById('ability-display');
@@ -293,10 +297,10 @@ function updateHUD() {
     const combo=document.getElementById('combat-combo-status');
     if(combo){combo.textContent=combat.isAttacking?`⚔ Combo ${combat.comboStep+1}/3`:
       combat.attackBuffered?'⚔ Próximo golpe preparado':combat.comboActive?'⚔ Continue atacando para combinar golpes':'⚔ J/clique: 3 golpes em sequência';}
-    document.getElementById('score-display').textContent = `🌲 Acampamento livre`;
-    document.getElementById('quest-display').textContent = `🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`;
-    document.getElementById('wave-display').textContent = `Perigo: ${wave}/6 · Invasões: ${raidState.waves}`;
-    document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)';
+    hudText('score-display',`🌲 Acampamento livre`);
+    hudText('quest-display',`🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`);
+    hudText('wave-display',`Perigo: ${wave}/6 · Invasões: ${raidState.waves}`);
+    hudText('guard-status',guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)');
     const activityNode=document.getElementById('guard-activity');
     if(activityNode){
       const activities={idle:'Aguardando',down:'Precisa de ajuda',shooting:'Em combate',engaging:'Protegendo área',blocked:'Caminho obstruído',repositioning:'Procurando ângulo de tiro',pathfinding:'Procurando caminho',following:'Acompanhando',patrolling:'Em ronda',defending:'Guardando a base'};
@@ -308,13 +312,13 @@ function updateHUD() {
     }
     const orderBtn=document.getElementById('guard-order');
     if(orderBtn){orderBtn.classList.toggle('hidden',!gameActive||!guard.recruited||!guard.alive);orderBtn.textContent=`🛡 ${guard.mode==='follow'?'Seguir':guard.mode==='patrol'?'Patrulhar':'Defender'} [O]`;}
-    document.getElementById('poison-status').textContent = poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'';
-    document.getElementById('cemetery-status').textContent = withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'';
+    hudText('poison-status',poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'');
+    hudText('cemetery-status',withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'');
     document.getElementById('raid-alert').classList.toggle('hidden',!(gameActive&&elapsed<raidAlertUntil));
     const nearbyGoblin=nearestGoblinEncounter(enemies,player.position);
     const goblinHint=nearbyGoblin && nearbyGoblin.distance<65 ?
       ` · 👺 Goblin ${Math.round(nearbyGoblin.distance)}m${goblinModels.failed?' (visual simples)':''}`:'';
-    document.getElementById('enemies-left').textContent = `Criaturas: ${enemies.length}${goblinHint}`;
+    hudText('enemies-left',`Criaturas: ${enemies.length}${goblinHint}`);
     const nearbyZombies=enemies.filter(e=>e.isZombie&&e.awareness&&
       Math.hypot(e.mesh.position.x-player.position.x,e.mesh.position.z-player.position.z)<24);
     const following=nearbyZombies.filter(e=>e.awareness.state==='chase').length;
@@ -324,8 +328,8 @@ function updateHUD() {
       investigating?`👂 ${investigating} zumbi(s) investigando a área`:
       sneaking?'🤫 Furtividade ativa · ruído reduzido':'👣 Passos normais · C para andar silenciosamente';
     stealthStatus.dataset.alert=following?'danger':investigating?'caution':sneaking?'quiet':'normal';
-    document.getElementById('boost-display').textContent = webSlowTimer>0?`🕸 Teia: ${webSlowTimer.toFixed(1)}s`:speedBoostTimer > 0 ? `⚡ Velocidade: ${speedBoostTimer.toFixed(1)}s` : '';
-    document.getElementById('dodge-display').textContent = dashCooldown > 0 ? `Q · Esquiva: ${dashCooldown.toFixed(1)}s` : 'Q · Esquiva pronta';
+    hudText('boost-display',webSlowTimer>0?`🕸 Teia: ${webSlowTimer.toFixed(1)}s`:speedBoostTimer > 0 ? `⚡ Velocidade: ${speedBoostTimer.toFixed(1)}s` : '');
+    hudText('dodge-display',dashCooldown > 0 ? `Q · Esquiva: ${dashCooldown.toFixed(1)}s` : 'Q · Esquiva pronta');
     const explorationGoal=exploration.objective(player.position);
     const explorationStatus=document.getElementById('exploration-status');
     explorationStatus.textContent=!explorationGoal.ready?'🧭 Procure suprimentos nas casas abandonadas':
@@ -339,16 +343,16 @@ function updateHUD() {
     document.getElementById('spider-nest-status').textContent=nestCount?
       `🕸 Ninhos: ${nestCount} ovos restantes · F recolhe seda e quitina · cuidado com as teias!`:
       '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens';
-    document.getElementById('mission-title').textContent = buildings.structures.some(s=>s.type==='farmPlot')?'Cultive alimentos, pesque e proteja sua casa':'Monte uma horta e complete sua casa';
+    hudText('mission-title',buildings.structures.some(s=>s.type==='farmPlot')?'Cultive alimentos, pesque e proteja sua casa':'Monte uma horta e complete sua casa');
     document.getElementById('mission-goal').textContent = survival.firesBuilt ?
       'Construa um telhado, um canteiro e fabrique uma vara de pesca'  : 'Reúna 4 madeiras e 4 pedras para a fogueira';
-    document.getElementById('equipment-display').textContent = `Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`;
-    document.getElementById('target-hint').textContent = placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · C furtividade · Y pescar · I mochila · U habilidades';
+    hudText('equipment-display',`Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`);
+    hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · C furtividade · Y pescar · I mochila · U habilidades');
     const bossWrapper=document.getElementById('boss-bar-wrapper');
     const showQueen=arachnidCave.inside&&!!queen&&queen.hp>0;
     bossWrapper.classList.toggle('hidden',!showQueen);
     if(showQueen){
-      document.getElementById('boss-name').textContent=queen.enraged?'🕷 RAINHA DAS ARANHAS · FASE 2':'🕷 Rainha das Aranhas · Fase 1';
+      hudText('boss-name',queen.enraged?'🕷 RAINHA DAS ARANHAS · FASE 2':'🕷 Rainha das Aranhas · Fase 1');
       document.getElementById('boss-bar').style.width=`${Math.max(0,Math.min(100,queen.hp/queen.maxHp*100))}%`;
       bossWrapper.classList.toggle('rage',!!queen.enraged);
     }
@@ -356,7 +360,7 @@ function updateHUD() {
     campfireUI.update();
     consumableHotbarUI.update();
     skillsUI.update();
-    document.getElementById('skill-hud').textContent=`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`;
+    hudText('skill-hud',`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`);
     const closestBuilding=buildings.nearest(player.position,2.85);
     const closest=resources.findNearby(player.position);
     const closestLoot=exploration.nearest(player.position);
@@ -899,6 +903,7 @@ document.addEventListener('keydown', e => {
     if (e.code === 'F3' && !e.repeat) {
         showFps = !showFps;
         fpsDisplay.classList.toggle('hidden', !showFps);
+        frameProfiler.reset();
     }
     if (!gameActive || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || campfireUI.isOpen || e.repeat) return;
     if (e.code === 'Space' && isGrounded) {
@@ -1019,6 +1024,36 @@ async function beginAdventure(restore=false) {
 document.getElementById('start-btn').onclick=()=>void beginAdventure(false);
 document.getElementById('load-btn').onclick=()=>void beginAdventure(true);
 document.getElementById('save-btn').onclick = () => saveProgress(true);
+// Exportação usa apenas checkpoint validado; não executa código de arquivos importados.
+function downloadSave(){
+  if(gameActive && !saveProgress()){showToast('⚠ Não foi possível salvar antes da exportação.');return;}
+  try{
+    const json=exportStoredSave(progressStorage);
+    const blob=new Blob([json],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const anchor=document.createElement('a');anchor.href=url;
+    anchor.download='madruga-survival-save-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.append(anchor);anchor.click();anchor.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    showToast('💾 Backup da partida exportado.');
+  }catch(error){showToast('⚠ '+String(error?.message||error));}
+}
+const saveFileInput=document.getElementById('save-file-input');
+for(const id of ['export-save-menu','export-save-pause'])document.getElementById(id).addEventListener('click',downloadSave);
+for(const id of ['import-save-menu','import-save-pause'])document.getElementById(id).addEventListener('click',()=>saveFileInput.click());
+saveFileInput.addEventListener('change',async()=>{
+  const file=saveFileInput.files?.[0];saveFileInput.value='';
+  if(!file)return;
+  if(file.size>MAX_IMPORT_BYTES*2){showToast('⚠ Arquivo de save grande demais.');return;}
+  try{
+    const contents=await file.text();
+    // O save atual só será substituído após confirmação explícita.
+    if(!confirm('Importar esta partida? O checkpoint atual será mantido como backup. A página será recarregada.'))return;
+    importPortableSave(progressStorage,contents);
+    gameActive=false; // impede que o pagehide sobrescreva o save importado
+    location.reload();
+  }catch(error){showToast('⚠ '+String(error?.message||error));}
+});
 updateContinueButton();
 document.getElementById('resume-btn').onclick = resumeGame;
 document.getElementById('restart-btn').onclick = () => location.reload();
@@ -1609,6 +1644,7 @@ const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
 const clock = new THREE.Clock();
 let walkTime = 0, hudTick = 0, minimapTick = 0, fpsTime = 0, fpsFrames = 0;
 let showFps = false;
+const frameProfiler=createFrameProfiler();
 let lastIdleRenderAt=-Infinity;
 const fpsDisplay = document.getElementById('fps-display');
 player.position.y = getGroundHeight(0,0);
@@ -1617,9 +1653,11 @@ camera.lookAt(0, 1.6, 0);
 
 function animate() {
     // Apenas o driver agenda quadros; a tela inicial não cria um loop RAF.
-    const dt = Math.min(clock.getDelta(), 0.05);
+    const frameSeconds=clock.getDelta();
+    const dt = Math.min(frameSeconds, 0.05);
     if (document.hidden) return;
     const running = gameActive && controls.isLocked && health > 0;
+    if(running&&showFps)frameProfiler.record(frameSeconds*1000);
     // Pausa: o driver agenda 4 FPS via timer, evitando RAF contínuo a 60/144 Hz.
     // Relógio é atualizado primeiro, evitando salto de física ao retomar.
     if (!running) {
@@ -1844,7 +1882,7 @@ function animate() {
             }
         }
         hudTick+=dt;
-        if (hudTick>0.12) { hudTick=0;updateHUD(); }
+        if (hudTick>0.25) { hudTick=0;updateHUD(); }
 
         // Dia/noite só evolui durante o jogo ativo.
         dayTime=survival.time;
@@ -1867,7 +1905,8 @@ function animate() {
     if (showFps) {
         fpsTime += dt; fpsFrames++;
         if (fpsTime > .75) {
-            fpsDisplay.textContent = `FPS: ${Math.round(fpsFrames/fpsTime)} · Draw calls: ${renderer.info.render.calls} · Árvores: ${forest.visibilityStats.visibleTrees}/${forest.visibilityStats.totalTrees} · Geom. reutilizadas: ${spawnEnemy.geometryStats().reused}`;
+            const profile=frameProfiler.snapshot();
+            fpsDisplay.textContent = `FPS: ${Math.round(fpsFrames/fpsTime)} · p95: ${profile.p95}ms · Lentidão ≥50ms: ${profile.slowFrames}/${profile.samples} · Draw calls: ${renderer.info.render.calls} · Árvores: ${forest.visibilityStats.visibleTrees}/${forest.visibilityStats.totalTrees} · Geom. reutilizadas: ${spawnEnemy.geometryStats().reused}`;
             fpsTime=0; fpsFrames=0;
         }
     }
