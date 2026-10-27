@@ -121,8 +121,8 @@ await test('jogo substitui apenas o tipo normal; outros preservados',()=>{
 });
 await test('versão e testes atualizados, mantendo save e demais inimigos',()=>{
  const pkg=JSON.parse(text('../package.json'));
- assert.ok(['2.23.0','2.24.0','2.25.0','2.26.0'].includes(pkg.version));assert.match(pkg.scripts.test,/v223-goblin.mjs/);
- assert.match(text('../index.html'),/data-build="(?:2\.2[34]\.0-goblin(?:-ik)?|2\.25\.0-menu-hud|2\.26\.0-adventure-loading)"/);
+ assert.ok(['2.23.0','2.24.0','2.25.0','2.26.0','2.26.1'].includes(pkg.version));assert.match(pkg.scripts.test,/v223-goblin.mjs/);
+ assert.match(text('../index.html'),/data-build="(?:2\.2[34]\.0-goblin(?:-ik)?|2\.25\.0-menu-hud|2\.26\.1-hud-nullfix)"/);
  assert.match(text('../src/gameplay/save-system.js'),/normal:2/);
  assert.match(text('../src/main.js'),/spawnEnemy\('spider'/);
 });

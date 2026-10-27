@@ -1,3 +1,11 @@
+## v2.26.1 — Correção crítica do HUD ao interagir com construções
+
+- Corrige `TypeError: Cannot read properties of null (reading 'planted')` após o REV5 terminar o carregamento.
+- A escolha da ação `[F]` avalia apenas o tipo de construção realmente próximo; portas, camas, baús e bancadas não acessam dados de plantação.
+- Canteiros com dados incompletos mostram mensagem segura, sem interromper a renderização.
+- Testes de regressão dos diferentes tipos de construções e carregamento de um save inválido.
+- O aviso `GLTFLoader: Missing min/max properties` é um aviso não fatal do GLB, separado desta correção.
+
 ## REV226 (v2.26.0) — tela de loading entre menu e partida
 
 - Loading responsivo com barra, percentual e tarefas reais concluídas para **Novo jogo** e **Continuar**.

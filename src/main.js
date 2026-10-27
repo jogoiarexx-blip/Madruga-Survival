@@ -1,4 +1,4 @@
-// Madruga Survival v2.26.0 — carregamento em etapas antes da partida, menu sem simulação.
+// Madruga Survival v2.26.1 — correção HUD de interação sem acessar crop nulo.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -17,6 +17,7 @@ import {createFrameDriver} from './render/startup-scheduler.js';
 import {createAdventureLoader} from './render/adventure-loader.js';
 import {createGpuWarmup} from './render/gpu-warmup.js';
 import {createMenuPreview} from './ui/menu-preview.js';
+import {buildingInteractionLabel} from './ui/building-interaction-label.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
 import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
@@ -332,8 +333,8 @@ function updateHUD() {
     if(placement){
         prompt.classList.add('hidden');
     }else if(closestBuilding&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
-        const names={door:closestBuilding.open?'Fechar porta':'Abrir porta',bed:'Dormir até amanhecer',chest:'Abrir baú',workbench:'Usar bancada',farmPlot:!closestBuilding.crop.planted?'Plantar sementes':closestBuilding.crop.growth>=CROP_MATURITY?'Colher legumes':closestBuilding.crop.water>8?'Canteiro crescendo':'Regar canteiro'};
-        prompt.textContent=`[F] ${names[closestBuilding.type]} · [X] desmontar`;
+        const action=buildingInteractionLabel(closestBuilding,CROP_MATURITY);
+        prompt.textContent=`[F] ${action} · [X] desmontar`;
         prompt.classList.remove('hidden');
     }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=guard.hp===0?'[F] Reanimar aldeão com 2 frutas e 1 água':'[F] Recrutar aldeão para defender sua base';
