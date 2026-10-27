@@ -1,3 +1,11 @@
+## v2.40.0 — Fauna reagindo ao combate, fuga com obstáculos e novas missões
+
+- Javali interrompe a investida e apresenta recoil/squash visual temporário quando recebe golpe, com cooldown físico independente do frame rate.
+- Coelhos sondam 8 direções possíveis à frente, desviam de construções antes de encostar nelas e evitam avançar quando todos os trajetos estão obstruídos.
+- Três missões pós-Chaves aproveitam os quatro locais existentes: descobrir dois, saquear três recipientes, encontrar o posto de socorro. Recompensas distintas de ferro, tecido, sucata, curativos e água.
+- Progresso das missões de exploração obtido do estado já persistido dos POIs; saves antigos com as seis missões completas continuam na etapa 7 sem repetir premiações.
+- Testes de regressão cobrem desvio, áreas fechadas, animação de impacto, persistência de progresso e recompensas.
+
 ## v2.39.0 — fauna, combate em grupo e missões
 
 - Javali anuncia a investida com a cabeça abaixada e marcas laranja. Depois de 0,72 s dispara em linha reta; só causa dano uma vez se o jogador permanece dentro do alcance e cone frontal; bloqueio encerra investida.

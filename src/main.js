@@ -1,4 +1,4 @@
-// Madruga Survival v2.39.0 — investida do javali, IA em grupo e missões progressivas.
+// Madruga Survival v2.40.0 — javali com reação a impacto, coelho desvia de obstáculos e exploração recompensada.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -347,7 +347,12 @@ function updateHUD() {
       `🕸 Ninhos: ${nestCount} ovos restantes · F recolhe seda e quitina · cuidado com as teias!`:
       '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens';
     const context={firesBuilt:survival.firesBuilt>0||buildings.structures.some(s=>s.type==='campfire'),
-      hasFarm:buildings.structures.some(s=>s.type==='farmPlot'),guardRecruited:guard.recruited};
+      hasFarm:buildings.structures.some(s=>s.type==='farmPlot'),guardRecruited:guard.recruited,
+      // Estado existente dos locais já descobertos/vasculhados: não é necessário
+      // modificar o formato de checkpoint nem repetir recompensas ao continuar.
+      sitesDiscovered:exploration.sites.filter(s=>s.discovered).length,
+      containersOpened:exploration.sites.reduce((n,s)=>n+s.containers.filter(c=>c.opened).length,0),
+      clinicDiscovered:exploration.sites.some(s=>s.id==='posto'&&s.discovered)};
     if(gameActive){
       const completed=advanceMission(missionProgress,context);
       if(completed){

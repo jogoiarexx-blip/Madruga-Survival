@@ -1,7 +1,8 @@
 import {geometryDetail} from '../render/geometry-detail.js';
 import {createSeededRandom} from './random.js';
 import {isInAttackArc} from '../gameplay/combat.js';
-import {advanceBoarCharge,BOAR_WINDUP} from './boar-charge.js';
+import {advanceBoarCharge,BOAR_WINDUP,startBoarHitReaction,boarHitPose} from './boar-charge.js';
+import {chooseRabbitEscape} from './rabbit-navigation.js';
 
 // Animais low-poly leves. O corpo usa a mesma geometria compartilhada em
 // múltiplos espécimes; apenas transforms individuais são animados.
@@ -101,7 +102,7 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
   g.position.set(x,getGroundHeight(x,z),z);g.rotation.y=heading+Math.PI;scene.add(g);
   const a={type,x,z,heading,hp:hp??(type==='boar'?5:2),group:g,rig,
    pace:1,attackDelay:0,wander:0,step:0,alert:false,behavior:'wander',
-   chargePhase:'idle',chargeLeft:0,chargeHit:false,escapeBurst:1.2,escapeRest:0};
+   chargePhase:'idle',chargeLeft:0,chargeHit:false,staggerLeft:0,escapeBurst:1.2,escapeRest:0,escapeReplan:0,escapeHeading:heading,escapeBlocked:false};
   animals.push(a);return a;
  }
  function generate(seed=2026,quality='medium'){
@@ -153,17 +154,25 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
      if(a.escapeBurst===0&&dist>6&&a.escapeRest===0){
        a.escapeRest=.18;a.escapeBurst=1.25;
      }
-     desired=Math.atan2(dx,dz);
+     a.escapeReplan=Math.max(0,(a.escapeReplan||0)-frame);
+     // Calcular a fuga antes de correr: não esperar o animal ficar preso na parede.
+     const lookX=a.x+Math.sin(a.escapeHeading)*1.25,lookZ=a.z+Math.cos(a.escapeHeading)*1.25;
+     if(a.escapeReplan===0 || !isPositionFree(lookX,lookZ,.46)){
+       const route=chooseRabbitEscape({position:a,player,isFree:isPositionFree});
+       a.escapeHeading=route.heading;a.escapeBlocked=route.blocked;
+       a.escapeReplan=.26;
+     }
+     desired=a.escapeHeading;
    }else if(behavior==='defend'&&dist>1.1)desired=Math.atan2(-dx,-dz);
    else if(a.wander<=0){desired=a.heading+(Math.random()-.5)*1.8;a.heading=desired;a.wander=3+Math.random()*3;}
-   if(a.type==='rabbit'&&behavior!=='flee'){a.escapeBurst=1.2;a.escapeRest=0;}
+   if(a.type==='rabbit'&&behavior!=='flee'){a.escapeBurst=1.2;a.escapeRest=0;a.escapeReplan=0;a.escapeBlocked=false;}
    a.wander=Math.max(0,a.wander-frame);
    // Durante a investida a direção fica fixada: o jogador pode desviar.
    if(boar&&['windup','charge'].includes(boar.phase))desired=boar.heading;
-   a.heading=turnTowards(a.heading,desired,frame*(boar?.phase==='charge'?14:behavior==='forage'||behavior==='wander'?1.3:5.2));
+   a.heading=turnTowards(a.heading,desired,frame*(boar?.phase==='charge'?14:behavior==='flee'?9:behavior==='forage'||behavior==='wander'?1.3:5.2));
    const speed=boar?boar.phase==='windup'||boar.phase==='rest'?0:
       boar.phase==='charge'?boar.speed:behavior==='defend'?(dist>1.25?2.45:0):.44:
-      behavior==='flee'?(a.escapeRest>0?0:5.2):.58;
+      behavior==='flee'?(a.escapeRest>0||a.escapeBlocked?0:5.2):.58;
    const nx=a.x+Math.sin(a.heading)*speed*frame;
    const nz=a.z+Math.cos(a.heading)*speed*frame;
    let moved=false;
@@ -171,6 +180,7 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
     a.x=nx;a.z=nz;moved=true;
    }else if(speed>0){
      if(boar?.phase==='charge'){a.chargePhase='rest';a.chargeLeft=1.65;a.attackDelay=1.65;}
+     if(a.type==='rabbit'){a.escapeReplan=0;a.escapeBlocked=false;}
      a.heading=turnTowards(a.heading,a.heading+Math.PI*.7,frame*3.4);a.wander=0;
    }
    a.heading=Math.atan2(Math.sin(a.heading),Math.cos(a.heading));
@@ -185,11 +195,14 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
     a.rig.legs.forEach((leg,i)=>{leg.rotation.x=Math.sin(a.step+(i%2)*Math.PI)*.23*amplitude;});
     a.rig.tail.scale.y=1+Math.sin(a.step)*.05;
    }else{
-    a.group.position.set(a.x,getGroundHeight(a.x,a.z),a.z);
-    a.rig.body.rotation.x=Math.sin(a.step)*.035*amplitude;
+    const reaction=boarHitPose(a.staggerLeft);
+    a.group.position.set(a.x,getGroundHeight(a.x,a.z)+reaction.lift,a.z);
+    a.group.scale.set(1+reaction.swell,1-reaction.squash,1+reaction.swell);
+    a.rig.body.rotation.x=Math.sin(a.step)*.035*amplitude+reaction.pitch;
     a.rig.head.rotation.x=boar?.phase==='windup'?-.30-0.05*Math.sin((BOAR_WINDUP-a.chargeLeft)*19):
       boar?.phase==='charge'?-.25:a.alert?-.11:Math.sin(a.step*.35)*.03;
-    a.rig.warning.visible=boar?.phase==='windup';
+    a.rig.head.rotation.x+=reaction.headDip;
+    a.rig.warning.visible=boar?.phase==='windup'||reaction.active;
     a.rig.warning.scale.set(1+Math.sin(a.chargeLeft*23)*.2,1,1);
     a.rig.legs.forEach((leg,i)=>{leg.rotation.x=Math.sin(a.step+((i%3)===0?Math.PI:0))*.28*amplitude;});
     a.rig.tail.rotation.z=Math.sin(a.step*.55)*.2;
@@ -208,6 +221,7 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
    if(!canSee(player,a.group.position))continue;
    a.hp-=Math.max(1,Math.floor(damage));hit++;
    if(a.hp<=0){const i=animals.indexOf(a);if(i>=0)animals.splice(i,1);scene.remove(a.group);onHunt(a.type,a.type==='boar'?3:1);}
+   else if(a.type==='boar'){startBoarHitReaction(a);a.heading=Math.atan2(player.x-a.x,player.z-a.z);}
    else a.heading=Math.atan2(a.x-player.x,a.z-player.z);
   }
   return hit;

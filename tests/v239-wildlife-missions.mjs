@@ -51,7 +51,7 @@ test('missões têm etapas, progresso e recompensas sem repetição',()=>{
  recordMissionEvent(state,'defeat',5);assert.equal(advanceMission(state,context).id,'defend');
  assert.equal(advanceMission(state,context),null);
  context.guardRecruited=true;assert.equal(advanceMission(state,context).id,'ally');
- assert.equal(state.stage,MISSIONS.length);assert.equal(advanceMission(state,context),null);
+ assert.equal(state.stage,6);assert.equal(currentMission(state,context).id,'survey');
 });
 test('estados malformados são rejeitados, saves antigos migrados',()=>{
  assert.deepEqual(restoreMissionProgress(undefined),createMissionProgress());
@@ -76,6 +76,6 @@ test('interface exibe missão e módulo de animais não aplica dano instantâneo
  assert.match(main,/advanceMission\(missionProgress,context\)/);
  assert.match(main,/missions:missionProgress/);assert.match(main,/recordMissionEvent\(missionProgress,'cook'/);
  assert.match(wild,/if\(boar\?\.hit\)onHurt\(8/);assert.doesNotMatch(wild,/onHurt\(5,a.group.position\)/);
- assert.match(html,/2\.39\.0-wildlife-quests/);
+ assert.match(html,/2\.40\.0-fauna-exploration/);
 });
 console.log('v2.39.0: '+n+' regressões aprovadas');

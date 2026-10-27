@@ -10,6 +10,7 @@ const facing=(heading,dx,dz)=>{
 export function advanceBoarCharge(a,{dt,distance,playerDx,playerDz,canSee=true}={}){
   const frame=Math.max(0,Math.min(.1,Number(dt)||0));
   a.chargePhase ||= 'idle'; a.chargeLeft=Math.max(0,(a.chargeLeft||0)-frame);
+  a.staggerLeft=Math.max(0,(a.staggerLeft||0)-frame);
   a.attackDelay=Math.max(0,(a.attackDelay||0)-frame);
   if(a.chargePhase==='idle' && a.attackDelay<=0 && canSee && distance>=2.15 && distance<=7.2){
     a.chargePhase='windup';a.chargeLeft=BOAR_WINDUP;
@@ -23,4 +24,21 @@ export function advanceBoarCharge(a,{dt,distance,playerDx,playerDz,canSee=true}=
   const hit=a.chargePhase==='charge'&&!a.chargeHit&&distance<1.75&&inCone&&canSee;
   if(hit){a.chargeHit=true;a.attackDelay=BOAR_REST;}
   return {phase:a.chargePhase,heading:a.chargeHeading??a.heading,hit,speed:a.chargePhase==='charge'?8.0:0};
+}
+
+// Reação recebendo golpe: interrompe a investida, sem mudar a física do collider.
+export const BOAR_HIT_DURATION=.36;
+export function startBoarHitReaction(animal){
+ if(!animal||animal.hp<=0)return false;
+ animal.staggerLeft=BOAR_HIT_DURATION;
+ animal.chargePhase='rest';animal.chargeLeft=Math.max(animal.chargeLeft||0,.60);
+ animal.attackDelay=Math.max(animal.attackDelay||0,.70);
+ animal.chargeHit=false;
+ return true;
+}
+export function boarHitPose(remaining=0){
+ const t=Math.max(0,Math.min(1,(Number(remaining)||0)/BOAR_HIT_DURATION));
+ const impact=Math.sin(Math.PI*t);
+ return {active:t>0,pitch:impact?-.22*impact:0,headDip:.30*impact,
+   squash:.075*impact,swell:.045*impact,lift:.035*impact};
 }
