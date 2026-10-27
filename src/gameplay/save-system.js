@@ -11,6 +11,7 @@ import {maxBuildingHP} from './base-defense.js';
 import {restoreRaid} from './raids.js';
 import {validCrop} from './farming.js';
 import {validWildlife} from '../world/wildlife.js';
+import {restoreMissionProgress} from './mission-progress.js';
 import {validExplorationSave} from '../world/exploration.js';
 import {validSpiderNestSave} from '../world/spider-nests.js';
 import {validCaveSave} from '../world/arachnid-cave.js';
@@ -56,11 +57,12 @@ export function validateSave(data){
      (b.type!=='farmPlot'||b.crop===undefined||validCrop(b.crop))&&
      (b.hp===undefined||integer(b.hp,1,maxBuildingHP(b.type)))))return null;
  if(data.wildlife!==undefined&&!validWildlife(data.wildlife))return null;
+ const missions=restoreMissionProgress(data.missions);if(!missions)return null;
  if(!validExplorationSave(data.exploration)||!validSpiderNestSave(data.spiderNests)||!validCaveSave(data.arachnidCave))return null;
  const raid=restoreRaid(data.raid);if(!raid)return null;
  const guard=restoreGuard(data.guard);if(!guard)return null;
  if(data.poisonTimer!==undefined&&!number(data.poisonTimer,0,30))return null;
- return {...data,survival,hotbar,inventorySlots,raid,...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
+ return {...data,survival,hotbar,inventorySlots,raid,...(data.missions===undefined?{}:{missions}),...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
 }
 function parseCheckpoint(raw){
   if(typeof raw!=='string'||raw.length> SAVE_MAX_BYTES || raw.length===0)return null;

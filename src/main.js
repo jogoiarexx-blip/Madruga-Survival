@@ -1,10 +1,11 @@
-// Madruga Survival v2.38.0 — recuperação portátil de saves e diagnósticos de frames.
+// Madruga Survival v2.39.0 — investida do javali, IA em grupo e missões progressivas.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
 import { readSave, writeSave } from './gameplay/save-system.js?v=2.13.0';
 import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js';
 import {createFrameProfiler} from './render/frame-profiler.js';
+import {createMissionProgress,restoreMissionProgress,recordMissionEvent,currentMission,advanceMission} from './gameplay/mission-progress.js';
 import {setTextIfChanged} from './ui/dom-patch.js';
 import { createTerrain } from './world/terrain.js';
 import { createMinimap } from './ui/minimap.js';
@@ -200,6 +201,7 @@ let raidState=createRaidState(),raidAlertUntil=0,poisonTimer=0,cemeterySpawnTime
 let health = 100;
 let maxHealth = 100;
 let level = 1, xp = 0, kills = 0;
+let missionProgress=createMissionProgress();
 // As ruínas continuam como ponto de exploração e marco visual da floresta.
 const shrinePosition = Object.freeze({x:32,z:-28});
 
@@ -275,6 +277,7 @@ const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     canSee:(from,to)=>!buildings.blocksLine(from,to),
     onHurt:(amount,origin)=>{if(gameActive)damagePlayer(amount,origin);},
     onHunt:(type,amount)=>{
+      recordMissionEvent(missionProgress,'hunt');
       const quantity=amount+huntingBonus(skillLevel(survival,'hunting'));
       addResource(survival,'meat',quantity);gainXP(type==='boar'?3:1);
       earnSkill('hunting',type==='boar'?42:26);
@@ -343,9 +346,23 @@ function updateHUD() {
     document.getElementById('spider-nest-status').textContent=nestCount?
       `🕸 Ninhos: ${nestCount} ovos restantes · F recolhe seda e quitina · cuidado com as teias!`:
       '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens';
-    hudText('mission-title',buildings.structures.some(s=>s.type==='farmPlot')?'Cultive alimentos, pesque e proteja sua casa':'Monte uma horta e complete sua casa');
-    document.getElementById('mission-goal').textContent = survival.firesBuilt ?
-      'Construa um telhado, um canteiro e fabrique uma vara de pesca'  : 'Reúna 4 madeiras e 4 pedras para a fogueira';
+    const context={firesBuilt:survival.firesBuilt>0||buildings.structures.some(s=>s.type==='campfire'),
+      hasFarm:buildings.structures.some(s=>s.type==='farmPlot'),guardRecruited:guard.recruited};
+    if(gameActive){
+      const completed=advanceMission(missionProgress,context);
+      if(completed){
+        for(const [item,amount] of Object.entries(completed.items))addResource(survival,item,amount);
+        // A experiência recompensa a etapa; evitando chamar gainXP() (que atualiza o HUD).
+        xp+=completed.xp;
+        while(xp>=xpRequired()&&level<100){xp-=xpRequired();level++;maxHealth+=12;health=Math.min(maxHealth,health+30);}
+        showToast(`🏆 Missão concluída: ${completed.title} · +${completed.xp} XP`);
+        saveProgress();
+      }
+    }
+    const mission=currentMission(missionProgress,context);
+    hudText('mission-title',mission?`🎯 ${mission.title}`:'🏆 Missões do acampamento concluídas');
+    hudText('mission-goal',mission?`${mission.description} · ${mission.count}/${mission.target} · +${mission.xp} XP`:
+      'Continue sobrevivendo, explorando e melhorando sua base.');
     hudText('equipment-display',`Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`);
     hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · C furtividade · Y pescar · I mochila · U habilidades');
     const bossWrapper=document.getElementById('boss-bar-wrapper');
@@ -666,6 +683,7 @@ function serializeProgress() {
     inventorySlots=reconcileBag(inventorySlots,survival.inventory) || createBag(survival.inventory);
     return {
         seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
+        missions:missionProgress,
         currentWeapon,hotbar:hotbarSlots,inventorySlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
         wildlife:wildlife.serialize(),exploration:exploration.serialize(),spiderNests:spiderNests.serialize(),
@@ -693,6 +711,7 @@ function replaceItems(items, data, create) {
 function restoreProgress(data) {
     level=data.level;xp=data.xp;kills=data.kills;maxHealth=data.maxHealth;health=data.health;
     wave=data.wave;elapsed=data.elapsed;spawnTimer=15;
+    missionProgress=restoreMissionProgress(data.missions)||createMissionProgress();
     zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;
     survival=data.survival;hotbarSlots=[...data.hotbar];inventorySlots=data.inventorySlots.map(s=>s?{...s}:null);raidState=data.raid||createRaidState();raidAlertUntil=0;
     poisonTimer=data.poisonTimer||0;cemeterySpawnTimer=5;guard.setState(data.guard);
@@ -990,7 +1009,7 @@ async function beginAdventure(restore=false) {
         ...(worldInitialized?[]:initWorld()),
         {name:save?'Restaurando inventário e progresso':'Organizando a nova sobrevivência',load:()=>{
             if(save)restoreProgress(save);
-            else{hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
+            else{missionProgress=createMissionProgress();hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
         }},
         {name:'Compilando shaders e texturas do cenário',optional:true,load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
         {name:'Preparando Seu Madruga e animações',optional:true,load:()=>playerRev5.preload()},
@@ -1081,7 +1100,7 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
-    onEnemyKilled:(type,drop,enemy)=>{kills++;if(type==='spider'){
+    onEnemyKilled:(type,drop,enemy)=>{kills++;recordMissionEvent(missionProgress,'defeat');if(type==='spider'){
         if(enemy?.spiderVariant==='matriarch'&&arachnidCave.defeatBoss()){
             showToast('🏆 Rainha derrotada! O grande cristal da caverna foi revelado.');
             saveProgress();
@@ -1591,6 +1610,7 @@ function craft(recipe,quantity=1){
   if(recipe==='spear'){unlockedWeaponCount=3;equipWeapon(2)}
   if(['ironSpear','ironHammer','reinforcedGrip','spikedHammer','hardenedSpear','armoredBroom'].includes(recipe))setWeaponUpgrades(survival.crafted);
   const cooking=['cooked','grilledFish','stew'].includes(recipe);
+  if(cooking)recordMissionEvent(missionProgress,'cook',quantity);
   earnSkill('crafting',Math.min(300,(cooking?14:22)*quantity));
   sfx.boost();
   showToast('🔨 '+RECIPES[recipe].label+' · '+(result.produced>1?'+'+result.produced:'fabricado')+'!');

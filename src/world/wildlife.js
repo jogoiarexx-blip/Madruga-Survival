@@ -1,6 +1,7 @@
 import {geometryDetail} from '../render/geometry-detail.js';
 import {createSeededRandom} from './random.js';
 import {isInAttackArc} from '../gameplay/combat.js';
+import {advanceBoarCharge,BOAR_WINDUP} from './boar-charge.js';
 
 // Animais low-poly leves. O corpo usa a mesma geometria compartilhada em
 // múltiplos espécimes; apenas transforms individuais são animados.
@@ -86,7 +87,12 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
   }
   const tail=new THREE.Group();tail.position.set(0,.75,.88);g.add(tail);
   sphere(tail,boarMat,0,.015,.19,.055,.065,.25);
-  return {body,head,legs,mane,tail};
+  // Contraste de cor e inclinação da cabeça anunciam o ataque antes do impacto.
+  const warning=new THREE.Group();head.add(warning);warning.visible=false;
+  const warningFur=mat(0xeb8244);
+  sphere(warning,warningFur,-.31,.29,-.45,.075,.095,.072);
+  sphere(warning,warningFur,.31,.29,-.45,.075,.095,.072);
+  return {body,head,legs,mane,tail,warning};
  }
  function spawn(type,x,z,hp=null,heading=0){
   if(animals.length>=MAX_ANIMALS)return null;
@@ -94,7 +100,8 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
   const rig=type==='rabbit'?rabbit(g):boar(g);
   g.position.set(x,getGroundHeight(x,z),z);g.rotation.y=heading+Math.PI;scene.add(g);
   const a={type,x,z,heading,hp:hp??(type==='boar'?5:2),group:g,rig,
-   pace:1,attackDelay:0,wander:0,step:0,alert:false,behavior:'wander'};
+   pace:1,attackDelay:0,wander:0,step:0,alert:false,behavior:'wander',
+   chargePhase:'idle',chargeLeft:0,chargeHit:false,escapeBurst:1.2,escapeRest:0};
   animals.push(a);return a;
  }
  function generate(seed=2026,quality='medium'){
@@ -130,26 +137,42 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
   const radius=quality==='low'?45:quality==='medium'?72:100;
   for(const a of animals){
    const dx=a.x-player.x,dz=a.z-player.z,dist=Math.hypot(dx,dz);
-   a.group.visible=dist<radius;a.attackDelay=Math.max(0,a.attackDelay-frame);
+   a.group.visible=dist<radius;
    if(dist>radius)continue;
    const close=dist<(a.type==='rabbit'?RABBIT_ALERT_RADIUS:BOAR_DEFENSE_RADIUS);
    // A detecção depende da linha de visão a distâncias não imediatas.
    const hasVisual=dist<2.5||(!close?false:canSee(a.group.position,player));
    const behavior=wildlifeDecision(a.type,dist,hasVisual);
    a.behavior=behavior;a.alert=behavior==='flee'||behavior==='defend';
+   const boar=a.type==='boar'?advanceBoarCharge(a,{dt:frame,distance:dist,
+     playerDx:-dx,playerDz:-dz,canSee:hasVisual}):null;
    let desired=a.heading;
-   if(behavior==='flee')desired=Math.atan2(dx,dz);
-   else if(behavior==='defend'&&dist>1.1)desired=Math.atan2(-dx,-dz);
+   if(a.type==='rabbit'&&behavior==='flee'){
+     a.escapeBurst=Math.max(0,a.escapeBurst-frame);
+     a.escapeRest=Math.max(0,a.escapeRest-frame);
+     if(a.escapeBurst===0&&dist>6&&a.escapeRest===0){
+       a.escapeRest=.18;a.escapeBurst=1.25;
+     }
+     desired=Math.atan2(dx,dz);
+   }else if(behavior==='defend'&&dist>1.1)desired=Math.atan2(-dx,-dz);
    else if(a.wander<=0){desired=a.heading+(Math.random()-.5)*1.8;a.heading=desired;a.wander=3+Math.random()*3;}
+   if(a.type==='rabbit'&&behavior!=='flee'){a.escapeBurst=1.2;a.escapeRest=0;}
    a.wander=Math.max(0,a.wander-frame);
-   a.heading=turnTowards(a.heading,desired,frame*(behavior==='forage'||behavior==='wander'?1.3:5.2));
-   const speed=behavior==='flee'?5.0:behavior==='defend'?(dist>1.25?3.65:0):a.type==='rabbit'?.58:.44;
+   // Durante a investida a direção fica fixada: o jogador pode desviar.
+   if(boar&&['windup','charge'].includes(boar.phase))desired=boar.heading;
+   a.heading=turnTowards(a.heading,desired,frame*(boar?.phase==='charge'?14:behavior==='forage'||behavior==='wander'?1.3:5.2));
+   const speed=boar?boar.phase==='windup'||boar.phase==='rest'?0:
+      boar.phase==='charge'?boar.speed:behavior==='defend'?(dist>1.25?2.45:0):.44:
+      behavior==='flee'?(a.escapeRest>0?0:5.2):.58;
    const nx=a.x+Math.sin(a.heading)*speed*frame;
    const nz=a.z+Math.cos(a.heading)*speed*frame;
    let moved=false;
    if(speed>0&&Math.abs(nx)<98&&Math.abs(nz)<98&&isPositionFree(nx,nz,a.type==='boar'?.8:.45)){
     a.x=nx;a.z=nz;moved=true;
-   }else if(speed>0){a.heading=turnTowards(a.heading,a.heading+Math.PI*.7,frame*3.4);a.wander=0;}
+   }else if(speed>0){
+     if(boar?.phase==='charge'){a.chargePhase='rest';a.chargeLeft=1.65;a.attackDelay=1.65;}
+     a.heading=turnTowards(a.heading,a.heading+Math.PI*.7,frame*3.4);a.wander=0;
+   }
    a.heading=Math.atan2(Math.sin(a.heading),Math.cos(a.heading));
    a.step+=frame*(moved?(a.type==='rabbit'?15.5:9.2)*Math.max(.5,speed/3.7):2.5);
    const cadence=Math.sin(a.step),amplitude=moved?Math.min(1,speed/3.0):0;
@@ -164,16 +187,18 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
    }else{
     a.group.position.set(a.x,getGroundHeight(a.x,a.z),a.z);
     a.rig.body.rotation.x=Math.sin(a.step)*.035*amplitude;
-    a.rig.head.rotation.x=a.alert?-.11:Math.sin(a.step*.35)*.03;
+    a.rig.head.rotation.x=boar?.phase==='windup'?-.30-0.05*Math.sin((BOAR_WINDUP-a.chargeLeft)*19):
+      boar?.phase==='charge'?-.25:a.alert?-.11:Math.sin(a.step*.35)*.03;
+    a.rig.warning.visible=boar?.phase==='windup';
+    a.rig.warning.scale.set(1+Math.sin(a.chargeLeft*23)*.2,1,1);
     a.rig.legs.forEach((leg,i)=>{leg.rotation.x=Math.sin(a.step+((i%3)===0?Math.PI:0))*.28*amplitude;});
     a.rig.tail.rotation.z=Math.sin(a.step*.55)*.2;
     a.rig.mane.forEach((spine,i)=>{spine.rotation.x=(i-2)*.15+Math.sin(a.step+i*.2)*.035;});
    }
    a.group.rotation.y=a.heading+Math.PI;
-   // O javali só machuca em contato real e com campo de visão; coelhos nunca atacam.
-   if(a.type==='boar'&&dist<1.65&&a.attackDelay<=0&&hasVisual){
-    onHurt(5,a.group.position);a.attackDelay=2.8;
-   }
+   // O dano do javali acontece uma única vez, após a preparação,
+   // apenas se o jogador continuar no alcance e no cone frontal.
+   if(boar?.hit)onHurt(8,a.group.position);
   }
  }
  function attack(player,yaw,range,arc,damage){

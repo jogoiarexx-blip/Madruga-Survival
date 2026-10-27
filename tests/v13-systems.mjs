@@ -97,9 +97,11 @@ test('fauna real nasce da semente, movimenta, sofre ataque e derruba carne',()=>
 test('javali causa dano com origem válida, sem travar o jogo',()=>{
  const hurts=[],wild=createWildlifeWorld({THREE,scene:makeScene(),getGroundHeight:()=>0,isPositionFree:()=>true,
  onHunt:()=>{},onHurt:(amount,origin)=>hurts.push({amount,origin})});
- wild.restore([{type:'boar',x:2,z:0,hp:5,heading:0}]);
- wild.update(.01,{x:2,z:0});
- assert.equal(hurts.length,1);assert.equal(hurts[0].amount,5);
+ wild.restore([{type:'boar',x:5,z:0,hp:5,heading:0}]);
+ wild.update(.01,{x:0,z:0});
+ assert.equal(hurts.length,0,'Investida não provoca dano antes do aviso');
+ for(let frame=0;frame<100;frame++)wild.update(.03,{x:0,z:0});
+ assert.equal(hurts.length,1,'A investida frontal acerta uma única vez');assert.equal(hurts[0].amount,8);
  assert.ok(Number.isFinite(hurts[0].origin.x));
 });
 test('save v1.2 migra sem fauna e v1.3 rejeita animais/culturas corrompidos',()=>{

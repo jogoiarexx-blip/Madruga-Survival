@@ -75,9 +75,9 @@ test('HUD, tecla, toque, F e dados salvos integram comandos',()=>{
 });
 test('rev32 está no cache do HTML, CSS e ponto de entrada',()=>{
   const html=source('index.html'),pkg=JSON.parse(source('package.json'));
-  assert.equal(pkg.version,'2.38.0');
-  assert.match(html,/data-build="2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling"/);
-  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling/);
-  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling/);
+  assert.equal(pkg.version,'2.39.0');
+  assert.match(html,/data-build="2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests"/);
+  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests/);
+  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests/);
 });
 console.log('v2.32:',passed,'testes aprovados');

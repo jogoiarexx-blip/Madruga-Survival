@@ -4,6 +4,7 @@ import {startGoblinAttack,advanceGoblinAttack,goblinHitTest} from './goblin-comb
 import {faceZombieAlongPath} from './zombie-facing.js';
 import {updateZombieAwareness} from './zombie-perception.js';
 import {updateEnemyTerritory} from './enemy-territory.js';
+import {steerAroundAllies} from './enemy-group-steering.js';
 import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zombie-attack-events.js?v=2.1.3-zombie-combat';
 
 // Atualização de IA independente da renderização e dos controles.
@@ -98,7 +99,13 @@ function update(dt,elapsed){
                 const nx=dx/(dist||1),nz=dz/(dist||1);
                 // Guardião contorna o alvo ao se aproximar: mais de uma rota.
                 const orbit=boss && dist<12?enemy.strafe*(enemy.enraged?.48:.27):0;
-                const steerX=nx-orbit*nz,steerZ=nz+orbit*nx;
+                let steerX=nx-orbit*nz,steerZ=nz+orbit*nx;
+                // Apenas enquanto avançam num combate: no modo patrulha,
+                // manter a rota original e não afastar inimigos dos seus postos.
+                if(!boss&&(decision?.state==='chase'||!!targetGuard||!!targetBuilding)){
+                  const around=steerAroundAllies(enemy,enemies,steerX,steerZ);
+                  steerX=around.x;steerZ=around.z;
+                }
                 const steerLength=Math.hypot(steerX,steerZ)||1;
                 const moveSpeed=enemy.speed*(decision?.speed??1);
                 let next=resolveCollision(mesh.position.x+steerX/steerLength*moveSpeed*dt,

@@ -1,3 +1,12 @@
+## v2.39.0 — fauna, combate em grupo e missões
+
+- Javali anuncia a investida com a cabeça abaixada e marcas laranja. Depois de 0,72 s dispara em linha reta; só causa dano uma vez se o jogador permanece dentro do alcance e cone frontal; bloqueio encerra investida.
+- Coelhos alternam entre fuga por saltos e breves pausas, com movimento das orelhas e patas.
+- Inimigos de combate próximo utilizam separação limitada entre aliados ao perseguir, reduzindo empilhamento em cima do jogador sem custo quadrático elevado (máximo 7 vizinhos examinados por ator).
+- Seis missões opcionais progressivas: fogueira, horta, caça, culinária, defesa e recrutar o Chaves. HUD mostra meta/progresso e recompensas de experiência e suprimentos.
+- Estado de missões salvo na versão 2 do checkpoint, com migração automática de saves anteriores e validação contra estados corrompidos.
+- Testes de regressão para investida/colisão, grupo/limites e missões/save.
+
 ## v2.38.0 — Diagnóstico de frames, HUD e backup de saves
 
 - Adicionados botões **Exportar save / Importar save (.json)** no menu principal e pausa; apenas arquivos JSON com formato e dados validados são aceitos, com confirmação explícita antes da importação.
