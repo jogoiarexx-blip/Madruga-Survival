@@ -1,3 +1,14 @@
+## v2.31.0 — Chaves atira no momento correto, patrulhas com rotas e alertas
+
+- Chaves usa o clipe Shoot até o instante de disparo (0,46 s) antes de aplicar dano; não há hit no começo da animação.
+- Revalidação no disparo: vida, alcance de 11 m e linha de visão, inclusive quando o alvo sai da mira.
+- Defesa mais eficaz: Chaves detecta inimigos próximos até 13 m, aproxima-se a cerca de 7,8 m, mira e atira; mantém cooldown e não dispara morto.
+- Goblins e xamãs têm cinco waypoints fixos por território, alternância de rota e pausas em pontos de guarda.
+- Inimigos escutam ruídos, investigam sem atacar alvos invisíveis, procuram na última posição vista e retornam à sua base.
+- Alerta visual com anel de chão vermelho durante perseguição e âmbar na investigação, sem substituir modelos 3D.
+- As regras não alteram invasores, chefes, aranhas e saves existentes.
+- Novos testes de eventos de tiro, regressão de alvo perdido, limite de perseguição, linha de visão e patrulha.
+
 ## v2.30.0 — Empunhadura, Oficina, Chaves e território inimigo
 
 - Equipamentos procedurais menores e pivô de arma REV5 centrado na mão, inclinação segura e deslocamentos aditivos limitados para reduzir o cruzamento com o chão.

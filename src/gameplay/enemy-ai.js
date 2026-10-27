@@ -32,10 +32,19 @@ function update(dt,elapsed){
                   ...perception,canSee:(from,to)=>!hasLineOfSight||hasLineOfSight(from,to)}):null;
             // Goblins e xamãs não enxergam o jogador através da floresta toda:
             // rondam seu território, perseguem quando detectam e retornam ao perder alvo.
-            const territoryAware=!targetBuilding&&!targetGuard&&!needsPerception&&!enemy.raider&&
-              enemy.type!=='boss'&&enemy.type!=='spider'?updateEnemyTerritory(enemy,{
-                player:player.position,now:elapsed,
+            const isTerritoryEnemy=!targetBuilding&&!targetGuard&&!needsPerception&&!enemy.raider&&
+                enemy.type!=='boss'&&enemy.type!=='spider';
+            if(isTerritoryEnemy&&!perceptionLoaded){perception=getPlayerPerception?.()??null;perceptionLoaded=true;}
+            const territoryAware=isTerritoryEnemy?updateEnemyTerritory(enemy,{
+                player:player.position,now:elapsed,sounds:perception?.sounds,
                 canSee:(from,to)=>!hasLineOfSight||hasLineOfSight(from,to)}):null;
+            // Aro de chão apenas no alerta/investigação, sem objetos por frame.
+            if(territoryAware&&mesh.userData?.rig?.aura){
+                const ring=mesh.userData.rig.aura;
+                ring.visible=territoryAware.state==='chase'||territoryAware.state==='search'||territoryAware.state==='investigate';
+                if(ring.visible && ring.material?.color?.setHex)
+                    ring.material.color.setHex(territoryAware.state==='chase'?0xff644a:0xffd16c);
+            }
             const decision=aware||territoryAware;
             const targetPos=targetBuilding||targetGuard||(decision?decision.target:player.position);
             const dx=targetPos?targetPos.x-mesh.position.x:0;

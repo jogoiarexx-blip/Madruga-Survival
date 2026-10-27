@@ -77,6 +77,8 @@ test('aldeão pode ser recrutado, patrulhar e atacar zumbis',()=>{
  assert.equal(guard.nearby(at(4,2)),true);
  assert.match(guard.interact(inventory),/recrutado/);
  guard.update(1,1,at(0,0));
+ assert.equal(damage,0); // Shoot ainda não chegou ao instante de disparo.
+ guard.update(.5,1.5,at(0,0));
  assert.equal(guard.recruited,true);
  assert.ok(damage>0);
  assert.equal(guard.getState().recruited,true);

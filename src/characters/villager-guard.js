@@ -1,4 +1,5 @@
 import {loadChaves} from './chaves-loader.js';
+import {guardTarget,createGuardShotController,CHAVES_SHOT_RANGE} from '../gameplay/guard-combat.js';
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
 // NPC aliado: recruta com F, patrulha as construções, defende e pode ser reanimado.
 export const GUARD_MAX_HP=80;
@@ -16,10 +17,10 @@ export function interactGuard(state,inventory){
    inventory.berries-=2;inventory.water-=1;state.hp=50;
    return '💚 O Chaves voltou para defender a base!';
  }
- return `🛡 Guarda de prontidão · ${state.hp}/${GUARD_MAX_HP} de vida`;
+ return `🛡 Chaves de prontidão · ${state.hp}/${GUARD_MAX_HP} de vida`;
 }
 export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,getStructures,getEnemies,canSee,attackEnemy,onStatus=()=>{},onBeforeMount=async()=>{}}){
- let state=createGuardState(),timer=0,step=0;
+ let state=createGuardState(),step=0;
  const model=new THREE.Group();
  const tunic=new THREE.MeshStandardMaterial({color:0x4b79a6,roughness:.9});
  const skin=new THREE.MeshStandardMaterial({color:0xe2b58c,roughness:.88});
@@ -30,7 +31,8 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  box(model,.49,.48,.49,skin,0,1.86,0);
  box(model,.56,.19,.56,brown,0,2.15,0);
  box(model,.63,.12,.63,steel,0,2.22,0);
- let chavesVisual=null,mixer=null,activeAction=null,actions={},loadPromise=null,attackUntil=0;
+ let chavesVisual=null,mixer=null,activeAction=null,actions={},loadPromise=null;
+ const shotController=createGuardShotController();
  async function preload(){
    if(chavesVisual)return true;
    if(loadPromise)return loadPromise;
@@ -81,43 +83,52 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  fallbackVisuals.push(...model.children);
  model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);scene.add(model);
  function getState(){return {...state};}
- function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;
+ function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;shotController.cancel();
   model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function nearby(pos,radius=2.9){return Math.hypot(model.position.x-pos.x,model.position.z-pos.z)<radius;}
  function interact(inventory){const message=interactGuard(state,inventory);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return message;}
  function damage(amount){if(!state.recruited||state.hp<=0)return false;
-   state.hp=Math.max(0,state.hp-Math.max(0,Math.round(amount)));model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
+   state.hp=Math.max(0,state.hp-Math.max(0,Math.round(amount)));if(state.hp===0)shotController.cancel();model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function update(dt,elapsed,playerPosition){
-   if(state.hp<=0){if(mixer)mixer.update(dt);return;}
+   if(state.hp<=0){shotController.cancel();if(mixer)mixer.update(dt);return;}
+   // Um disparo marcado atinge somente quando o clipe chega ao gatilho.
+   // A linha de visão, o alcance e a vida do inimigo são checados NOVAMENTE.
+   shotController.update(dt,model.position,{canSee:canSee||(()=>true),
+     onHit:target=>attackEnemy(target,2),range:CHAVES_SHOT_RANGE});
    let patrol={x:4,z:2};
    if(state.recruited){
      const built=getStructures();
      if(built.length){const p=built[0];patrol={x:p.x+2.0,z:p.z+1.6};}
      else patrol={x:playerPosition.x+1.7,z:playerPosition.z+1.7};
    }
-   const candidates=state.recruited?getEnemies().filter(e=>e.hp>0&&e.type!=='boss'&&Math.hypot(e.mesh.position.x-state.x,e.mesh.position.z-state.z)<10.5):[];
-   const target=candidates.sort((a,b)=>Math.hypot(a.mesh.position.x-state.x,a.mesh.position.z-state.z)-Math.hypot(b.mesh.position.x-state.x,b.mesh.position.z-state.z))[0];
+   // Reaproveita os objetos existentes: nunca interfere na vida nem no spawn.
+   const target=state.recruited?guardTarget(getEnemies(),model.position,
+     {detectionRange:13,canSee:canSee||(()=>true)}):null;
    const destination=target?.mesh.position||patrol;
    const dx=destination.x-state.x,dz=destination.z-state.z,dist=Math.hypot(dx,dz);
-   const moving=dist>(target?2.9:2.5);
-   if(moving){const move=Math.min(dist-(target?2.5:2.2),dt*(target?4.1:3.3));
+   const moveLimit=target?7.8:2.5;
+   const moving=dist>moveLimit && !shotController.isShooting;
+   if(moving&&dist>.001){
+     const move=Math.min(dist-(target?7.5:2.2),dt*(target?4.1:3.3));
      const next=resolveCollision(state.x+dx/dist*move,state.z+dz/dist*move,.42);
      state.x=next.x;state.z=next.z;
    }
    model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);
    if(dist>.03)model.rotation.y=Math.atan2(dx,dz);
-   attackUntil=Math.max(0,attackUntil-dt);
-   if(attackUntil===0)playAnimation(target?'Aim_Idle':moving?'Walking':'Aim_Idle');
+   // O tiro é disparado no instante real do clipe (0,46 s); não se inicia
+   // uma segunda animação antes de a primeira terminar.
+   if(target && dist<=CHAVES_SHOT_RANGE && shotController.ready){
+      if(shotController.begin(target))playAnimation('Shoot');
+   }else if(!shotController.isShooting){
+      playAnimation(moving&&target?'Running':moving?'Walking':'Aim_Idle');
+   }
    if(mixer)mixer.update(dt);
    step+=dt*(moving?8:2.4);
    limbs[1].rotation.x=Math.sin(step)*.55*(moving?1:.08);
    limbs[3].rotation.x=-limbs[1].rotation.x;
    limbs[0].rotation.x=-limbs[1].rotation.x*.5;
    limbs[2].rotation.x=target?-.85:-limbs[3].rotation.x*.4;
-   timer=Math.max(0,timer-dt);
-   if(target&&dist<3.6&&timer<=0&&(!canSee||canSee(model.position,target.mesh.position))){
-     timer=1.1;attackEnemy(target,2);limbs[2].rotation.x=-1.6;attackUntil=.75;playAnimation('Shoot');
-   }
  }
+
  return {model,getState,setState,nearby,interact,damage,update,preload,get visualLoaded(){return !!chavesVisual},get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
 }
