@@ -1,4 +1,4 @@
-// Madruga Survival v2.28.0 — cache persistente de modelos 3D por SHA, com fallback seguro.
+// Madruga Survival v2.30.0 — oficina, Chaves animado, patrulhas e arma ajustada.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -62,6 +62,8 @@ import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
 import {tryFish} from './gameplay/fishing.js';
 import {createWildlifeWorld} from './world/wildlife.js';
 import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
+import {CRAFT_STATIONS} from './gameplay/crafting.js';
+import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createVillagerGuard} from './characters/villager-guard.js';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
@@ -293,7 +295,7 @@ function updateHUD() {
     document.getElementById('score-display').textContent = `🌲 Acampamento livre`;
     document.getElementById('quest-display').textContent = `🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`;
     document.getElementById('wave-display').textContent = `Perigo: ${wave}/6 · Invasões: ${raidState.waves}`;
-    document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Guarda caído · F para reanimar':guard.recruited?`🛡 Guarda aliado · ${guard.hp}/80 PV`:'🛡 Encontre o aldeão perto do acampamento (F)';
+    document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves aliado · ${guard.hp}/80 PV`:'🛡 Encontre o Chaves perto do acampamento (F)';
     document.getElementById('poison-status').textContent = poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'';
     document.getElementById('cemetery-status').textContent = withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'';
     document.getElementById('raid-alert').classList.toggle('hidden',!(gameActive&&elapsed<raidAlertUntil));
@@ -354,7 +356,7 @@ function updateHUD() {
         prompt.textContent=`[F] ${action} · [X] desmontar`;
         prompt.classList.remove('hidden');
     }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
-        prompt.textContent=guard.hp===0?'[F] Reanimar aldeão com 2 frutas e 1 água':'[F] Recrutar aldeão para defender sua base';
+        prompt.textContent=guard.hp===0?'[F] Reanimar Chaves com 2 frutas e 1 água':'[F] Contratar Chaves para defender sua base';
         prompt.classList.remove('hidden');
     }else if(arachnidCave.nearPortal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent='[F] Entrar na Caverna das Aranhas';prompt.classList.remove('hidden');
@@ -569,10 +571,12 @@ function ensureVisibleGoblinEncounter(){
     return true;
 }
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
-const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
+const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
     canSee:(a,b)=>!buildings.blocksLine(a,b),
-    attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false)});
+    attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false),
+    onStatus:(message,state)=>console.info('[Chaves]',state,message),
+    onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
 const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
     addCollider:collisionWorld.add,cameraObstacles,getGraphicsQuality:()=>graphicsQuality});
 let worldSeed = Math.floor(Math.random() * 0x100000000);
@@ -825,7 +829,7 @@ loadingEnter.onclick=()=>{
     if(!loadingWarning.classList.contains('hidden'))showToast('⚠ Alguns modelos 3D usam o visual de reserva.');
 };
 function showPauseMenu(message = '') {
-    if (!gameActive || !helpPanel.classList.contains('hidden') || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || buildWheelUI.isOpen) return;
+    if (!gameActive || !helpPanel.classList.contains('hidden') || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || buildWheelUI.isOpen) return;
     pauseMenu.classList.remove('hidden');
     if (message) pauseMenu.querySelector('p').textContent = message;
     frameDriver?.wake();
@@ -866,6 +870,7 @@ document.addEventListener('keydown', e => {
     if (e.code === 'F3') e.preventDefault();
     if (e.code === 'KeyI' && !e.repeat && gameActive) {toggleInventory();return;}
     if (e.code === 'KeyU' && !e.repeat && gameActive) {toggleSkills();return;}
+    if (e.code === 'Escape' && workbenchUI.isOpen) {workbenchUI.close();return;}
     if (e.code === 'Escape' && survivalUI.isOpen) {closeInventory();return;}
     if (e.code === 'Escape' && storageUI.isOpen) {closeStorage();return;}
     if (e.code === 'Escape' && skillsUI.isOpen) {closeSkills();return;}
@@ -873,7 +878,7 @@ document.addEventListener('keydown', e => {
         showFps = !showFps;
         fpsDisplay.classList.toggle('hidden', !showFps);
     }
-    if (!gameActive || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || e.repeat) return;
+    if (!gameActive || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || e.repeat) return;
     if (e.code === 'Space' && isGrounded) {
         playerNoise(12,'jump');
         verticalVelocity = jumpForce; isGrounded = false; sfx.boost(); playerRev5.jump();
@@ -964,6 +969,7 @@ async function beginAdventure(restore=false) {
         {name:'Carregando zumbis e animações',optional:true,load:()=>zombieModels.preload()},
         {name:'Carregando aranhas e animações',optional:true,load:()=>spiderModels.preload()},
         {name:'Carregando goblins e animações',optional:true,load:()=>goblinModels.preload()},
+        {name:'Carregando Chaves e animações',optional:true,load:()=>guard.preload()},
         {name:'Preparando o primeiro quadro',load:()=>{
             renderer.render(scene,camera); // Primeiro desenho oculto: evita o pico inicial de compilação.
         }}
@@ -1063,7 +1069,7 @@ const enemyAI = createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
     getPlayerPerception:()=>({sounds:zombieSenses,night:isNight(survival),sneaking,sprinting:runningFastNow}),
     getRaidTarget:(pos)=>raidTarget(buildings.structures,pos,player.position),
     getGuard:()=>guard.recruited&&guard.alive?guard.position:null,
-    onGuardDamage:amount=>{if(guard.damage(amount)&&!guard.alive){showToast('💔 O aldeão caiu! Reanime-o com comida e água.');saveProgress();}},
+    onGuardDamage:amount=>{if(guard.damage(amount)&&!guard.alive){showToast('💔 O Chaves caiu! Reanime-o com comida e água.');saveProgress();}},
     onPoison:seconds=>{poisonTimer=Math.max(poisonTimer,seconds);showToast('☣ Zumbi tóxico! Você foi envenenado.');},
     onRaidDamage:(structure,damage)=>{const hit=buildings.damage(structure,damage);
        if(hit.destroyed){refreshBuildingCamera();
@@ -1194,7 +1200,7 @@ const buildWheelUI=createBuildWheelUI({
   onClose:()=>closeBuildWheel()
 });
 function openBuildWheel(){
-  if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen)return false;
+  if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen)return false;
   if(placement)releasePlacement();
   buildWheelUI.open();
   Object.keys(keys).forEach(key=>{keys[key]=false;});
@@ -1288,6 +1294,8 @@ const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume
     getCraftStatus:(id,cost)=>craftingStatus(id,cost),
     getRecipeCost:id=>recipeCost(id,RECIPES[id]?.cost,survival.skills),
     getSelectedItem:()=>selectedInventoryItem,onSelectItem:chooseInventoryItem,onQuickAssign:quickAssignInventoryItem});
+const workbenchUI=createWorkbenchUI({getStatus:(id)=>craftingStatus(id),onCraft:(id)=>craft(id),
+    onClose:()=>{if(gameActive)resumeGame();}});
 const storageUI=createStorageUI({getInventory:()=>survival.inventory,getBag:updateBagFromInventory,
  onTransfer:(chest,key,direction,amount,index)=>{
   if(!gameActive||!buildings.structures.includes(chest)||closestAccessibleChest()!==chest)return false;
@@ -1298,6 +1306,12 @@ const storageUI=createStorageUI({getInventory:()=>survival.inventory,getBag:upda
   if(!commitBagChestPlan(chest,plan)){showToast('⚠ Estoque insuficiente ou baú cheio.');return false;}
   return true;
  },onClose:closeStorage});
+function openWorkbench(){
+    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen)return;
+    if(!buildings.near('workbench',player.position,6))return;
+    if(placement)releasePlacement();
+    workbenchUI.open();controls.unlock();pauseMenu.classList.add('hidden');
+}
 function closeStorage(){
     if(!storageUI.isOpen)return;
     buildings.setChestOpen(storageUI.chest,false);storageUI.close();resumeGame();
@@ -1305,7 +1319,7 @@ function closeStorage(){
 function interactWithBuilding(){
     const item=buildings.nearest(player.position,2.85);
     if(!item)return false;
-    if(item.type==='workbench'){openInventory();return true;}
+    if(item.type==='workbench'){openWorkbench();return true;}
     if(item.type==='farmPlot'){
         const result=workCrop(item.crop,survival.inventory,farmingBonus(skillLevel(survival,'farming')));
         if(result.ok){
@@ -1433,7 +1447,7 @@ function fishNearby(){
     return result.ok;
 }
 function useHotbarSlot(index){
-  if(!gameActive || placement || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen ||
+  if(!gameActive || placement || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen ||
      !document.getElementById('pause-menu').classList.contains('hidden'))return false;
   const item=hotbarSlots[index];
   return item?consume(item):false;
@@ -1483,6 +1497,10 @@ function craftingStatus(recipe,cost=recipeCost(recipe,RECIPES[recipe]?.cost,surv
 function canCraftAtPosition(recipe){return craftingStatus(recipe).ok}
 function craft(recipe,quantity=1){
   if(!gameActive||!RECIPES[recipe])return false;
+  // Receitas avançadas só podem ser confirmadas pela tela da bancada.
+  if(CRAFT_STATIONS[recipe]==='workbench'&&(!workbenchUI.isOpen||!buildings.near('workbench',player.position,6))){
+    showToast('⚠ Use uma bancada próxima [F] para esta receita.');return false;
+  }
   if(isStructureRecipe(recipe)){
     if(quantity!==1)return false;
     return startPlacement(recipe);
@@ -1507,7 +1525,7 @@ function craft(recipe,quantity=1){
   updateHUD();saveProgress();return true;
 }
 function openInventory(){
-    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen)return;
+    if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen)return;
     if(placement)releasePlacement();
     survivalUI.open();
     controls.unlock();

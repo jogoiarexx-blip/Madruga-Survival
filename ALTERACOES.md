@@ -1,3 +1,14 @@
+## v2.30.0 — Empunhadura, Oficina, Chaves e território inimigo
+
+- Equipamentos procedurais menores e pivô de arma REV5 centrado na mão, inclinação segura e deslocamentos aditivos limitados para reduzir o cruzamento com o chão.
+- Nova oficina dedicada: receitas que exigem bancada deixam de aparecer na mochila, só são produzidas ao usar [F] na bancada dentro de 6 m, com custo detalhado e feedback.
+- Chaves_Rig_Revisado.glb instalado como visual animado do NPC recrutável; seis clipes (andar, correr, mirar, atirar, treino e combo), com fallback procedural se a GPU, o navegador ou a rede não suportarem o modelo.
+- Na publicação web, o Chaves é baixado em fragmentos base64 de um gzip; validação SHA-256 e armazenamento opcional via CacheStorage.
+- Goblins/xamãs patrulham territórios definidos em torno do spawn, detectam o jogador a curta distância e retornam ao local de origem quando perdem a trilha. Chefes e invasores preservam seus alvos.
+- Save do aliado preserva o mesmo formato, evitando perder recrutamento e vida nos saves antigos.
+
+Limite conhecido: contato exato da arma e animações do Chaves ainda exigem validação visual em navegador com controle real, além dos testes automatizados.
+
 ## v2.29.1 — Goblin REV2 encontrável, identificado e restaurado com segurança
 
 - Verificamos o GLB original (15 animações) e suas 24 partes compactadas: reconstrução bit a bit idêntica.

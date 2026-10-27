@@ -1,6 +1,6 @@
 import {RESOURCES,RECIPES,cycleClock,isNight} from '../gameplay/survival.js?v=2.6.0-crafting';
 import {isStructureRecipe} from '../gameplay/placement.js';
-import {craftCategory,batchable,missingCostLabel,craftBatchPreview} from '../gameplay/crafting.js?v=2.6.0-crafting';
+import {craftCategory,batchable,missingCostLabel,craftBatchPreview,CRAFT_STATIONS} from '../gameplay/crafting.js?v=2.6.0-crafting';
 import {INVENTORY_SECTIONS,INVENTORY_DRAG_TYPE,canPlaceOnHotbar,inventoryMatches} from '../gameplay/inventory-ui-logic.js';
 import {BAG_SIZE} from '../gameplay/inventory-slots.js';
 
@@ -184,6 +184,7 @@ export function createSurvivalUI({getState,onCraft,onConsume,onClose,onRotate,on
    groups[id]=make(section,'craft-grid');
  }
  for(const [id,recipe] of Object.entries(RECIPES)){
+   if(CRAFT_STATIONS[id]==='workbench')continue; // Exclusivos da bancada, nunca fabricados diretamente na mochila.
    const categoryId=craftCategory(id),item=make(groups[categoryId],'craft-card','button');
    item.type='button';item.classList.add('recipe-btn');
    const heading=make(item,'recipe-title');

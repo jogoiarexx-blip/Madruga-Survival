@@ -3,6 +3,7 @@ import {animateEnemy} from '../characters/enemy-animation.js';
 import {startGoblinAttack,advanceGoblinAttack,goblinHitTest} from './goblin-combat.js';
 import {faceZombieAlongPath} from './zombie-facing.js';
 import {updateZombieAwareness} from './zombie-perception.js';
+import {updateEnemyTerritory} from './enemy-territory.js';
 import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zombie-attack-events.js?v=2.1.3-zombie-combat';
 
 // Atualização de IA independente da renderização e dos controles.
@@ -29,7 +30,14 @@ function update(dt,elapsed){
             const aware=perception&&needsPerception?
                 updateZombieAwareness(enemy,{player:player.position,now:elapsed,dt,
                   ...perception,canSee:(from,to)=>!hasLineOfSight||hasLineOfSight(from,to)}):null;
-            const targetPos=targetBuilding||targetGuard||(aware?aware.target:player.position);
+            // Goblins e xamãs não enxergam o jogador através da floresta toda:
+            // rondam seu território, perseguem quando detectam e retornam ao perder alvo.
+            const territoryAware=!targetBuilding&&!targetGuard&&!needsPerception&&!enemy.raider&&
+              enemy.type!=='boss'&&enemy.type!=='spider'?updateEnemyTerritory(enemy,{
+                player:player.position,now:elapsed,
+                canSee:(from,to)=>!hasLineOfSight||hasLineOfSight(from,to)}):null;
+            const decision=aware||territoryAware;
+            const targetPos=targetBuilding||targetGuard||(decision?decision.target:player.position);
             const dx=targetPos?targetPos.x-mesh.position.x:0;
             const dz=targetPos?targetPos.z-mesh.position.z:0;
             const dist=Math.hypot(dx,dz);
@@ -72,7 +80,7 @@ function update(dt,elapsed){
             const shaman=enemy.type==='shaman', boss=enemy.type==='boss';
             const meleeRadius=boss?2.65:1.85;
             const visible=!!targetPos&&(!hasLineOfSight||hasLineOfSight(mesh.position,targetPos));
-            const wantsToMove=!!targetPos&&(aware?dist>(aware.state==='patrol'?1.3:1):shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8);
+            const wantsToMove=!!targetPos&&(decision?dist>(decision.state==='patrol'?1.3:1):shaman?dist>9.5:boss?dist>4.1:dist>meleeRadius*.8);
             const finishingAttack=Number.isFinite(enemy.attackFacingYaw)&&enemy.attackTimer>0;
             const moving=wantsToMove && dist<52 && enemy.knockback===0 && enemy.windup===0 &&
                 !enemy.pendingImpact && !enemy.goblinAttack && !finishingAttack;
@@ -83,7 +91,7 @@ function update(dt,elapsed){
                 const orbit=boss && dist<12?enemy.strafe*(enemy.enraged?.48:.27):0;
                 const steerX=nx-orbit*nz,steerZ=nz+orbit*nx;
                 const steerLength=Math.hypot(steerX,steerZ)||1;
-                const moveSpeed=enemy.speed*(aware?.speed??1);
+                const moveSpeed=enemy.speed*(decision?.speed??1);
                 let next=resolveCollision(mesh.position.x+steerX/steerLength*moveSpeed*dt,
                     mesh.position.z+steerZ/steerLength*moveSpeed*dt,enemy.size*0.48);
                 if (Math.hypot(next.x-mesh.position.x,next.z-mesh.position.z)<moveSpeed*dt*0.16) {
@@ -113,7 +121,7 @@ function update(dt,elapsed){
                 } else mesh.lookAt(targetPos.x,mesh.position.y,targetPos.z);
             }
             const stepDistance=Math.hypot(mesh.position.x-previousX,mesh.position.z-previousZ);
-            const locomotionPace=actualMoving ? stepDistance/Math.max(.001,enemy.speed*(aware?.speed??1)*dt) : 0;
+            const locomotionPace=actualMoving ? stepDistance/Math.max(.001,enemy.speed*(decision?.speed??1)*dt) : 0;
             animateEnemy(enemy,elapsed,(isZombieType(enemy.type)||enemy.goblinVisual)?actualMoving:moving,dt,
                 Math.hypot(player.position.x-mesh.position.x,player.position.z-mesh.position.z)<48,
                 enemy.goblinVisual&&playerDistance<9&&actualMoving?Math.max(1.12,locomotionPace):locomotionPace, playerDistance<16);
@@ -135,7 +143,7 @@ function update(dt,elapsed){
                         throwProjectile(enemy,-.33);throwProjectile(enemy,.33);
                     }
                 }
-            } else if (enemy.attackTimer===0 && dist<52 && (!aware||aware.canAttack||targetBuilding||targetGuard)) {
+            } else if (enemy.attackTimer===0 && dist<52 && (!decision||decision.canAttack||targetBuilding||targetGuard)) {
                 if(targetBuilding&&dist<2.25){
                     enemy.attackTimer=shaman?2.4:1.55;
                     if(enemy.rev4Visual){

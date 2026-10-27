@@ -154,16 +154,17 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
       // The GLB sword prop is *actually* a child of LeftHand despite its name.
       // Reuse the authored position/quaternion rather than inventing a -0.43 offset.
       const pos=sword?.position;
-      weapon.position.set(pos?.x??.01406238,pos?.y??-.01078378,pos?.z??.07972427);
-      if(sword?.quaternion && weapon.quaternion?.copy)weapon.quaternion.copy(sword.quaternion);
-      else weapon.rotation.set(0,0,-.12);
+      // Referência: centro da palma. Evita herdar quaternion de uma espada GLB
+      // com eixo incompatível com nossas armas procedurais (+Y para a ponta).
+      weapon.position.set(.032,-.018,.087);
+      weapon.rotation.set(-.17,.04,-.32);
     }
     // Guarda apenas a transformação local do acessório para animação aditiva.
     restingGrip={position:{x:weapon.position.x||0,y:weapon.position.y||0,z:weapon.position.z||0},
       rotation:{x:weapon.rotation.x||0,y:weapon.rotation.y||0,z:weapon.rotation.z||0}};
     // The player GLB has a separate scene scale of 1.459x.
     // Cancel that scale for the procedural weapon geometry (and grip radius).
-    weapon.scale.setScalar(1/PLAYER_REV5_SCALE);
+    weapon.scale.setScalar(.80/PLAYER_REV5_SCALE);
   }
   function setComboStep(step){queuedComboStep=Number.isInteger(step)?Math.max(0,Math.min(2,step)):0;}
   function attack(){if(!loaded)return false;
@@ -288,8 +289,13 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     if(weapon&&restingGrip){
       const motion=sampleRiggedWeaponMotion(equipped,attackProgress===null?0:attackProgress,
         Math.min(1,speed/5),weaponTime,attackStep);
-      weapon.position.set(restingGrip.position.x+motion.x,restingGrip.position.y+motion.y,restingGrip.position.z+motion.z);
-      weapon.rotation.set(restingGrip.rotation.x+motion.pitch,restingGrip.rotation.y,restingGrip.rotation.z+motion.roll);
+      // Limitar adição de deslocamento e rotação: ataques continuam animados,
+      // mas a ponta não mergulha metros abaixo do terreno.
+      const limit=(v,amount)=>Math.max(-amount,Math.min(amount,v||0));
+      weapon.position.set(restingGrip.position.x+limit(motion.x,.10),
+        restingGrip.position.y+limit(motion.y,.10),restingGrip.position.z+limit(motion.z,.10));
+      weapon.rotation.set(restingGrip.rotation.x+limit(motion.pitch,.38),
+        restingGrip.rotation.y,restingGrip.rotation.z+limit(motion.roll,.38));
     }
   }
   function dispose(){

@@ -1,3 +1,4 @@
+import {loadChaves} from './chaves-loader.js';
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
 // NPC aliado: recruta com F, patrulha as construções, defende e pode ser reanimado.
 export const GUARD_MAX_HP=80;
@@ -9,15 +10,15 @@ export function validGuard(data){
 export function createGuardState(){return {recruited:false,hp:GUARD_MAX_HP,x:4,z:2};}
 export function restoreGuard(data){return data===undefined?createGuardState():validGuard(data)?{recruited:data.recruited,hp:data.hp,x:data.x,z:data.z}:null;}
 export function interactGuard(state,inventory){
- if(!state.recruited){state.recruited=true;return '🛡 Aldeão recrutado! Ele defenderá sua base.';}
+ if(!state.recruited){state.recruited=true;return '🛡 Chaves recrutado! Ele defenderá sua base.';}
  if(state.hp===0){
-   if((inventory.berries||0)<2||(inventory.water||0)<1)return 'O guarda caiu! Para reanimá-lo: 2 frutas e 1 água.';
+   if((inventory.berries||0)<2||(inventory.water||0)<1)return 'O Chaves caiu! Para reanimá-lo: 2 frutas e 1 água.';
    inventory.berries-=2;inventory.water-=1;state.hp=50;
-   return '💚 O aldeão voltou para defender a base!';
+   return '💚 O Chaves voltou para defender a base!';
  }
  return `🛡 Guarda de prontidão · ${state.hp}/${GUARD_MAX_HP} de vida`;
 }
-export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,getStructures,getEnemies,canSee,attackEnemy}){
+export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,getStructures,getEnemies,canSee,attackEnemy,onStatus=()=>{},onBeforeMount=async()=>{}}){
  let state=createGuardState(),timer=0,step=0;
  const model=new THREE.Group();
  const tunic=new THREE.MeshStandardMaterial({color:0x4b79a6,roughness:.9});
@@ -29,6 +30,45 @@ export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollisio
  box(model,.49,.48,.49,skin,0,1.86,0);
  box(model,.56,.19,.56,brown,0,2.15,0);
  box(model,.63,.12,.63,steel,0,2.22,0);
+ let chavesVisual=null,mixer=null,activeAction=null,actions={},loadPromise=null,attackUntil=0;
+ async function preload(){
+   if(chavesVisual)return true;
+   if(loadPromise)return loadPromise;
+   if(!GLTFLoader)return false;
+   onStatus('Carregando modelo do Chaves…','loading');
+   loadPromise=loadChaves({GLTFLoader,onProgress:(done,total)=>onStatus('Chaves: '+done+'/'+total+' partes','loading')}).then(async gltf=>{
+     const root=gltf.scene;
+     root.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=false;if(node.isSkinnedMesh)node.frustumCulled=false;}});
+     try{await onBeforeMount(root,'Chaves aliado');}catch(error){console.warn('[Chaves] Preparação ignorada:',error);}
+     root.updateMatrixWorld(true);
+     const bounds=new THREE.Box3().setFromObject(root);
+     const height=bounds.max.y-bounds.min.y;
+     if(!Number.isFinite(height)||height<=0)throw Error('Altura do Chaves inválida');
+     // Preserva rig e animações; normaliza para a altura do NPC do jogo.
+     const wrapper=new THREE.Group();wrapper.name='Chaves_Rig_Revisado';
+     const factor=1.82/height;wrapper.scale.setScalar(factor);
+     root.position.set(-(bounds.min.x+bounds.max.x)/2,-bounds.min.y,-(bounds.min.z+bounds.max.z)/2);
+     wrapper.add(root);model.add(wrapper);
+     mixer=new THREE.AnimationMixer(root);
+     actions=Object.fromEntries((gltf.animations||[]).map(clip=>[clip.name,mixer.clipAction(clip)]));
+     chavesVisual=wrapper;
+     for(const child of fallbackVisuals)child.visible=false;
+     onStatus('Chaves carregado com rig e '+(gltf.animations?.length||0)+' animações','ready');
+     return true;
+   }).catch(error=>{loadPromise=null;console.warn('[Chaves] Usando aliado visual simplificado:',error);
+     onStatus('Chaves: visual provisório (modelo não carregado)','error');return false;});
+   return loadPromise;
+ }
+ function playAnimation(name){
+   if(!chavesVisual)return;
+   const next=actions[name]||actions.Aim_Idle||actions.Walking;
+   if(!next||next===activeAction)return;
+   if(activeAction)activeAction.fadeOut(.18);
+   activeAction=next;next.reset().fadeIn(.18).play();
+   if(name==='Shoot'){next.setLoop(THREE.LoopOnce,1);next.clampWhenFinished=true;}
+   else {next.setLoop(THREE.LoopRepeat,Infinity);next.clampWhenFinished=false;}
+ }
+ const fallbackVisuals=[];
  const limbs=[];
  for(const side of [-1,1]){
    const arm=new THREE.Group();arm.position.set(side*.47,1.38,0);model.add(arm);
@@ -36,7 +76,9 @@ export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollisio
    const leg=new THREE.Group();leg.position.set(side*.21,.82,0);model.add(leg);
    box(leg,.23,.72,.26,brown,0,-.37,0);limbs.push(leg);
  }
- box(limbs[2],.14,.7,.14,steel,0,-.65,-.20); // arma de guarda
+ box(limbs[2],.14,.7,.14,steel,0,-.65,-.20); // arma de Chaves
+ // Todas as peças antigas ficam invisíveis após GLB pronto.
+ fallbackVisuals.push(...model.children);
  model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);scene.add(model);
  function getState(){return {...state};}
  function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;
@@ -46,7 +88,7 @@ export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollisio
  function damage(amount){if(!state.recruited||state.hp<=0)return false;
    state.hp=Math.max(0,state.hp-Math.max(0,Math.round(amount)));model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function update(dt,elapsed,playerPosition){
-   if(state.hp<=0)return;
+   if(state.hp<=0){if(mixer)mixer.update(dt);return;}
    let patrol={x:4,z:2};
    if(state.recruited){
      const built=getStructures();
@@ -64,6 +106,9 @@ export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollisio
    }
    model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);
    if(dist>.03)model.rotation.y=Math.atan2(dx,dz);
+   attackUntil=Math.max(0,attackUntil-dt);
+   if(attackUntil===0)playAnimation(target?'Aim_Idle':moving?'Walking':'Aim_Idle');
+   if(mixer)mixer.update(dt);
    step+=dt*(moving?8:2.4);
    limbs[1].rotation.x=Math.sin(step)*.55*(moving?1:.08);
    limbs[3].rotation.x=-limbs[1].rotation.x;
@@ -71,8 +116,8 @@ export function createVillagerGuard({THREE,scene,getGroundHeight,resolveCollisio
    limbs[2].rotation.x=target?-.85:-limbs[3].rotation.x*.4;
    timer=Math.max(0,timer-dt);
    if(target&&dist<3.6&&timer<=0&&(!canSee||canSee(model.position,target.mesh.position))){
-     timer=1.1;attackEnemy(target,2);limbs[2].rotation.x=-1.6;
+     timer=1.1;attackEnemy(target,2);limbs[2].rotation.x=-1.6;attackUntil=.75;playAnimation('Shoot');
    }
  }
- return {model,getState,setState,nearby,interact,damage,update,get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
+ return {model,getState,setState,nearby,interact,damage,update,preload,get visualLoaded(){return !!chavesVisual},get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
 }

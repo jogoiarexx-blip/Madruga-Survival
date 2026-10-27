@@ -82,7 +82,12 @@ export function createPlayerWeaponRig(THREE,rightArm){
     grips.forEach(group=>{group.visible=!!crafted.reinforcedGrip});
   }
   setWeaponUpgrades();
-  const models=[broom,hammer,spear];let activeIndex=0;
+  // Normaliza o volume visual ao redor da empunhadura: mais leve no REV5
+  // e no avatar de reserva, sem mudar hitboxes, dano ou upgrades.
+  const models=[broom,hammer,spear];
+  const proportions=[.72,.78,.68];
+  models.forEach((mesh,index)=>mesh.scale?.setScalar?.(proportions[index]));
+  let activeIndex=0;
   function equipWeaponVisual(index){
     if(!Number.isInteger(index)||index<0||index>=models.length)return false;
     activeIndex=index;models.forEach((m,i)=>{m.visible=i===index});
