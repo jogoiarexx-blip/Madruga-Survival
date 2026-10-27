@@ -31,7 +31,7 @@ export function createMinimap(canvas, getState) {
         collectibles.forEach(c => dot(c.position.x,c.position.z,'#ffd46d',3));
         healthPacks.forEach(c => dot(c.position.x,c.position.z,'#51ef92',2.5));
         speedBoosts.forEach(c => dot(c.position.x,c.position.z,'#30ccff',2.5));
-        enemies.forEach(e => dot(e.mesh.position.x,e.mesh.position.z,e.type==='boss'?'#ffda44':e.type==='shaman'?'#b883ff':'#ff7661',e.type==='boss'?5:3));
+        enemies.forEach(e => dot(e.mesh.position.x,e.mesh.position.z,e.type==='boss'?'#ffda44':e.type==='normal'?'#98f079':e.type==='shaman'?'#b883ff':'#ff7661',e.type==='boss'?5:3));
         dot(-4,-5,'#ffffff',3);
         dot(shrinePosition.x,shrinePosition.z,'#8affdb',4);
         if(cemeteryPosition)dot(cemeteryPosition.x,cemeteryPosition.z,'#b5a3ff',5);

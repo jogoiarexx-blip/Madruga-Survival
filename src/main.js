@@ -29,6 +29,7 @@ import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-po
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
 import {createGoblinModelManager} from './characters/goblin-model.js';
+import {findGoblinEncounterSpot,nearestGoblinEncounter} from './gameplay/goblin-encounter.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.3.0-perception';
 import { createCombatSystem } from './gameplay/combat.js?v=2.13.0';
 import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave';
@@ -239,6 +240,13 @@ const goblinModels=createGoblinModelManager({THREE,GLTFLoader,cloneSkeleton,defe
 if(typeof window!=='undefined')Object.defineProperty(window,'madrugaSpiderStatus',{configurable:true,
   get:()=>({loaded:spiderModels.loaded,failed:spiderModels.failed,active:enemies.filter(e=>e.type==='spider').length,
      variants:Object.fromEntries(['shadow','hunter','weaver'].map(id=>[id,enemies.filter(e=>e.spiderVariant===id).length]))})});
+if(typeof window!=='undefined')Object.defineProperty(window,'madrugaGoblinStatus',{configurable:true,
+  get:()=>{const nearby=nearestGoblinEncounter(enemies,player.position);
+    return {loaded:goblinModels.loaded,failed:goblinModels.failed,
+      alive:enemies.filter(e=>e.type==='normal'&&e.hp>0).length,
+      animated:enemies.filter(e=>e.type==='normal'&&e.hp>0&&!!e.goblinVisual).length,
+      nearestMeters:nearby?Math.round(nearby.distance):null};
+  }});
 const healthPacks = [];
 const speedBoosts = [];
 const trees = [];
@@ -289,7 +297,10 @@ function updateHUD() {
     document.getElementById('poison-status').textContent = poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'';
     document.getElementById('cemetery-status').textContent = withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'';
     document.getElementById('raid-alert').classList.toggle('hidden',!(gameActive&&elapsed<raidAlertUntil));
-    document.getElementById('enemies-left').textContent = `Criaturas: ${enemies.length}`;
+    const nearbyGoblin=nearestGoblinEncounter(enemies,player.position);
+    const goblinHint=nearbyGoblin && nearbyGoblin.distance<65 ?
+      ` · 👺 Goblin ${Math.round(nearbyGoblin.distance)}m${goblinModels.failed?' (visual simples)':''}`:'';
+    document.getElementById('enemies-left').textContent = `Criaturas: ${enemies.length}${goblinHint}`;
     const nearbyZombies=enemies.filter(e=>e.isZombie&&e.awareness&&
       Math.hypot(e.mesh.position.x-player.position.x,e.mesh.position.z-player.position.z)<24);
     const following=nearbyZombies.filter(e=>e.awareness.state==='chase').length;
@@ -542,6 +553,21 @@ function spawnSpeedBoost(at = null) {
 }
 
 const spawnEnemy = createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,getQuality:()=>graphicsQuality,onSpawn:enemy=>{zombieModels.attach(enemy);spiderModels.attach(enemy);goblinModels.attach(enemy);}});
+// Só adiciona um encontro se não houver nenhum goblin perto; não move os
+// inimigos de um save antigo. O modelo 3D é montado quando o preload concluir.
+function ensureVisibleGoblinEncounter(){
+    if(arachnidCave.inside||enemies.length>=12)return false;
+    const near=nearestGoblinEncounter(enemies,player.position);
+    if(near&&near.distance<42)return false;
+    const position=findGoblinEncounterSpot({player:player.position,yaw:playerYaw,
+        isFree:isPositionFree,hasClearPath:(from,to)=>!buildings.blocksLine(from,to)});
+    if(!position){console.warn('[Goblin] Sem local seguro próximo do jogador');return false;}
+    spawnEnemy('normal');
+    const enemy=enemies[enemies.length-1];
+    enemy.mesh.position.set(position.x,getGroundHeight(position.x,position.z)+enemy.size/2,position.z);
+    console.info('[Goblin] Encontro criado a',Math.round(Math.hypot(position.x-player.position.x,position.z-player.position.z)),'m',goblinModels.loaded?'3D animado':'visual provisório');
+    return true;
+}
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
 const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
@@ -583,7 +609,9 @@ function initWorld() {
             wildlife.generate(worldSeed,graphicsQuality);
             for(let i=0;i<2;i++)spawnHealthPack();
             for(let i=0;i<2;i++)spawnSpeedBoost();
-            for(let i=0;i<2;i++)spawnEnemy('normal');
+            // Um goblin aparece à frente do jogador; o outro patrulha livremente.
+            ensureVisibleGoblinEncounter();
+            spawnEnemy('normal');
             spawnEnemy('fast');
             if(Math.random()<0.35)spawnEnemy('zombie');
             spawnEnemy('spider','shadow');
@@ -653,7 +681,10 @@ function restoreProgress(data) {
     playerYaw=data.player.yaw;player.rotation.y=playerYaw;
     replaceItems(healthPacks,data.healthPacks,spawnHealthPack);
     replaceItems(speedBoosts,data.speedBoosts,spawnSpeedBoost);
-    for(const enemy of enemies) removeMesh(enemy.mesh);
+    for(const enemy of enemies){
+        zombieModels.dispose(enemy);spiderModels.dispose(enemy);goblinModels.dispose(enemy);
+        removeMesh(enemy.mesh);
+    }
     enemies.length=0;
     for(const savedEnemy of data.enemies) {
         spawnEnemy(savedEnemy.type,savedEnemy.spiderVariant);
@@ -670,6 +701,9 @@ function restoreProgress(data) {
     const desired=Math.min(data.currentWeapon,unlockedWeaponCount-1);
     equipWeapon(desired>0&&!canUseTool(survival,desired===1?'hammer':'spear')?0:desired);
     invulnerableTimer=.75;dashCooldown=0;dashTimer=0;
+    // Saves antigos sem goblins próximos também recebem um encontro único,
+    // sem apagar ou reposicionar criaturas já existentes.
+    ensureVisibleGoblinEncounter();
     velocity.set(0,0,0);verticalVelocity=0;isGrounded=true;
     updateHUD();
 }

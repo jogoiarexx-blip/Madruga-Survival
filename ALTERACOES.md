@@ -1,3 +1,13 @@
+## v2.29.1 — Goblin REV2 encontrável, identificado e restaurado com segurança
+
+- Verificamos o GLB original (15 animações) e suas 24 partes compactadas: reconstrução bit a bit idêntica.
+- O goblin inicial aparece num local livre à frente do jogador a 14–23 metros; mantém outro goblin patrulhando.
+- Saves existentes recebem um encontro próximo apenas quando não houver goblin a menos de 42 metros, mantendo todos os inimigos salvos nas posições originais. Não gera novos encontros na caverna ou acima do limite de 12 inimigos.
+- Goblins no minimapa têm pontos verdes, e o HUD mostra a distância do mais próximo dentro de 65 metros.
+- Diagnóstico em `window.madrugaGoblinStatus` apresenta quantidade viva, modelo pronto, falhas, montagens animadas e distância.
+- Corrige vazamento de referências de modelos ao restaurar saves: descarta visual dos inimigos antigos antes de remover suas malhas.
+- 8 testes de regressão novos. Sem alterar o rig, as animações ou reduzir a geometria.
+
 ## v2.29.0 — Inimigos: geometria compartilhada e percepção por frame
 
 - Geometrias dos inimigos procedurais agora usam um pool local por tipo, dimensão e perfil de qualidade, reduzindo reconstruções quando surgem criaturas iguais.
