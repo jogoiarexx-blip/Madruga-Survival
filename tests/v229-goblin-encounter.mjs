@@ -41,7 +41,7 @@ check('modelo e animações continuam no fluxo de carregamento',()=>{
  assert.match(m,/model\.name='Goblin_Animated'/);
 });
 check('versão e cache invalidados',()=>{
- assert.equal(JSON.parse(read('package.json')).version,'2.31.0');
- assert.match(read('index.html'),/2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai/);
+ assert.equal(JSON.parse(read('package.json')).version,'2.32.0');
+ assert.match(read('index.html'),/2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders/);
 });
 console.log(`${n} testes de encontro com goblin aprovados`);

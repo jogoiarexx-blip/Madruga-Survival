@@ -33,8 +33,8 @@ test('menu não executa IA, terreno ou física até iniciar',()=>{
   assert.match(main,/getMode:\(\)=>!gameActive\|\|document\.hidden\?'off'/);
 });
 test('cache busting dos arquivos da revisão',()=>{
-  assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai"/);
-  assert.match(html,/main\.js\?v=2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai/);
-  assert.match(html,/main\.css\?v=2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai/);
+  assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders"/);
+  assert.match(html,/main\.js\?v=2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders/);
+  assert.match(html,/main\.css\?v=2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders/);
 });
 console.log('v2.25: '+count+' novas verificações aprovadas');

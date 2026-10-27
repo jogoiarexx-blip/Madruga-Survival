@@ -1,3 +1,11 @@
+## v2.32.0 — comandos do Chaves e efeitos do tiro
+
+- Três ordens após contratar Chaves: Seguir, Defender base e Patrulhar com [O], [F] perto do companheiro ou botão na tela/toque.
+- Modo preservado no save v2; saves antigos sem o campo continuam a carregar como Defender base.
+- Distância máxima de perseguição relativa ao jogador ou posto de defesa e patrulha em quatro posições na base.
+- Mira com verificação de obstáculos; traçante e flash aparecem no evento real do tiro (0,46 s), com geometria reutilizada.
+- Botão acessível, HUD com ordem atual, e testes de regressão incluindo saves legados.
+
 ## v2.31.0 — Chaves atira no momento correto, patrulhas com rotas e alertas
 
 - Chaves usa o clipe Shoot até o instante de disparo (0,46 s) antes de aplicar dano; não há hit no começo da animação.

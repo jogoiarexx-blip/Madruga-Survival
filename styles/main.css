@@ -682,3 +682,9 @@ body.adventure-loading #asset-loading-status,body.adventure-loading #gpu-warmup-
 .workbench-recipe:not(:disabled):hover{background:#3a6449;}
 #workbench-message{min-height:1.4em;color:#ffe2a2;}
 @media(max-width:600px){#workbench-panel{padding:7px;align-items:flex-start}.workbench-dialog{padding:13px;max-height:98dvh}.workbench-grid{grid-template-columns:1fr}}
+
+/* v2.32 — controle do aliado acessível em teclado e toque. */
+#guard-order{max-width:100%;padding:5px 9px;margin-top:3px;background:#234536e8;color:#f0e8c5;border:1px solid #8bb08a;border-radius:8px;cursor:pointer;font-size:11px}
+#guard-order.hidden{display:none!important}
+#guard-order:focus-visible{outline:2px solid #f5cf66;outline-offset:2px}
+@media(pointer:coarse){.touch-actions [data-action="KeyO"]{font-size:10px;background:#2e5143}.touch-actions{bottom:22px}}

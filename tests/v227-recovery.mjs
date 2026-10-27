@@ -46,6 +46,6 @@ check('progresso REV5 só aparece no estágio do personagem, sem porcentagem fal
   assert.match(main,/loadingStage\?\.textContent==='Preparando Seu Madruga e animações'/);
   assert.match(main,/loadingDetail\.textContent=message/);
   assert.match(main,/if\(status==='loading' && label!==previousLabel\)/);
-  assert.match(source('index.html'),/2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai/);
+  assert.match(source('index.html'),/2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders/);
 });
 console.log(`v2.27: ${tested} regressões aprovadas`);

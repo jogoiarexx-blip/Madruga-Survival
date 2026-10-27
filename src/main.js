@@ -1,4 +1,4 @@
-// Madruga Survival v2.30.0 — oficina, Chaves animado, patrulhas e arma ajustada.
+// Madruga Survival v2.32.0 — comandos de Chaves, mira e efeito de disparo.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -295,7 +295,9 @@ function updateHUD() {
     document.getElementById('score-display').textContent = `🌲 Acampamento livre`;
     document.getElementById('quest-display').textContent = `🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`;
     document.getElementById('wave-display').textContent = `Perigo: ${wave}/6 · Invasões: ${raidState.waves}`;
-    document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves aliado · ${guard.hp}/80 PV`:'🛡 Encontre o Chaves perto do acampamento (F)';
+    document.getElementById('guard-status').textContent = guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)';
+    const orderBtn=document.getElementById('guard-order');
+    if(orderBtn){orderBtn.classList.toggle('hidden',!gameActive||!guard.recruited||!guard.alive);orderBtn.textContent=`🛡 ${guard.mode==='follow'?'Seguir':guard.mode==='patrol'?'Patrulhar':'Defender'} [O]`;}
     document.getElementById('poison-status').textContent = poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'';
     document.getElementById('cemetery-status').textContent = withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'';
     document.getElementById('raid-alert').classList.toggle('hidden',!(gameActive&&elapsed<raidAlertUntil));
@@ -355,8 +357,8 @@ function updateHUD() {
         const action=buildingInteractionLabel(closestBuilding,CROP_MATURITY);
         prompt.textContent=`[F] ${action} · [X] desmontar`;
         prompt.classList.remove('hidden');
-    }else if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
-        prompt.textContent=guard.hp===0?'[F] Reanimar Chaves com 2 frutas e 1 água':'[F] Contratar Chaves para defender sua base';
+    }else if(guard.nearby(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent=guard.hp===0?'[F] Reanimar Chaves com 2 frutas e 1 água':guard.recruited?'[F/O] Mudar ordem do Chaves':'[F] Contratar Chaves para defender sua base';
         prompt.classList.remove('hidden');
     }else if(arachnidCave.nearPortal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent='[F] Entrar na Caverna das Aranhas';prompt.classList.remove('hidden');
@@ -577,6 +579,14 @@ const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveC
     attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false),
     onStatus:(message,state)=>console.info('[Chaves]',state,message),
     onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
+function changeChavesOrder(){
+    if(!gameActive||!guard.recruited||!guard.alive){showToast('Recrute e mantenha o Chaves vivo para dar ordens.');return false;}
+    const order=guard.cycleOrder();
+    if(!order)return false;
+    showToast(`🛡 Ordem do Chaves: ${order}.`);
+    saveProgress();updateHUD();return true;
+}
+document.getElementById('guard-order').addEventListener('click',changeChavesOrder);
 const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
     addCollider:collisionWorld.add,cameraObstacles,getGraphicsQuality:()=>graphicsQuality});
 let worldSeed = Math.floor(Math.random() * 0x100000000);
@@ -888,6 +898,7 @@ document.addEventListener('keydown', e => {
         showToast(sneaking?'🤫 Modo furtivo: movimentos silenciosos':'👣 Movimento normal: mais rápido e barulhento');
         updateHUD();return;
     }
+    if (e.code === 'KeyO'){changeChavesOrder();return;}
     if (e.code === 'KeyJ') combat.attack();
     if (e.code === 'KeyE') combat.special();
     if (e.code === 'KeyQ') doDodge();
@@ -1400,7 +1411,8 @@ function harvestNear(){
     }
     if(arachnidCave.inside){showToast('Explore os cristais ou volte ao portal de saída [F].');return false;}
     if(interactWithBuilding())return true;
-    if(guard.nearby(player.position)&&(!guard.recruited||!guard.alive)){
+    if(guard.nearby(player.position)){
+        if(guard.recruited&&guard.alive)return changeChavesOrder();
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
     }
     if(spiderNests.nearest(player.position)){
@@ -1421,7 +1433,7 @@ function harvestNear(){
     }
     const result=resources.harvest(player.position,canUseTool(survival,'pickaxe'));
     if(!result){
-        if(guard.nearby(player.position)){showToast(guard.interact(survival.inventory));return true;}
+        if(guard.nearby(player.position)){return changeChavesOrder();}
         showToast('Procure madeira, pedras, minério, planta ou água (F)');return false;
     }
     if(result.requires){showToast('⛏ Faça uma picareta na bancada e repare se estiver quebrada!');return false;}
