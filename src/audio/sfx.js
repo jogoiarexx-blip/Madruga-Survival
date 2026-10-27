@@ -1,50 +1,145 @@
-// Web Audio: iniciado apenas após interação do jogador.
-// ========== AUDIO ==========
-// AudioContext só é criado com interação do jogador, evitando bloqueio de autoplay.
-let audioCtx = null;
-function initAudio() {
-    try {
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (Ctx && !audioCtx) audioCtx = new Ctx();
-        if (audioCtx?.state === 'suspended') audioCtx.resume().catch(() => {});
-    } catch (_) { /* Áudio é opcional: o jogo deve continuar sem ele. */ }
+// Mixer procedural WebAudio: sem downloads e sem áudio antes de ação do jogador.
+// Vozes curtas com limite de concorrência, categorias independentes e paisagem sonora em loop.
+import {AUDIO_STORAGE_KEY,DEFAULT_AUDIO_SETTINGS,normalizeAudioSettings,distanceVolume,
+ canTrigger,soundscapeVolumes} from './audio-rules.js';
+let ctx=null,master=null,effectBus=null,ambientBus=null,landscape=null;
+let settings={...DEFAULT_AUDIO_SETTINGS},paused=true,activeVoices=0;
+const MAX_VOICES=18,previous=new Map();
+try{settings=normalizeAudioSettings(JSON.parse(globalThis.localStorage?.getItem(AUDIO_STORAGE_KEY)||'null'));}catch(_){}
+function mix(){
+ if(!master)return;
+ master.gain.value=settings.muted?0:settings.master;
+ effectBus.gain.value=settings.effects;
+ ambientBus.gain.value=settings.ambient;
 }
-function playTone(freq, duration, type = 'sine', vol = 0.15) {
-    if (!audioCtx || audioCtx.state !== 'running' || vol<=0) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+export function getAudioSettings(){return {...settings};}
+export function setAudioSettings(patch){
+ settings=normalizeAudioSettings({...settings,...patch});mix();
+ try{globalThis.localStorage?.setItem(AUDIO_STORAGE_KEY,JSON.stringify(settings));}catch(_){}
+ return getAudioSettings();
 }
-// Sons procedurais da aranha, baratos e sem downloads extras. O valor de distância
-// preserva áudio baixo para inimigos remotos e zero fora do raio audível.
-export function spiderSoundGain(distance,maxDistance=24){
-    if(!Number.isFinite(distance)||distance<0)return 0;
-    const factor=Math.max(0,1-distance/maxDistance);
-    return factor*factor;
+export function initAudio(){
+ try{
+  const Ctor=globalThis.AudioContext||globalThis.webkitAudioContext;
+  if(!Ctor)return false;
+  if(!ctx){
+   ctx=new Ctor();master=ctx.createGain();effectBus=ctx.createGain();ambientBus=ctx.createGain();
+   effectBus.connect(master);ambientBus.connect(master);master.connect(ctx.destination);mix();
+  }
+  if(ctx.state==='suspended')ctx.resume()?.catch?.(()=>{});
+  return true;
+ }catch(_){return false;}
 }
-const sfx = {
-    collect: () => { playTone(880, 0.12, 'square', 0.12); playTone(1320, 0.1, 'square', 0.08); },
-    hit: () => playTone(140, 0.18, 'sawtooth', 0.22),
-    attack: () => playTone(380, 0.07, 'square', 0.11),
-    damage: () => { playTone(90, 0.22, 'triangle', 0.28); playTone(70, 0.15, 'sawtooth', 0.1); },
-    heal: () => { playTone(520, 0.15, 'sine', 0.14); playTone(780, 0.2, 'sine', 0.1); },
-    boost: () => { playTone(600, 0.1, 'square', 0.12); playTone(900, 0.15, 'square', 0.1); },
-    win: () => { playTone(523, 0.18); setTimeout(() => playTone(659, 0.18), 180); setTimeout(() => playTone(784, 0.35), 360); },
-    warning: () => { playTone(290, 0.19, 'triangle', 0.095);playTone(220, 0.29, 'triangle', 0.07); },
-    lose: () => playTone(110, 0.55, 'sawtooth', 0.22),
-    spiderStep: d => playTone(110, .065, 'triangle', .04*spiderSoundGain(d,19)),
-    spiderAttack: d => playTone(250, .12, 'sawtooth', .085*spiderSoundGain(d)),
-    spiderCharge: d => {playTone(165, .23, 'sawtooth', .07*spiderSoundGain(d));},
-    spiderWeb: d => playTone(490, .16, 'triangle', .09*spiderSoundGain(d)),
-    spiderJump: d => playTone(225, .17, 'triangle', .08*spiderSoundGain(d)),
-    spiderHurt: d => playTone(180, .10, 'sawtooth', .095*spiderSoundGain(d)),
-    spiderDeath: d => playTone(75, .42, 'triangle', .11*spiderSoundGain(d))
+export function setAudioPaused(value){
+ if(paused===!!value)return;
+ paused=!!value;
+ if(landscape)landscape.fading=0;
+ updateLandscapeGains({active:false});
+}
+function ready(bus='effects'){
+ return !!(ctx&&ctx.state==='running'&&!paused&&!settings.muted&&settings.master>0&&settings[bus]>0);
+}
+function tone(freq,duration=.1,type='sine',volume=.12,{delay=0,to=null,bus='effects'}={}){
+ if(!ready(bus)||activeVoices>=MAX_VOICES||!Number.isFinite(freq)||freq<=0||volume<=0)return false;
+ try{
+  const t=ctx.currentTime+Math.max(0,delay),end=t+Math.max(.02,Math.min(1.6,duration));
+  const osc=ctx.createOscillator(),gain=ctx.createGain();
+  osc.type=type;osc.frequency.setValueAtTime(freq,t);
+  if(to>0)osc.frequency.exponentialRampToValueAtTime(to,end);
+  gain.gain.setValueAtTime(.0001,t);
+  gain.gain.exponentialRampToValueAtTime(Math.max(.0002,Math.min(.3,volume)),t+.012);
+  gain.gain.exponentialRampToValueAtTime(.0001,end);
+  osc.connect(gain);gain.connect(bus==='ambient'?ambientBus:effectBus);
+  activeVoices++;
+  osc.onended=()=>{activeVoices=Math.max(0,activeVoices-1);try{osc.disconnect();gain.disconnect();}catch(_){}};
+  osc.start(t);osc.stop(end+.012);
+  return true;
+ }catch(_){return false;}
+}
+function limited(name,cooldown,fn){
+ if(!ready())return false;
+ const now=ctx.currentTime;
+ if(!canTrigger(previous.get(name),now,cooldown))return false;
+ const played=fn();if(played!==false)previous.set(name,now);
+ return played!==false;
+}
+function buildLandscape(){
+ if(!ctx||landscape)return;
+ const size=Math.max(2048,Math.floor(ctx.sampleRate*1.3));
+ const buffer=ctx.createBuffer(1,size,ctx.sampleRate),data=buffer.getChannelData(0);
+ // Ruído fixo de baixa intensidade, filtrado para vento e margem da lagoa.
+ for(let i=0;i<size;i++)data[i]=Math.random()*2-1;
+ function channel(type,frequency){
+  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();
+  source.buffer=buffer;source.loop=true;filter.type=type;filter.frequency.value=frequency;
+  gain.gain.value=0;source.connect(filter);filter.connect(gain);gain.connect(ambientBus);source.start();
+  return {source,gain};
+ }
+ const wind=channel('lowpass',310),water=channel('bandpass',1120);
+ const cricket=ctx.createOscillator(),cricketGain=ctx.createGain();
+ cricket.type='sine';cricket.frequency.value=4200;cricketGain.gain.value=0;
+ cricket.connect(cricketGain);cricketGain.connect(ambientBus);cricket.start();
+ landscape={wind,water,cricket,cricketGain,elapsed:0,birdAt:0,chirpIndex:0};
+}
+function fadeGain(node,value){
+ if(!ctx||!node)return;
+ const t=ctx.currentTime;
+ node.gain.cancelScheduledValues(t);
+ node.gain.setTargetAtTime(value,t,.28);
+}
+function updateLandscapeGains({nearWater=Infinity,night=false,active=true}={}){
+ if(!landscape)return;
+ const levels=soundscapeVolumes({nearWater,night,active:active&&!paused&&!settings.muted});
+ fadeGain(landscape.wind.gain,levels.wind);
+ fadeGain(landscape.water.gain,levels.water);
+ fadeGain(landscape.cricketGain,levels.night);
+}
+export function updateSoundscape({nearWater=Infinity,night=false,active=false,dt=0}={}){
+ if(!ctx||ctx.state!=='running')return;
+ if(active&&!landscape)buildLandscape();
+ updateLandscapeGains({nearWater,night,active});
+ if(!landscape||!active||paused||settings.muted)return;
+ const s=landscape;s.elapsed+=Math.max(0,Math.min(1,dt));
+ // Pássaros distantes e espaçados, sem setTimeout e sem tocar no menu/pausa.
+ if(!night&&s.elapsed>s.birdAt){
+  const base=1030+(s.chirpIndex%4)*140;s.chirpIndex++;
+  tone(base,.11,'sine',.032,{to:base*1.22,bus:'ambient'});
+  tone(base*1.31,.13,'sine',.024,{to:base*.91,delay:.16,bus:'ambient'});
+  s.birdAt=s.elapsed+7+(s.chirpIndex%5)*2.4;
+ }
+}
+export function spiderSoundGain(distance,maxDistance=24){return distanceVolume(distance,maxDistance);}
+export const sfx={
+ collect:()=>limited('collect',.075,()=>{tone(720,.075,'sine',.075,{to:1040});return tone(1150,.105,'sine',.055,{delay:.055});}),
+ hit:()=>limited('hit',.06,()=>{tone(170,.11,'triangle',.13,{to:70});return tone(420,.065,'sawtooth',.05,{to:135});}),
+ attack:()=>limited('attack',.1,()=>tone(320,.07,'triangle',.10,{to:120})),
+ damage:()=>limited('damage',.22,()=>{tone(145,.22,'sawtooth',.18,{to:60});return tone(85,.16,'triangle',.13);}),
+ heal:()=>limited('heal',.12,()=>{tone(520,.15,'sine',.13);return tone(780,.20,'sine',.09,{delay:.10});}),
+ boost:()=>limited('boost',.12,()=>{tone(580,.1,'triangle',.11);return tone(900,.16,'sine',.08,{delay:.08});}),
+ win:()=>limited('win',1,()=>{tone(523,.16);tone(659,.16,'sine',.12,{delay:.18});return tone(784,.31,'sine',.12,{delay:.36});}),
+ warning:()=>limited('warning',.65,()=>{tone(290,.19,'triangle',.09);return tone(215,.27,'triangle',.075,{delay:.10});}),
+ lose:()=>limited('lose',1,()=>tone(110,.55,'sawtooth',.18,{to:55})),
+ // Variação da frequência conforme movimento e estado do solo. Evita passo digital agudo.
+ footstep:(running=false,soft=false)=>limited('footstep',running?.17:.26,()=>{
+  const variation=.91+Math.random()*.20;
+  return tone((soft?95:125)*variation,running?.09:.065,'triangle',soft?.03:.065,{to:60});
+ }),
+ door:(opening=true)=>limited('door',.15,()=>{tone(opening?225:180,.13,'sawtooth',.06,{to:105});return tone(opening?95:70,.085,'triangle',.065,{delay:.09});}),
+ craft:()=>limited('craft',.18,()=>{tone(380,.085,'triangle',.10,{to:290});return tone(590,.17,'sine',.085,{delay:.075});}),
+ fire:()=>limited('fire',.30,()=>tone(260,.12,'triangle',.055,{to:105})),
+ fish:()=>limited('fish',.35,()=>{tone(455,.12,'triangle',.07,{to:220});return tone(840,.13,'sine',.085,{delay:.1});}),
+ chavesShot:(distance=0)=>limited('chavesShot',.14,()=>{
+  const gain=distanceVolume(distance,40);return tone(270,.095,'sawtooth',.17*gain,{to:70});
+ }),
+ rabbit:(distance=0)=>limited('rabbit',1.9,()=>tone(920,.08,'sine',.055*distanceVolume(distance,28),{to:1350})),
+ boar:(distance=0)=>limited('boar',1.7,()=>{const gain=distanceVolume(distance,36);
+  tone(120,.21,'sawtooth',.13*gain,{to:75});return tone(85,.16,'triangle',.065*gain,{delay:.08});}),
+ spiderStep:d=>limited('spiderStep',.22,()=>tone(110,.065,'triangle',.04*spiderSoundGain(d,19))),
+ spiderAttack:d=>tone(250,.12,'sawtooth',.085*spiderSoundGain(d)),
+ spiderCharge:d=>limited('spiderCharge',.28,()=>tone(165,.23,'sawtooth',.07*spiderSoundGain(d))),
+ spiderWeb:d=>tone(490,.16,'triangle',.09*spiderSoundGain(d)),
+ spiderJump:d=>tone(225,.17,'triangle',.08*spiderSoundGain(d)),
+ spiderHurt:d=>tone(180,.10,'sawtooth',.095*spiderSoundGain(d)),
+ spiderDeath:d=>tone(75,.42,'triangle',.11*spiderSoundGain(d))
 };
-export { initAudio, sfx };
+export function audioDebug(){return {voices:activeVoices,maxVoices:MAX_VOICES,context:ctx?.state||'off',paused,landscape:!!landscape};}

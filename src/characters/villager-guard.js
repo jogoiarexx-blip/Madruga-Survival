@@ -24,7 +24,7 @@ export function interactGuard(state,inventory){
  }
  return `🛡 Chaves de prontidão · ${state.hp}/${GUARD_MAX_HP} de vida`;
 }
-export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,getWorkTarget=()=>null,onWork=()=>false,onStatus=()=>{},onBeforeMount=async()=>{}}){
+export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,getWorkTarget=()=>null,onWork=()=>false,onShot=()=>{},onStatus=()=>{},onBeforeMount=async()=>{}}){
  let state=createGuardState(),step=0,patrolIndex=0,patrolPause=0,shotFxTime=0;
  let workCooldown=0;
  let activity='idle',firingSpot=null,repositionEnemy=null,repositionCooldown=0,blockedDuration=0,lastSeenEnemy=null,lastSeenAge=Infinity;
@@ -135,7 +135,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    // Um disparo marcado atinge somente quando o clipe chega ao gatilho.
    // A linha de visão, o alcance e a vida do inimigo são checados NOVAMENTE.
    shotController.update(dt,model.position,{canSee:canSee||(()=>true),
-     onHit:target=>{showShot(target);attackEnemy(target,2);},range:CHAVES_SHOT_RANGE});
+     onHit:target=>{showShot(target);onShot(model.position,target?.mesh?.position);attackEnemy(target,2);},range:CHAVES_SHOT_RANGE});
    workCooldown=Math.max(0,workCooldown-dt);
    const structures=state.recruited?getStructures():[];
    const order=normalizeGuardOrder(state.mode);

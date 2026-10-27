@@ -36,11 +36,14 @@ try {
   }
   const ids=await evaluate(`['start-btn','load-btn','export-save-menu','import-save-menu','save-file-input','export-save-pause','import-save-pause','fps-display'].every(id=>!!document.getElementById(id))`);
   assert.equal(ids,true,'Interface de backup ou carregamento ausente');
-  assert.equal(await evaluate('document.documentElement.dataset.build'),'2.41.0-ecosystem');
-  assert.ok((await evaluate('document.title')).includes('2.41.0'));
+  assert.equal(await evaluate('document.documentElement.dataset.build'),'2.42.0-soundscape');
+  assert.ok((await evaluate('document.title')).includes('2.42.0'));
+  // Novo painel de áudio existe no menu e na pausa, mesmo se WebGL estiver indisponível.
+  const audio=await evaluate("document.querySelectorAll('[data-audio-setting]').length===6 && document.querySelectorAll('[data-audio-toggle]').length===2");
+  assert.equal(audio,true,'Controles de áudio ausentes');
   // Verifica troca de foco e retorno do menu, sem iniciar o mundo nem baixar GLBs.
   assert.equal(await evaluate(`(()=>{const b=document.getElementById('start-btn');b.focus();return document.activeElement===b;})()`),true);
-  console.log('PASS Browser smoke: navegação do menu, botões de save, foco e versão 2.41.0');
+  console.log('PASS Browser smoke: navegação do menu, botões de save, foco e versão 2.42.0');
   const loaded=await evaluate('Boolean(window.__madrugaReady)');
   if(!loaded)console.log('NOTA: runtime WebGL/Three.js não confirmado neste ambiente; sessão 3D e inventário requerem teste online.');
   else console.log('Runtime inicializado no navegador.');

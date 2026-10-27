@@ -722,3 +722,14 @@ body.adventure-loading #asset-loading-status,body.adventure-loading #gpu-warmup-
 #overlay .menu-actions #export-save-menu,#overlay .menu-actions #import-save-menu{font-size:13px;padding:10px 7px}
 #pause-menu{overflow-y:auto;padding:15px}
 #pause-menu #export-save-pause,#pause-menu #import-save-pause{font-size:13px;padding:10px 14px}
+
+/* v2.42: mixer de áudio opcional, acessível no menu e na pausa, também em telas pequenas. */
+.audio-panel{display:flex;flex-direction:column;gap:8px;max-width:100%;margin:9px 0;padding:11px 13px;background:rgba(11,24,26,.58);border:1px solid rgba(174,204,178,.28);border-radius:10px;color:#e0eadf;box-sizing:border-box}
+.audio-panel-title{display:flex;justify-content:space-between;align-items:center;gap:10px;font-weight:650;font-size:13px}
+.audio-panel [data-audio-toggle]{font:inherit;font-size:12px;background:#29433c;color:#d6f1df;border:1px solid #729782;border-radius:7px;padding:5px 9px;cursor:pointer}
+.audio-sliders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.audio-sliders label{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:11px;color:#dfebdb}
+.audio-sliders input{width:100%;accent-color:#83c99d;cursor:pointer}
+.audio-sliders output{font-variant-numeric:tabular-nums;opacity:.8}
+#pause-menu .audio-panel{width:min(470px,95%)}
+@media(max-width:560px){.audio-panel{padding:8px}.audio-sliders{gap:5px}.audio-sliders label{font-size:10px}}

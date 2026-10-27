@@ -1,3 +1,13 @@
+## v2.42.0 — Audio, ambiente e feedback de gameplay
+
+- Mixer procedural WebAudio com três volumes separados (geral, efeitos e ambiente), mute e persistência local sem modificar saves.
+- Vozes limitadas a 18, cooldown por evento, envelopes curtos e variação de tom; nenhum loop musical ou amostra de terceiros.
+- Sons diferenciados para passos, corridas, coleta, fabricação, abertura de portas, pesca, javalis e coelhos; áudio de caça contextual por distância.
+- Paisagem ambiente leve: vento, água filtrada perto da lagoa, grilos à noite e pássaros espaçados de dia.
+- Sons ambiente suspensos durante pausa, tela inicial e aba oculta, sem iniciar AudioContext sem gesto de usuário.
+- Controles acessíveis no menu principal e na pausa, inclusive em celular.
+- Sem alterações de saves ou redução de modelos/texturas. Testes de volume, mute, limites e integrações da fauna.
+
 # Madruga Survival v2.41.0
 
 - Nova ordem do Chaves: Coletar e cuidar da horta. Ele navega até nós válidos, coleta recursos não metálicos com cooldown, planta sementes, rega e colhe canteiros. Recursos entram no inventário com limite e save normal. Ao atacar, mantém prioridade de combate.

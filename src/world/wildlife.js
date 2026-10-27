@@ -21,7 +21,7 @@ export function wildlifeDecision(type,distance,canSeePlayer=true){
  if(type==='boar')return distance<BOAR_DEFENSE_RADIUS&&canSeePlayer?'defend':'wander';
  return 'wander';
 }
-export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,onHunt,onHurt=()=>{},canSee=()=>true,hearSound=()=>null}){
+export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,onHunt,onHurt=()=>{},canSee=()=>true,hearSound=()=>null,onSound=()=>{}}){
  const animals=[];
  let respawnElapsed=0, rabbitGeo=new THREE.SphereGeometry(1,12,9);
  const boxGeo=new THREE.BoxGeometry(1,1,1);
@@ -154,8 +154,12 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
    const informed=a.noiseLeft>0;
    const effectiveBehavior=a.type==='rabbit'&&informed?'flee':a.type==='boar'&&informed&&!hasVisual?'investigate':behavior;
    a.behavior=effectiveBehavior;a.alert=effectiveBehavior==='flee'||effectiveBehavior==='defend'||effectiveBehavior==='investigate';
+   const beforeCharge=a.chargePhase;
    const boar=a.type==='boar'?advanceBoarCharge(a,{dt:frame,distance:dist,
      playerDx:-dx,playerDz:-dz,canSee:hasVisual}):null;
+   if(a.type==='boar'&&boar?.phase==='windup'&&beforeCharge!=='windup'&&dist<27)onSound('boar',dist);
+   if(a.type==='rabbit'&&a.behavior==='flee'&&a.lastSoundBehavior!=='flee'&&dist<20)onSound('rabbit',dist);
+   a.lastSoundBehavior=a.behavior;
    let desired=a.heading;
    if(a.type==='rabbit'&&effectiveBehavior==='flee'){
      a.escapeBurst=Math.max(0,a.escapeBurst-frame);

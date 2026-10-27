@@ -1,4 +1,4 @@
-// Madruga Survival v2.41.0 — Chaves trabalhador, lagoa, LOD, casas interativas, animais atentos a som.
+// Madruga Survival v2.42.0 — mixer de áudio ambiente, feedback sonoro e controles de volume.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -15,7 +15,7 @@ import {segmentBlockedByCircles} from './world/line-of-sight.js';
 import {selectGuardWork} from './gameplay/guard-work.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
-import { initAudio, sfx } from './audio/sfx.js?v=2.11.0-spider';
+import { initAudio, sfx, setAudioSettings, getAudioSettings, setAudioPaused, updateSoundscape } from './audio/sfx.js?v=2.42.0-audio';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
@@ -284,6 +284,7 @@ const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     hearSound:(animal)=>zombieSenses.hear(animal,elapsed,{afterId:animal.heardId,
       blocked:(from,to)=>buildings.blocksLine(from,to)||(segmentBlockedByCircles(from,to,treeColliders)||segmentBlockedByCircles(from,to,rockColliders))}),
     onHurt:(amount,origin)=>{if(gameActive)damagePlayer(amount,origin);},
+    onSound:(event,distance)=>{if(event==='boar')sfx.boar(distance);else if(event==='rabbit')sfx.rabbit(distance);},
     onHunt:(type,amount)=>{
       recordMissionEvent(missionProgress,'hunt');
       const quantity=amount+huntingBonus(skillLevel(survival,'hunting'));
@@ -628,6 +629,7 @@ function ensureVisibleGoblinEncounter(){
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
 const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
+    onShot:position=>sfx.chavesShot(Math.hypot(position.x-player.position.x,position.z-player.position.z)),
     getWorkTarget:position=>selectGuardWork(position,
       buildings.structures[0]||{x:4,z:2},resources.nodes,buildings.structures,survival.inventory),
     onWork:job=>{
@@ -912,18 +914,19 @@ loadingEnter.onclick=()=>{
     gameActive=true;
     clock.getDelta();
     // O clique real no botão é necessário para solicitar Pointer Lock e desbloquear áudio.
-    initAudio();controls.lock();
+    initAudio();setAudioPaused(false);controls.lock();
     frameDriver.start();
     if(!loadingWarning.classList.contains('hidden'))showToast('⚠ Alguns modelos 3D usam o visual de reserva.');
 };
 function showPauseMenu(message = '') {
     if (!gameActive || !helpPanel.classList.contains('hidden') || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || campfireUI.isOpen || buildWheelUI.isOpen) return;
     pauseMenu.classList.remove('hidden');
+    setAudioPaused(true);
     if (message) pauseMenu.querySelector('p').textContent = message;
     frameDriver?.wake();
     Object.keys(keys).forEach(key => { keys[key] = false; });
 }
-function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); controls.lock(); frameDriver?.wake(); }
+function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); setAudioPaused(false); controls.lock(); frameDriver?.wake(); }
 document.addEventListener('keydown', e => {
     if(adventureLoading){e.preventDefault();return;}
     if(e.code==='F1'){e.preventDefault();setHelpOpen(helpPanel.classList.contains('hidden'));return;}
@@ -1462,7 +1465,8 @@ function interactWithBuilding(){
             showToast('Afaste-se da porta ou janela para fechar.');return true;
         }
         const isOpen=buildings.toggleDoor(item);
-        showToast(`${item.type==='window'?'🪟 Janela':'🚪 Porta'} ${isOpen?'aberta':'fechada'}`);sfx.collect();saveProgress();return true;
+        sfx.door(isOpen);
+        showToast(`${item.type==='window'?'🪟 Janela':'🚪 Porta'} ${isOpen?'aberta':'fechada'}`);saveProgress();return true;
     }
     if(item.type==='chest'){
         storageUI.open(item);buildings.setChestOpen(item,true);
@@ -1580,7 +1584,7 @@ function fishNearby(){
     if(!gameActive)return false;
     const node=resources.nodes.find(n=>n.type==='water'&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<3.8);
     const result=tryFish(survival,elapsed,!!node||nearLakeShore(player.position),fishingBonus(skillLevel(survival,'fishing')));
-    if(result.ok){earnSkill('fishing',28);sfx.collect();updateHUD();saveProgress();}
+    if(result.ok){earnSkill('fishing',28);sfx.fish();updateHUD();saveProgress();}
     showToast(result.message);
     return result.ok;
 }
@@ -1662,7 +1666,7 @@ function craft(recipe,quantity=1){
   const cooking=['cooked','grilledFish','stew'].includes(recipe);
   if(cooking)recordMissionEvent(missionProgress,'cook',quantity);
   earnSkill('crafting',Math.min(300,(cooking?14:22)*quantity));
-  sfx.boost();
+  sfx.craft();
   showToast('🔨 '+RECIPES[recipe].label+' · '+(result.produced>1?'+'+result.produced:'fabricado')+'!');
   updateHUD();saveProgress();return true;
 }
@@ -1718,7 +1722,7 @@ const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
 
 // ========== GAME LOOP ==========
 const clock = new THREE.Clock();
-let walkTime = 0, hudTick = 0, minimapTick = 0, fpsTime = 0, fpsFrames = 0;
+let walkTime = 0, hudTick = 0, minimapTick = 0, fpsTime = 0, fpsFrames = 0, audioLandscapeTick=0;
 let showFps = false;
 const frameProfiler=createFrameProfiler();
 let lastIdleRenderAt=-Infinity;
@@ -1733,6 +1737,7 @@ function animate() {
     const dt = Math.min(frameSeconds, 0.05);
     if (document.hidden) return;
     const running = gameActive && controls.isLocked && health > 0;
+    setAudioPaused(!running);
     if(running&&showFps)frameProfiler.record(frameSeconds*1000);
     // Pausa: o driver agenda 4 FPS via timer, evitando RAF contínuo a 60/144 Hz.
     // Relógio é atualizado primeiro, evitando salto de física ao retomar.
@@ -1811,6 +1816,7 @@ function animate() {
         if(realMovementSpeed>.55 && moveDir.lengthSq()>.01 && isGrounded){
             if(footstepTimer<=0){
                 playerNoise(sneaking?3:runningFast?22:9,'footsteps');
+                sfx.footstep(runningFast,sneaking);
                 footstepTimer=sneaking?1.15:runningFast?.40:.68;
             }
         }else footstepTimer=Math.max(footstepTimer,.12);
@@ -1893,6 +1899,12 @@ function animate() {
         zombieSenses.prune(elapsed);
         resources.update(dt,player.position,graphicsQuality);
         fishingLake.update(player.position,graphicsQuality);
+        audioLandscapeTick+=dt;
+        if(audioLandscapeTick>=.5){
+            updateSoundscape({active:true,dt:audioLandscapeTick,night:vitals.night,
+              nearWater:Math.abs(Math.hypot(player.position.x-LAKE.x,player.position.z-LAKE.z)-LAKE.radius)});
+            audioLandscapeTick=0;
+        }
         for(const event of exploration.update(player.position,graphicsQuality)){
             if(event.type==='discovered'){showToast(`🗺 Descoberto: ${event.site.label}. Vasculhe os móveis com F!`);saveProgress();}
             if(event.type==='danger'){
@@ -1997,7 +2009,7 @@ function loseGame() {
     if(placement)releasePlacement();
     gameActive = false;
     // Permitir retomar o último checkpoint após morrer.
-    sfx.lose();
+    sfx.lose();setAudioPaused(true);
     document.getElementById('go-title').textContent = 'Fim da sobrevivência';
     document.getElementById('go-title').style.color = '#e74c3c';
     document.getElementById('go-msg').textContent = `Sobreviveu até o Dia ${survival.days} e derrotou ${kills} criaturas. Recomece para tentar durar mais!`;
@@ -2010,7 +2022,7 @@ function loseGame() {
 // checkpoint. O erro fica visível e o jogador pode voltar ao menu com segurança.
 function recoverFromFrameError(error){
     console.error('[Madruga Survival] Falha durante quadro do jogo:',error);
-    gameActive=false;
+    gameActive=false;setAudioPaused(true);
     frameDriver?.stop();
     Object.keys(keys).forEach(key=>{keys[key]=false;});
     controls.unlock();
@@ -2025,7 +2037,7 @@ function recoverFromFrameError(error){
 }
 
 window.addEventListener('pagehide',()=>saveProgress());
-document.addEventListener('visibilitychange',()=>{if(document.hidden)saveProgress();frameDriver?.wake();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){saveProgress();setAudioPaused(true);}frameDriver?.wake();});
 window.addEventListener('focus',()=>frameDriver?.wake());
 
 // Menu principal: nenhum requestAnimationFrame, timer recorrente ou download GLB.
@@ -2040,6 +2052,29 @@ frameDriver=createFrameDriver({
     onError:recoverFromFrameError
 });
 updateHUD();
+
+// Preferências independentes do save: controles iguais no menu e na pausa.
+function setupSoundSettings(){
+ const sliders=[...document.querySelectorAll('[data-audio-setting]')];
+ const toggles=[...document.querySelectorAll('[data-audio-toggle]')];
+ function redraw(){
+  const v=getAudioSettings();
+  for(const slider of sliders){
+   const key=slider.dataset.audioSetting;
+   slider.value=String(Math.round(v[key]*100));
+   slider.setAttribute('aria-valuetext',Math.round(v[key]*100)+'%');
+   const label=slider.parentElement?.querySelector('output');
+   if(label)label.textContent=Math.round(v[key]*100)+'%';
+  }
+  for(const btn of toggles){btn.textContent=v.muted?'🔇 Sem som':'🔊 Som ativado';btn.setAttribute('aria-pressed',String(v.muted));}
+ }
+ for(const slider of sliders)slider.addEventListener('input',()=>{
+  setAudioSettings({[slider.dataset.audioSetting]:Number(slider.value)/100});redraw();
+ });
+ for(const btn of toggles)btn.addEventListener('click',()=>{setAudioSettings({muted:!getAudioSettings().muted});redraw();});
+ redraw();
+}
+setupSoundSettings();
 window.__madrugaReady = true;
 
 window.addEventListener('resize', () => {

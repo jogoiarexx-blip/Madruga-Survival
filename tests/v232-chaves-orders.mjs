@@ -69,15 +69,15 @@ test('HUD, tecla, toque, F e dados salvos integram comandos',()=>{
   assert.match(main,/guard:guard\.getState\(\)/);
   assert.match(html,/id="guard-order"/);
   assert.match(html,/data-action="KeyO"/);
-  assert.match(guard,/showShot\(target\);attackEnemy\(target,2\)/);
+  assert.match(guard,/showShot\(target\);(?:onShot\([^)]*\);)?attackEnemy\(target,2\)/);
   assert.match(guard,/getObjectByName\('Muzzle'\)/);
   assert.match(guard,/patrolPause/);
 });
 test('rev32 está no cache do HTML, CSS e ponto de entrada',()=>{
   const html=source('index.html'),pkg=JSON.parse(source('package.json'));
-  assert.equal(pkg.version,'2.41.0');
-  assert.match(html,/data-build="2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem"/);
-  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem/);
-  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem/);
+  assert.equal(pkg.version,'2.42.0');
+  assert.match(html,/data-build="2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape"/);
+  assert.match(html,/main\.js\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape/);
+  assert.match(html,/main\.css\?v=2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape/);
 });
 console.log('v2.32:',passed,'testes aprovados');
