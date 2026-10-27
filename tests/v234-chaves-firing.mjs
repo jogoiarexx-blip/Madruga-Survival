@@ -66,7 +66,7 @@ t('AI uses navigation for repositioning instead of shooting across buildings',()
 t('version cache and test suite updated',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
- assert.equal(pkg.version,'2.42.0');assert.match(html,/2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape/);
+ assert.equal(pkg.version,'2.43.0');assert.match(html,/2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley/);
  assert.match(pkg.scripts.test,/v234-chaves-firing\.mjs/);
 });
 console.log(`v2.34: ${passed} verificações aprovadas`);

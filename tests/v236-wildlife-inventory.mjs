@@ -115,8 +115,8 @@ check('animais preservam saves e respeitam obstáculos',()=>{
 check('versão e cache do módulo corrigido são novos',()=>{
  const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
- assert.match(main,/survival-ui\.js\?v=2\.41\.0-ecosystem|2\.42\.0-soundscape/);
- assert.match(main,/wildlife\.js\?v=2\.41\.0-ecosystem|2\.42\.0-soundscape/);
- assert.match(html,/2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape/);
+ assert.match(main,/survival-ui\.js\?v=2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley/);
+ assert.match(main,/wildlife\.js\?v=2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley/);
+ assert.match(html,/2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley/);
 });
 console.log(`v2.36.0: ${count} regressões aprovadas`);

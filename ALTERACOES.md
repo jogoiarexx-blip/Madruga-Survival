@@ -1,3 +1,11 @@
+## v2.43.0 — Foley CC0 sob demanda e fallback seguro
+
+- Eventos de passos, portas, combate, coleta e fabricação usam amostras OGG leves da Kenney (CC0), carregadas depois da primeira interação do usuário.
+- CDN com versão fixa da biblioteca; duas origens tentadas, verificando tamanho e tempo de duração, 3 downloads paralelos e controle de falhas/re-tentativas.
+- Mixer, volume por categoria, pausa e limite global de 18 vozes preservados. Quando a amostra não está pronta ou CDN falha, som procedural continua sem bloquear o jogo.
+- Áudio baixado sob demanda e mantido em cache de memória da sessão, não armazenado no save. O ZIP contém código e manifesto, mas requer rede para áudio amostrado; offline funciona com efeitos procedurais.
+- Referências: Kenney RPG Audio e Kenney Impact Sounds (licença CC0-1.0), redistribuídos publicamente em github.com/GeorgeQLe/assets-sfx-combat no commit 9662dc1bed3b06ae753045915f9accfac044c7ce.
+
 ## v2.42.0 — Audio, ambiente e feedback de gameplay
 
 - Mixer procedural WebAudio com três volumes separados (geral, efeitos e ambiente), mute e persistência local sem modificar saves.

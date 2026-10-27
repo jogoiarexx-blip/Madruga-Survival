@@ -15,7 +15,7 @@ import {segmentBlockedByCircles} from './world/line-of-sight.js';
 import {selectGuardWork} from './gameplay/guard-work.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
-import { initAudio, sfx, setAudioSettings, getAudioSettings, setAudioPaused, updateSoundscape } from './audio/sfx.js?v=2.42.0-audio';
+import { initAudio, sfx, setAudioSettings, getAudioSettings, setAudioPaused, updateSoundscape } from './audio/sfx.js?v=2.43.0-samples';
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
@@ -1442,7 +1442,7 @@ function openCampfire(){
     if(!gameActive||survivalUI.isOpen||storageUI.isOpen||skillsUI.isOpen||workbenchUI.isOpen||campfireUI.isOpen)return false;
     if(!buildings.near('campfire',player.position,6))return false;
     if(placement)releasePlacement();
-    campfireUI.open();controls.unlock();pauseMenu.classList.add('hidden');
+    campfireUI.open();sfx.fire();controls.unlock();pauseMenu.classList.add('hidden');
     return true;
 }
 function closeStorage(){
