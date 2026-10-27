@@ -14,6 +14,7 @@ import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
 import {createFrameDriver} from './render/startup-scheduler.js';
+import {canDisposeEnemyGeometry} from './render/enemy-geometry-pool.js';
 import {createAdventureLoader} from './render/adventure-loader.js';
 import {createGpuWarmup} from './render/gpu-warmup.js';
 import {createMenuPreview} from './ui/menu-preview.js';
@@ -462,7 +463,7 @@ function removeMesh(mesh,defeated=false) {
     mesh.traverse(node => {
         if (!node.isMesh) return;
         // Recursos partilhados entre braços/pernas de um mesmo inimigo são descartados uma só vez.
-        if (node.geometry && !node.userData?.sharedZombieGeometry && !node.userData?.sharedGoblinGeometry && !disposed.has(node.geometry)) {
+        if (canDisposeEnemyGeometry(node.geometry) && !node.userData?.sharedZombieGeometry && !node.userData?.sharedGoblinGeometry && !disposed.has(node.geometry)) {
             disposed.add(node.geometry);node.geometry.dispose();
         }
         for (const m of (Array.isArray(node.material) ? node.material : [node.material])) {
@@ -1777,7 +1778,7 @@ function animate() {
     if (showFps) {
         fpsTime += dt; fpsFrames++;
         if (fpsTime > .75) {
-            fpsDisplay.textContent = `FPS: ${Math.round(fpsFrames/fpsTime)} · Draw calls: ${renderer.info.render.calls} · Árvores: ${forest.visibilityStats.visibleTrees}/${forest.visibilityStats.totalTrees}`;
+            fpsDisplay.textContent = `FPS: ${Math.round(fpsFrames/fpsTime)} · Draw calls: ${renderer.info.render.calls} · Árvores: ${forest.visibilityStats.visibleTrees}/${forest.visibilityStats.totalTrees} · Geom. reutilizadas: ${spawnEnemy.geometryStats().reused}`;
             fpsTime=0; fpsFrames=0;
         }
     }

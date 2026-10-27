@@ -1,8 +1,10 @@
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
+import {createEnemyGeometryPool} from '../render/enemy-geometry-pool.js';
 import {ZOMBIE_TYPES,isZombieType} from '../gameplay/zombie-variants.js';
 import {getSpiderVariant,isSpiderVariant} from '../gameplay/spider-variants.js?v=2.13.0';
 // Construção procedural de inimigos, centralizada e testável.
 export function createEnemySpawner({THREE,scene,getGroundHeight,findSpawnPoint,shrinePosition,enemies,onSpawn=()=>{},getQuality=()=> 'medium'}) {
+const geometryPool=createEnemyGeometryPool();
 function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
     let size = 0.9, color = 0xe74c3c, speed = 3.2, hp = 2, damage = 12;
     let skinColor = color, clothColor = color, eyeColor = 0xfff4ac, accentColor = 0x4b2227;
@@ -34,8 +36,12 @@ function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
     } else if (type === 'boss') {
         skinColor = color; clothColor = color; accentColor = 0x4b2227; eyeColor = 0xfff4ac;
     }
-    const curve=geometryDetail(getQuality());
-    const rounded=(w,h,d,r)=>roundedBoxGeometry(THREE,w,h,d,r,getQuality()==='high'?4:3);
+    const quality=getQuality();
+    const curve=geometryDetail(quality);
+    // Dimensões e perfil de qualidade fazem parte da chave; nunca deformar
+    // geometrias já criadas quando o usuário troca a qualidade gráfica.
+    const shared=(shape,dimensions,create)=>geometryPool.get([quality,shape,...dimensions].join(':'),create);
+    const rounded=(w,h,d,r)=>shared('rounded',[w,h,d,r],()=>roundedBoxGeometry(THREE,w,h,d,r,quality==='high'?4:3));
     const material = new THREE.MeshStandardMaterial({ color: clothColor, roughness: 0.62, emissive: isZombieType(type)?skinColor:clothColor, emissiveIntensity: 0 });
     const mesh = new THREE.Mesh(rounded(size*.81,size*.74,size*.78,size*.075), material);
     const limbMat = new THREE.MeshStandardMaterial({color:skinColor,roughness:.78});
@@ -53,60 +59,60 @@ function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
         rig[side<0?'leftLeg':'rightLeg']=leg;
     }
     const head=new THREE.Group();head.position.y=size*.29;mesh.add(head);rig.head=head;
-    const mask=new THREE.Mesh(new THREE.BoxGeometry(size*.47,size*.27,size*.12),
+    const mask=new THREE.Mesh(shared('mask',[size],()=>new THREE.BoxGeometry(size*.47,size*.27,size*.12)),
         new THREE.MeshStandardMaterial({color:accentColor,roughness:.8}));
     mask.position.z=size*.43;head.add(mask);
-    const aura=new THREE.Mesh(new THREE.TorusGeometry(size*.65,size*.025,Math.max(5,Math.floor(curve.decoration/2)),Math.max(20,curve.decoration*3)),
+    const aura=new THREE.Mesh(shared('aura',[size],()=>new THREE.TorusGeometry(size*.65,size*.025,Math.max(5,Math.floor(curve.decoration/2)),Math.max(20,curve.decoration*3))),
         new THREE.MeshBasicMaterial({color:0xff8e40,transparent:true,opacity:.75}));
     aura.rotation.x=Math.PI/2;aura.visible=false;aura.position.y=-size*.38;mesh.add(aura);rig.aura=aura;
     mesh.userData.rig=rig;
     const eyeMat = new THREE.MeshBasicMaterial({color: eyeColor});
-    const eyeGeo = new THREE.SphereGeometry(size * 0.09,curve.smallSphereWidth,curve.smallSphereHeight);
+    const eyeGeo = shared('eye',[size],()=>new THREE.SphereGeometry(size * 0.09,curve.smallSphereWidth,curve.smallSphereHeight));
     for (const offset of [-0.2, 0.2]) {
-        const eye = new THREE.Mesh(eyeGeo.clone(), eyeMat.clone());
+        const eye = new THREE.Mesh(eyeGeo, eyeMat.clone());
         eye.position.set(offset * size, -size * 0.16, size * 0.54);
         head.add(eye);
     }
     if (!isZombieType(type) && type!=='normal') for (const offset of [-0.25, 0.25]) {
-        const horn = new THREE.Mesh(new THREE.ConeGeometry(size * 0.14, size * 0.38,curve.decoration),
+        const horn = new THREE.Mesh(shared('horn',[size],()=>new THREE.ConeGeometry(size * 0.14, size * 0.38,curve.decoration)),
             new THREE.MeshStandardMaterial({color: 0x3d1b27}));
         horn.position.set(offset * size, size * 0.33, 0);
         horn.rotation.z = offset * 0.7;
         head.add(horn);
     }
     if (isZombieType(type)) {
-        const tornShirt = new THREE.Mesh(new THREE.BoxGeometry(size*.70,size*.34,size*.80),
+        const tornShirt = new THREE.Mesh(shared('shirt',[size],()=>new THREE.BoxGeometry(size*.70,size*.34,size*.80)),
             new THREE.MeshStandardMaterial({color:0x435746,roughness:.88}));
         tornShirt.position.set(0,-size*.08,0); mesh.add(tornShirt);
-        const jaw = new THREE.Mesh(new THREE.BoxGeometry(size*.26,size*.08,size*.10),
+        const jaw = new THREE.Mesh(shared('jaw',[size],()=>new THREE.BoxGeometry(size*.26,size*.08,size*.10)),
             new THREE.MeshStandardMaterial({color:0x203025,roughness:.9}));
         jaw.position.set(0,-size*.01,size*.47); head.add(jaw);
     }
     if (type==='zombie_toxic') {
-        const glow=new THREE.Mesh(new THREE.OctahedronGeometry(size*.14),
+        const glow=new THREE.Mesh(shared('toxic',[size],()=>new THREE.OctahedronGeometry(size*.14)),
             new THREE.MeshBasicMaterial({color:0x9bff6c}));
         glow.position.set(0,size*.12,size*.48);mesh.add(glow);
     }
     if (type==='zombie_brute') {
         const shoulderMat=new THREE.MeshStandardMaterial({color:0x4f6555,roughness:1});
         for(const offset of [-.42,.42]){
-            const shoulder=new THREE.Mesh(new THREE.BoxGeometry(size*.24,size*.27,size*.45),shoulderMat);
+            const shoulder=new THREE.Mesh(shared('shoulder',[size],()=>new THREE.BoxGeometry(size*.24,size*.27,size*.45)),shoulderMat);
             shoulder.position.set(offset*size,size*.30,0);mesh.add(shoulder);
         }
     }
     if (type==='shaman') {
-        const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,1.4,curve.decoration),
+        const staff = new THREE.Mesh(shared('staff',[],()=>new THREE.CylinderGeometry(0.04,0.05,1.4,curve.decoration)),
             new THREE.MeshStandardMaterial({color:0x523827}));
         staff.position.set(-size*0.64,0.15,0);mesh.add(staff);
-        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.16),
+        const gem = new THREE.Mesh(shared('gem',[],()=>new THREE.OctahedronGeometry(0.16)),
             new THREE.MeshStandardMaterial({color:0x62dbff,emissive:0x6c39d9,emissiveIntensity:0.9}));
         gem.position.set(-size*0.64,0.90,0);mesh.add(gem);
     }
     if (type==='boss') {
-        const crown = new THREE.Mesh(new THREE.TorusGeometry(size*0.37,0.10,8,24),
+        const crown = new THREE.Mesh(shared('crown',[size],()=>new THREE.TorusGeometry(size*0.37,0.10,8,24)),
             new THREE.MeshStandardMaterial({color:0xf2ad46,emissive:0x5a2506,metalness:0.6}));
         crown.rotation.x=Math.PI/2;crown.position.y=size*0.34;head.add(crown);
-        const chest = new THREE.Mesh(new THREE.OctahedronGeometry(0.36),
+        const chest = new THREE.Mesh(shared('chest',[],()=>new THREE.OctahedronGeometry(0.36)),
             new THREE.MeshStandardMaterial({color:0xffd056,emissive:0xdb4c10,emissiveIntensity:1.05}));
         chest.position.set(0,0,size*0.52);mesh.add(chest);
     }
@@ -120,5 +126,6 @@ function spawnEnemy(type = 'normal', spiderVariant = 'shadow') {
     onSpawn(enemies[enemies.length-1]);
 }
 
+spawnEnemy.geometryStats=()=>geometryPool.stats;
 return spawnEnemy;
 }

@@ -1,3 +1,13 @@
+## v2.29.0 — Inimigos: geometria compartilhada e percepção por frame
+
+- Geometrias dos inimigos procedurais agora usam um pool local por tipo, dimensão e perfil de qualidade, reduzindo reconstruções quando surgem criaturas iguais.
+- Ossos, animações, transformações e materiais de cada inimigo continuam independentes (nenhuma redução de polígonos ou de efeitos gráficos).
+- Geometrias compartilhadas não são destruídas ao derrotar uma única criatura: evita bugs de desaparecimento de outros inimigos que usam o mesmo buffer.
+- IA de zumbis calcula o estado de percepção do jogador no máximo uma vez por quadro, preservando os estados de consciência por inimigo e a atualização de ataque e colisão a cada quadro.
+- Contador de reutilização de geometria na opção de FPS para facilitar comparação durante combate.
+- Testes novos: compartilhamento de buffers, material independente, descarte, qualidade e percepção em grupo.
+- Limite: ganho depende da quantidade e dos tipos de criaturas; não há redução automática do número de draw calls nem benchmark de FPS em dispositivo real.
+
 ## v2.28.0 — Cache real para modelos 3D no GitHub Pages
 
 - Guarda os bytes reconstruídos do REV5, zumbi, goblin e aranha em CacheStorage, identificados por SHA-256.

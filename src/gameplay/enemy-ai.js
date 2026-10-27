@@ -9,6 +9,9 @@ import {queueZombieImpact,advanceZombieImpact,ZOMBIE_ATTACK_DURATION} from './zo
 export function createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
   showBossTelegraph,hideBossTelegraph,damagePlayer,spawnParticle,throwProjectile,sfx,isGameActive,hasLineOfSight,getRaidTarget=()=>null,onRaidDamage=()=>{},getGuard=()=>null,onGuardDamage=()=>{},onPoison=()=>{},getPlayerPerception=null,spiderAI=null}) {
 function update(dt,elapsed){
+        // Um mesmo quadro compartilha a leitura de furtividade, noite e sons.
+        // O estado de consciência continua independente por zumbi.
+        let perception=null,perceptionLoaded=false;
         // IA por tipo: melee perseguidor, xamã de longo alcance e chefe com aviso de ataque.
         for (const enemy of enemies) {
             if (!isGameActive()) break;
@@ -21,8 +24,9 @@ function update(dt,elapsed){
             const targetGuard=ally&&guardDistance<9&&guardDistance<playerDistance+.4?ally:null;
             // Raids/guard/boss retain their explicit combat targets. Ordinary
             // zombies use sight, hearing and a short-lived search memory.
-            const perception=getPlayerPerception?.();
-            const aware=perception&&!targetBuilding&&!targetGuard&&isZombieType(enemy.type)&&!enemy.raider?
+            const needsPerception=!targetBuilding&&!targetGuard&&isZombieType(enemy.type)&&!enemy.raider;
+            if(needsPerception&&!perceptionLoaded){perception=getPlayerPerception?.()??null;perceptionLoaded=true;}
+            const aware=perception&&needsPerception?
                 updateZombieAwareness(enemy,{player:player.position,now:elapsed,dt,
                   ...perception,canSee:(from,to)=>!hasLineOfSight||hasLineOfSight(from,to)}):null;
             const targetPos=targetBuilding||targetGuard||(aware?aware.target:player.position);

@@ -59,7 +59,7 @@ await test('HTML oferece loading acessível, retomada e confirmação para point
  }
  assert.match(html,/aria-modal="true"[^>]*aria-labelledby="loading-title"/);
  assert.match(html,/role="progressbar"[^>]*aria-valuemin="0"[^>]*aria-valuemax="100"/);
- assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache"/);
+ assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool"/);
 });
 await test('main bloqueia simulação no loading e libera o mouse somente via clique final',async()=>{
  const code=read('src/main.js');
@@ -83,7 +83,7 @@ await test('estilos mantêm loading legível em celular e sem assets ou animaç�
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  const pkg=JSON.parse(read('package.json'));
- assert.equal(pkg.version,'2.28.0');
+ assert.equal(pkg.version,'2.29.0','2.29.0');
  assert.match(pkg.scripts.test,/v226-adventure-loading/);
 });
 console.log(`v2.26: ${n} cenários de loading aprovados`);
