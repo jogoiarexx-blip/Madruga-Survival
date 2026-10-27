@@ -1,3 +1,9 @@
+## v2.26.0 — Loading de partida após o menu
+
+Ao clicar em **Nova sobrevivência** ou **Continuar partida**, uma nova tela de loading exibe o avanço real das etapas de geração de mundo, restauração do progresso salvo, shaders e modelos 3D. A física, a IA e o relógio permanecem parados até que a preparação termine. Ao atingir 100%, clique em **Entrar na partida** para capturar o mouse e habilitar o áudio. Caso algum modelo opcional falhe, o jogo mantém seu visual simplificado.
+
+Para publicar na branch `main` do GitHub, extraia este pacote e execute `PUBLICAR-v2.26-GITHUB.cmd` no Windows com Git autenticado. Esse script verifica a versão remota, não faz force push e executa os testes antes do envio.
+
 ## v2.23 — Goblin animado (novo inimigo comum)
 
 O goblin enviado já possuía **46 ossos** e 6 animações. Agora o jogo inclui
@@ -414,3 +420,9 @@ Na mochila (`I`), selecione **Colete**, **Quitina** ou **Botas** para vestir/ret
 Ao abrir um baú (`F`), surgem duas grades: as 36 posições da mochila e uma grade de recursos do baú. Selecione origem e toque na outra grade, ou arraste no computador. Use 1, metade, tudo ou digite uma quantidade de 1 a 80. As operações são atômicas e não ultrapassam a capacidade do baú. A grade do baú **agrupa por recurso**, não salva posições individuais.
 
 Colete, reforço de quitina e botas são acessórios 3D de geometria leve, presos ao rig do personagem; suas formas são aproximações visuais e não modelos de roupa costurados ao GLB.
+
+### v2.25 — menu principal e HUD limpa
+
+A tela inicial apresenta o personagem REV5 em prévia estática preparada em horário ocioso, usando o mesmo contexto WebGL da partida para antecipar seus shaders e texturas. **Não** executa IA, física, geração de floresta nem loop contínuo enquanto o menu está aberto. A simulação começa exclusivamente em Nova sobrevivência ou Continuar partida.
+
+Durante o jogo, os painéis de missão e atributos exibem apenas um resumo; use **Detalhes** ou **+** para expandir. Os comandos completos estão em **F1**, no botão **Ajuda** ou na tela inicial. As opções de qualidade e todas as funcionalidades anteriores continuam disponíveis.

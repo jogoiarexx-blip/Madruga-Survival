@@ -1,4 +1,4 @@
-// Madruga Survival v2.24.0 — goblin animado, menu inerte e GPU sob demanda.
+// Madruga Survival v2.26.0 — carregamento em etapas antes da partida, menu sem simulação.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -13,8 +13,10 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {clone as cloneSkeleton} from 'three/addons/utils/SkeletonUtils.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {shouldRenderFrame} from './render/frame-budget.js';
-import {createFrameDriver,createAssetPipeline} from './render/startup-scheduler.js';
+import {createFrameDriver} from './render/startup-scheduler.js';
+import {createAdventureLoader} from './render/adventure-loader.js';
 import {createGpuWarmup} from './render/gpu-warmup.js';
+import {createMenuPreview} from './ui/menu-preview.js';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
 import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
 import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
@@ -75,6 +77,7 @@ let graphicsQuality = 'medium'; // low, medium, high
 // Cria somente o canvas no menu. Contexto WebGL, sombras e buffers alocados
 // apenas quando o jogador inicia uma partida, poupando GPU/CPU no menu.
 const gameCanvas=document.createElement('canvas');
+gameCanvas.id='game-canvas';
 gameCanvas.style.visibility='hidden';
 document.body.appendChild(gameCanvas);
 let renderer=null;
@@ -118,9 +121,10 @@ const natureAssets = createNatureAssets(THREE);
 // ========== PERSONAGEM ==========
 const {player,avatar,torso,headRig,leftLeg,rightLeg,leftArm,rightArm,weapon,equipWeaponVisual,setWeaponUpgrades} =
     createPlayerModel(THREE,scene);
+let menuPreparing=false;
 const gpuWarmup=createGpuWarmup({
   getRenderer:()=>renderer,getScene:()=>scene,getCamera:()=>camera,
-  isActive:()=>gameActive&&!document.hidden,
+  isActive:()=>!document.hidden&&(gameActive||menuPreparing||adventureLoading),
   onProgress:({label,phase,done,total})=>{
     if(!gameActive)return;
     const status=document.getElementById('gpu-warmup-status');
@@ -137,7 +141,7 @@ const modelRetry=document.getElementById('player-model-retry');
 function showPlayerModelStatus(message,state){
     console.info('[Player REV5]',state,message);
     modelMessage.textContent=message;
-    modelBanner.style.display=state==='ready'?'none':'block';
+    modelBanner.style.display=(state==='ready'||!gameActive)?'none':'block';
     modelBanner.dataset.state=state;
     modelRetry.style.display=state==='error'?'inline-block':'none';
 }
@@ -201,6 +205,7 @@ let cameraZoom = 7.6;
 let toastTimer = null, skillAlertTimer = null;
 let wave = 1;
 let gameActive = false;
+let adventureLoading=false;
 let frameDriver=null;
 
 let speedBoost = 1;
@@ -538,36 +543,47 @@ const guard=createVillagerGuard({THREE,scene,getGroundHeight,resolveCollision,
 const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
     addCollider:collisionWorld.add,cameraObstacles,getGraphicsQuality:()=>graphicsQuality});
 let worldSeed = Math.floor(Math.random() * 0x100000000);
+// Etapas independentes: o navegador pode atualizar o loading entre blocos pesados.
+// Nenhum mapa, IA ou física é atualizado no menu principal.
 function initWorld() {
-    ensureRenderer();
-    if(!ground){
-        ground=createTerrain(THREE,scene,getGroundHeight);
-        cameraObstacles.unshift(ground);
-        cameraRig.refreshObstacles();
-    }
-    applyGraphicsSettings(THREE,graphicsQuality,renderer,scene,sun);
-    natureAssets.setQuality(graphicsQuality);
-    forest.generate(graphicsQuality,worldSeed);
-    // Primeiro a arena e os obstáculos; depois os elementos dinâmicos.
-    shrine.create();
-    cemetery.create();
-    cameraObstacles.push(...cemetery.cameraObstacles);
-    cameraRig.refreshObstacles();
-    forest.updateVisibility(player.position,graphicsQuality,0,true);
-    exploration.generate(worldSeed);
-    spiderNests.generate(worldSeed);
-    arachnidCave.generate(spiderNests.nests);
-    cameraRig.setArena(null);
-    resources.generate(worldSeed,graphicsQuality);
-    wildlife.generate(worldSeed,graphicsQuality);
-    // Modelos são solicitados após o primeiro frame jogável, com concorrência limitada.
-    for (let i=0; i<2; i++) spawnHealthPack();
-    for (let i=0; i<2; i++) spawnSpeedBoost();
-    for (let i=0; i<2; i++) spawnEnemy('normal');
-    spawnEnemy('fast');
-    if(Math.random()<0.35)spawnEnemy('zombie');
-    spawnEnemy('spider','shadow'); // Primeiro encontro acessível; espécies difíceis surgem com o progresso.
-    updateHUD();
+    return [
+        {name:'Preparando terreno e iluminação',load:()=>{
+            ensureRenderer();
+            if(!ground){
+                ground=createTerrain(THREE,scene,getGroundHeight);
+                cameraObstacles.unshift(ground);
+                cameraRig.refreshObstacles();
+            }
+            applyGraphicsSettings(THREE,graphicsQuality,renderer,scene,sun);
+            natureAssets.setQuality(graphicsQuality);
+        }},
+        {name:'Gerando floresta e vegetação',load:()=>{
+            forest.generate(graphicsQuality,worldSeed);
+        }},
+        {name:'Construindo locais, ruínas e caverna',load:()=>{
+            shrine.create();
+            cemetery.create();
+            cameraObstacles.push(...cemetery.cameraObstacles);
+            cameraRig.refreshObstacles();
+            forest.updateVisibility(player.position,graphicsQuality,0,true);
+            exploration.generate(worldSeed);
+            spiderNests.generate(worldSeed);
+            arachnidCave.generate(spiderNests.nests);
+            cameraRig.setArena(null);
+        }},
+        {name:'Distribuindo recursos e criaturas',load:()=>{
+            resources.generate(worldSeed,graphicsQuality);
+            wildlife.generate(worldSeed,graphicsQuality);
+            for(let i=0;i<2;i++)spawnHealthPack();
+            for(let i=0;i<2;i++)spawnSpeedBoost();
+            for(let i=0;i<2;i++)spawnEnemy('normal');
+            spawnEnemy('fast');
+            if(Math.random()<0.35)spawnEnemy('zombie');
+            spawnEnemy('spider','shadow');
+            updateHUD();
+            worldInitialized=true;
+        }}
+    ];
 }
 
 // Checkpoints. localStorage é específico da origem/domínio do GitHub Pages.
@@ -659,23 +675,111 @@ function updateContinueButton() {
 
 // ========== INPUT / COMBATE / PAUSA ==========
 const overlay = document.getElementById('overlay');
+let menuPreview=null;
+let menuPreviewRequested=false;
+async function prepareMainMenuPreview(){
+    if(menuPreviewRequested||gameActive||adventureLoading||document.hidden)return;
+    menuPreviewRequested=true;menuPreparing=true;
+    const hint=document.getElementById('menu-performance-tip');
+    try{
+        // Uma compilacao no contexto WebGL REAL da partida, sem terreno, IA ou fisica.
+        ensureRenderer();
+        hint.textContent='Carregando Seu Madruga e preparando shaders…';
+        const ok=await playerRev5.preload();
+        if(gameActive||adventureLoading||!ok||!playerRev5.model){if(!gameActive&&!adventureLoading)hint.textContent='Prévia indisponível. O jogo continua funcionando.';return;}
+        menuPreview=createMenuPreview({THREE,cloneSkeleton,renderer,model:playerRev5.model});
+        await gpuWarmup.prepare(playerRev5.model,'Prévia REV5');
+        if(gameActive||adventureLoading)return;
+        gameCanvas.style.visibility='visible';
+        menuPreview.draw(); // Renderiza UMA vez e nao agenda frames.
+        hint.textContent='✓ Personagem e shaders preparados · sem simulação';
+    }catch(error){console.warn('[Menu Preview] Opcional:',error);if(!adventureLoading)hint.textContent='Prévia não disponível · jogo pronto para iniciar';}
+    finally{menuPreparing=false;}
+}
+// Carregamento ocioso: apenas REV5, nunca mundo, IA, florestas ou demais inimigos.
+const scheduleMenuPreview=()=>{if(typeof requestIdleCallback==='function')requestIdleCallback(()=>void prepareMainMenuPreview(),{timeout:1400});else setTimeout(()=>void prepareMainMenuPreview(),900);};
+scheduleMenuPreview();
+
 const pauseMenu = document.getElementById('pause-menu');
-const assetStatus=document.getElementById('asset-loading-status');
-const assetPipeline=createAssetPipeline({
-    stages:[
-        {name:'Shaders do cenário',load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
-        {name:'Personagem REV5',load:()=>playerRev5.preload()},
-        {name:'Zumbis REV2',load:()=>zombieModels.preload()},
-        {name:'Aranha Sombria',load:()=>spiderModels.preload()},
-        {name:'Goblin animado',load:()=>goblinModels.preload()}
-    ],
-    onProgress:({label,done,total,complete})=>{
-        assetStatus.textContent=complete?'':`⏳ Assets ${done}/${total} · ${label}`;
-        assetStatus.classList.toggle('hidden',complete);
+const helpPanel=document.getElementById('help-panel');
+const campaignPanel=document.getElementById('campaign-hud');
+const vitalsPanel=document.getElementById('survival-hud');
+function toggleDetails(panel,buttonId){
+  const open=panel.classList.toggle('expanded');
+  const button=document.getElementById(buttonId);
+  button.setAttribute('aria-expanded',String(open));
+  button.textContent=buttonId==='status-toggle'?(open?'−':'+'):(open?'Recolher ▴':'Detalhes ▾');
+}
+document.getElementById('mission-toggle').addEventListener('click',()=>toggleDetails(campaignPanel,'mission-toggle'));
+document.getElementById('status-toggle').addEventListener('click',()=>toggleDetails(vitalsPanel,'status-toggle'));
+function setHelpOpen(open){
+  helpPanel.classList.toggle('hidden',!open);
+  if(open&&gameActive){controls.unlock();Object.keys(keys).forEach(key=>{keys[key]=false;});}
+  else if(!open&&gameActive&&pauseMenu.classList.contains('hidden'))resumeGame();
+}
+document.getElementById('help-toggle').addEventListener('click',()=>setHelpOpen(true));
+document.getElementById('menu-help').addEventListener('click',()=>setHelpOpen(true));
+document.getElementById('help-close').addEventListener('click',()=>setHelpOpen(false));
+helpPanel.addEventListener('click',event=>{if(event.target===helpPanel)setHelpOpen(false);});
+
+// Loader exibido somente depois de Iniciar/Continuar; o mundo permanece pausado.
+const loadingScreen=document.getElementById('loading-screen');
+const loadingTitle=document.getElementById('loading-title');
+const loadingDetail=document.getElementById('loading-detail');
+const loadingStage=document.getElementById('loading-stage');
+const loadingCount=document.getElementById('loading-stage-count');
+const loadingBar=document.getElementById('loading-progress');
+const loadingFill=document.getElementById('loading-progress-fill');
+const loadingPercent=document.getElementById('loading-percent');
+const loadingWarning=document.getElementById('loading-warning');
+const loadingRetry=document.getElementById('loading-retry');
+const loadingEnter=document.getElementById('loading-enter');
+let adventureReady=false;
+const adventureLoader=createAdventureLoader({
+    // RAF seguido de uma tarefa: garante chance real de pintar o progresso.
+    yieldToBrowser:()=>new Promise(resolve=>requestAnimationFrame(()=>setTimeout(resolve,0))),
+    onProgress:({status,label,done,total,percent,optionalFailures,error})=>{
+        if(status==='error'){
+            loadingTitle.textContent='Não foi possível carregar o mundo';
+            loadingDetail.textContent='Seu progresso salvo foi preservado. Recarregue para tentar novamente.';
+            loadingStage.textContent=error?.message||'Falha inesperada na preparação';
+            loadingScreen.dataset.state='error';
+            loadingRetry.classList.remove('hidden');loadingRetry.focus();
+            return;
+        }
+        loadingStage.textContent=status==='ready'?'Pronto para explorar':label;
+        loadingCount.textContent=`Etapa ${done} de ${total}`;
+        loadingPercent.textContent=`${percent}%`;
+        loadingBar.setAttribute('aria-valuenow',String(percent));
+        loadingFill.style.width=`${percent}%`;
+        if(status==='ready'&&optionalFailures?.length){
+            loadingWarning.textContent='Alguns modelos opcionais usarão o visual simplificado.';
+            loadingWarning.classList.remove('hidden');
+        }
     }
 });
+loadingRetry.onclick=()=>location.reload();
+loadingEnter.onclick=()=>{
+    if(!adventureLoading||!adventureReady||gameActive)return;
+    adventureReady=false;
+    adventureLoading=false;
+    loadingScreen.classList.add('hidden');
+    loadingScreen.removeAttribute('aria-busy');
+    document.body.classList.remove('adventure-loading');
+    document.body.classList.add('game-active');
+    gameCanvas.style.visibility='visible';
+    document.getElementById('consumable-hotbar').classList.remove('hidden');
+    consumableHotbarUI.update();
+    saveTick=0;
+    gameActive=true;
+    clock.getDelta();
+    // O clique real no botão é necessário para solicitar Pointer Lock e desbloquear áudio.
+    initAudio();controls.lock();
+    frameDriver.start();
+    if(!loadingWarning.classList.contains('hidden'))showToast('⚠ Alguns modelos 3D usam o visual de reserva.');
+};
 function showPauseMenu(message = '') {
-    if (!gameActive || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || buildWheelUI.isOpen) return;
+    if (!gameActive || !helpPanel.classList.contains('hidden') || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || buildWheelUI.isOpen) return;
     pauseMenu.classList.remove('hidden');
     if (message) pauseMenu.querySelector('p').textContent = message;
     frameDriver?.wake();
@@ -683,6 +787,9 @@ function showPauseMenu(message = '') {
 }
 function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); controls.lock(); frameDriver?.wake(); }
 document.addEventListener('keydown', e => {
+    if(adventureLoading){e.preventDefault();return;}
+    if(e.code==='F1'){e.preventDefault();setHelpOpen(helpPanel.classList.contains('hidden'));return;}
+    if(!helpPanel.classList.contains('hidden')){if(e.code==='Escape'){e.preventDefault();setHelpOpen(false);}return;}
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     // Com a roda aberta, nenhuma tecla movimenta, ataca ou fabrica inadvertidamente.
     if(buildWheelUI.isOpen){
@@ -758,8 +865,7 @@ window.addEventListener('blur', () => { Object.keys(keys).forEach(key => keys[ke
 
 function setGfx(q, activeBtn) {
     graphicsQuality = q;
-    document.querySelectorAll('.gfx-btn').forEach(b => b.style.background = '#555');
-    activeBtn.style.background = '#e74c3c';
+    document.querySelectorAll('.gfx-btn').forEach(b => b.setAttribute('aria-pressed',String(b===activeBtn)));
     try { localStorage.setItem('madrugacraft.gfx', q); } catch (_) {}
 }
 document.getElementById('gfx-low').onclick = () => setGfx('low', document.getElementById('gfx-low'));
@@ -771,31 +877,72 @@ document.getElementById('gfx-high').onclick = () => setGfx('high', document.getE
                 setGfx(savedQuality, document.getElementById('gfx-'+(savedQuality==='medium'?'med':savedQuality)));
         } catch (_) {}
 let worldInitialized = false;
-function beginAdventure(restore=false) {
-    if(placement)releasePlacement();
-    const save = restore ? availableSave : null;
-    buildWheelUI.close();
-    if (!save) {clearSave(progressStorage);availableSave=null;hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);}
-    else {
-        worldSeed=save.seed;
-        graphicsQuality=save.graphicsQuality;
-    }
-    zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;spawnTimer=15;
-    if (!worldInitialized) {initWorld();worldInitialized=true;}
-    if (save) restoreProgress(save);
+async function beginAdventure(restore=false) {
+    // Evita duplo clique e alterações de partida durante o carregamento.
+    if(adventureLoading||gameActive)return;
+    const save=restore?availableSave:null;
+    if(restore&&!save){updateContinueButton();return;}
+    adventureLoading=true;
+    adventureReady=false;
+    loadingEnter.classList.add('hidden');loadingEnter.disabled=true;
+    document.body.classList.add('adventure-loading');
+    loadingScreen.dataset.state='loading';
+    loadingTitle.textContent=save?'Retomando sua sobrevivência':'Preparando sua sobrevivência';
+    loadingDetail.textContent=save?`Restaurando Dia ${save.survival.days} · Nível ${save.level}`:
+        'Construindo seu mundo e preparando os recursos para jogar.';
+    loadingWarning.classList.add('hidden');loadingWarning.textContent='';
+    loadingRetry.classList.add('hidden');
+    loadingScreen.classList.remove('hidden');
+    loadingScreen.setAttribute('aria-busy','true');
+    document.getElementById('start-btn').disabled=true;
+    document.getElementById('load-btn').disabled=true;
     overlay.classList.add('hidden');
-    gameCanvas.style.visibility='visible';
-    gameActive=true;saveTick=0;
-    document.getElementById('consumable-hotbar').classList.remove('hidden');
-    consumableHotbarUI.update();
-    initAudio();controls.lock();
-    frameDriver.start();
-    // Primeiro quadro é desenhado antes do primeiro download GLB; preserva
-    // resposta ao clique de iniciar, mesmo com conexão lenta.
-    requestAnimationFrame(()=>{if(gameActive)void assetPipeline.start();});
+    if(placement)releasePlacement();
+    buildWheelUI.close();
+    menuPreview?.dispose();menuPreview=null;
+    gameCanvas.style.visibility='hidden';
+    menuPreparing=false;
+    if(save){worldSeed=save.seed;graphicsQuality=save.graphicsQuality;}
+    zombieSenses.clear();sneaking=false;runningFastNow=false;
+    footstepTimer=0;webSlowTimer=0;spawnTimer=15;
+
+    // initWorld() descreve etapas executadas progressivamente somente após o clique.
+    const stages=[
+        ...(worldInitialized?[]:initWorld()),
+        {name:save?'Restaurando inventário e progresso':'Organizando a nova sobrevivência',load:()=>{
+            if(save)restoreProgress(save);
+            else{hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
+        }},
+        {name:'Compilando shaders e texturas do cenário',optional:true,load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
+        {name:'Preparando Seu Madruga e animações',optional:true,load:()=>playerRev5.preload()},
+        {name:'Carregando zumbis e animações',optional:true,load:()=>zombieModels.preload()},
+        {name:'Carregando aranhas e animações',optional:true,load:()=>spiderModels.preload()},
+        {name:'Carregando goblins e animações',optional:true,load:()=>goblinModels.preload()},
+        {name:'Preparando o primeiro quadro',load:()=>{
+            renderer.render(scene,camera); // Primeiro desenho oculto: evita o pico inicial de compilação.
+        }}
+    ];
+    try{
+        await adventureLoader.start(stages);
+        // Nova partida só descarta o save depois do mundo estar pronto.
+        if(!save){clearSave(progressStorage);availableSave=null;}
+        loadingTitle.textContent='Tudo pronto para sobreviver';
+        loadingDetail.textContent='A floresta está preparada. Entre para começar a jogar.';
+        loadingScreen.dataset.state='ready';
+        loadingScreen.removeAttribute('aria-busy');
+        adventureReady=true;
+        loadingEnter.disabled=false;loadingEnter.classList.remove('hidden');loadingEnter.focus();
+    }catch(error){
+        console.error('[Adventure Loading]',error);
+        // O loader mostra o erro, oferece recarregar e não inicia física/IA.
+        adventureLoading=false;
+        adventureReady=false;
+        menuPreparing=false;
+        loadingScreen.removeAttribute('aria-busy');
+    }
 }
-document.getElementById('start-btn').onclick = () => beginAdventure(false);
-document.getElementById('load-btn').onclick = () => beginAdventure(true);
+document.getElementById('start-btn').onclick=()=>void beginAdventure(false);
+document.getElementById('load-btn').onclick=()=>void beginAdventure(true);
 document.getElementById('save-btn').onclick = () => saveProgress(true);
 updateContinueButton();
 document.getElementById('resume-btn').onclick = resumeGame;
@@ -803,7 +950,7 @@ document.getElementById('restart-btn').onclick = () => location.reload();
 document.addEventListener('pointerlockchange', () => {
     document.getElementById('instructions').style.opacity = controls.isLocked ? '0.6' : '1';
     if (controls.isLocked) pauseMenu.classList.add('hidden');
-    else if (gameActive && !placement && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen && !buildWheelUI.isOpen) {saveProgress();showPauseMenu();}
+    else if (gameActive && !placement && !survivalUI.isOpen && !storageUI.isOpen && !skillsUI.isOpen && !buildWheelUI.isOpen && helpPanel.classList.contains('hidden')) {saveProgress();showPauseMenu();}
     frameDriver?.wake();
 });
 document.addEventListener('wheel', e => {
@@ -1663,4 +1810,5 @@ window.addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     renderer?.setSize(innerWidth, innerHeight);
+    if(!gameActive&&!adventureLoading&&menuPreview&&!document.hidden)menuPreview.draw();
 });

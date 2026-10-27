@@ -106,8 +106,8 @@ test('cada modelo compartilha esqueleto mas clona materiais tintos',()=>{
 });
 test('nome da revisão, execução dos novos testes e sem download extra de GLB',()=>{
  const p=JSON.parse(source('../package.json'));
- assert.ok(['2.11.0','2.12.0','2.13.0','2.14.0','2.15.0','2.16.0','2.17.0','2.18.0','2.19.0','2.20.0','2.21.0','2.22.0','2.23.0','2.24.0'].includes(p.version));assert.match(p.scripts.test,/v211-spider-variants\.mjs/);
- assert.match(source('../index.html'),/(?:2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik)/);
+ assert.ok(['2.11.0','2.12.0','2.13.0','2.14.0','2.15.0','2.16.0','2.17.0','2.18.0','2.19.0','2.20.0','2.21.0','2.22.0','2.23.0','2.24.0','2.25.0','2.26.0'].includes(p.version));assert.match(p.scripts.test,/v211-spider-variants\.mjs/);
+ assert.match(source('../index.html'),/(?:2\.11\.0-spider|2\.12\.0-nests|2\.13\.0-cave|2\.14\.0-cave|2\.15\.0-hotbar|2\.16\.0-inventory|2\.17\.0-bag|2\.18\.0-bag-chest|2\.19\.0-gear|2\.20\.0-build-wheel|2\.21\.0-menu|2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.26\.0-adventure-loading)/);
  assert.equal(source('../src/characters/spider-model.js').includes('SPIDER_GLB=\'./assets/models/aranha_sombria_animada.glb\''),true);
 });
 console.log(`v2.11: ${tests} verificações novas aprovadas`);

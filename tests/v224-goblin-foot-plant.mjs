@@ -75,7 +75,7 @@ await test('IA envia movimento real, contato e pausas do goblin',()=>{
 });
 await test('projeto identificado como v2.24 e testes novos registrados',()=>{
  const pkg=JSON.parse(text('../package.json'));
- assert.equal(pkg.version,'2.24.0');assert.match(pkg.scripts.test,/v224-goblin-foot-plant/);
- assert.match(text('../index.html'),/data-build="2\.24\.0-goblin-ik"/);
+ assert.ok(['2.24.0','2.25.0','2.26.0'].includes(pkg.version));assert.match(pkg.scripts.test,/v224-goblin-foot-plant/);
+ assert.match(text('../index.html'),/data-build="(?:2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.26\.0-adventure-loading)"/);
 });
 console.log(`${count} verificações v2.24 aprovadas`);

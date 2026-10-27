@@ -69,10 +69,10 @@ await test('main mantém menu inerte e prepara três GLBs antes de exibi-los',as
  const player=readFileSync(new URL('../src/characters/player-rev5.js',import.meta.url),'utf8');
  const zombie=readFileSync(new URL('../src/characters/zombie-models.js',import.meta.url),'utf8');
  const spider=readFileSync(new URL('../src/characters/spider-model.js',import.meta.url),'utf8');
- assert.match(main,/createGpuWarmup\(/);assert.match(main,/Shaders do cenário/);
+ assert.match(main,/createGpuWarmup\(/);assert.match(main,/Compilando shaders e texturas do cenário/);
  assert.match(main,/getRenderer:\(\)=>renderer/);
  assert.match(main,/gameCanvas\.style\.visibility='hidden'/);
- assert.match(main,/requestAnimationFrame\(\(\)=>\{if\(gameActive\)void assetPipeline\.start\(\);\}\)/);
+ assert.match(main,/await adventureLoader\.start\(stages\)/);
  assert.match(player,/await onBeforeMount\(meshRoot/);
  assert.match(zombie,/await onBeforeMount\(gltf\.scene/);
  assert.match(spider,/await onBeforeMount\(gltf\.scene/);
@@ -81,9 +81,9 @@ await test('UI de progresso sem bloquear botões e arquivos da revisão conectad
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const css=readFileSync(new URL('../styles/main.css',import.meta.url),'utf8');
  const packageJson=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));
- assert.match(html,/data-build="(?:2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik)"/);assert.match(html,/id="gpu-warmup-status"/);
+ assert.match(html,/data-build="(?:2\.22\.0-gpu|2\.23\.0-goblin|2\.24\.0-goblin-ik|2\.25\.0-menu-hud|2\.26\.0-adventure-loading)"/);assert.match(html,/id="gpu-warmup-status"/);
  assert.match(css,/#gpu-warmup-status\{[^}]*pointer-events:none/);
- assert.ok(['2.22.0','2.23.0','2.24.0'].includes(packageJson.version));
+ assert.ok(['2.22.0','2.23.0','2.24.0','2.25.0','2.26.0'].includes(packageJson.version));
  assert.match(packageJson.scripts.test,/v222-gpu-warmup/);
 });
 console.log('v2.22: '+tests+' cenários de GPU aprovados');

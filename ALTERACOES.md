@@ -1,3 +1,26 @@
+## REV226 (v2.26.0) — tela de loading entre menu e partida
+
+- Loading responsivo com barra, percentual e tarefas reais concluídas para **Novo jogo** e **Continuar**.
+- Renderizador, cenário e GLBs preparados antes de iniciar o loop de física/IA.
+- Botão final **Entrar na partida** após 100% para liberação de Pointer Lock/áudio dentro de um clique real.
+- Sem limpar o save anterior até o novo mundo estar pronto; retomada preserva dia, nível e itens.
+- Erros críticos exibem opção de recarregar; modelos opcionais usam fallback.
+- 7 novos cenários de teste (`tests/v226-adventure-loading.mjs`).
+
+## v2.25.0 — Menu renovado, HUD compacta e REV5 pré-shader
+
+# Madruga Survival v2.25 — Menu e HUD
+
+- Menu redesenhado com título, nova partida, retomar, configurações e guia acessível.
+- Prévia estática do personagem REV5 em cena dedicada com o **mesmo WebGLRenderer** da partida, após `requestIdleCallback` e sem loop de animação.
+- Aquecimento de shaders e texturas do personagem no menu, usando o contexto real; floresta, IA e física continuam sem rodar.
+- Menu usa ocioso para evitar atrasar a primeira interação; shader e upload são feitos de forma progressiva.
+- HUD inicia compacta: detalhes das missões e estatísticas extras atrás de toggles com `aria-expanded`.
+- Bloco enorme de comandos deixa de cobrir o centro inferior. Guia completo abre com F1, Ajuda ou botão no menu.
+- HUD original e saves/crafting/hotbar/goblins foram preservados.
+- Prévia única sem loop, mas há alocação WebGL e download REV5 no menu, deliberadamente para executar pré-shaders.
+- Necessário conferir encaixe e screenshot visual em navegador real: suíte de testes não mede FPS.
+
 ## v2.22.0 — Preparação GPU e shaders
 
 - Compilação antecipada assíncrona de materiais, texturas progressivas após iniciar, preparação dos GLBs antes de aparecer.

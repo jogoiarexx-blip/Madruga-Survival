@@ -545,3 +545,122 @@ body.placing #interact-hint{display:none}
  border:1px solid #6fb99d;background:#10271ee6;border-radius:9px;padding:7px 12px;color:#def5df;
  font:700 12px/1.4 system-ui;text-align:center;max-width:90vw;box-shadow:0 2px 15px #0009}
 @media(pointer:coarse){#gpu-warmup-status{bottom:247px;font-size:11px}}
+
+/* v2.25 — interface limpa, controles acessíveis e menu com prévia estática. */
+body:not(.game-active) #hud,body:not(.game-active) #campaign-hud,
+body:not(.game-active) #survival-hud,body:not(.game-active) #minimap,
+body:not(.game-active) #crosshair,body:not(.game-active) #instructions,
+body:not(.game-active) #hud-shortcuts,body:not(.game-active) #boss-bar-wrapper,
+body:not(.game-active) #consumable-hotbar{display:none!important}
+body.game-active #instructions{display:none!important}
+#overlay{background:linear-gradient(100deg,#06100de8 0%,#071611e0 40%,#07161166 70%,#03150e88 100%);display:flex;flex-direction:row;justify-content:space-between;align-items:center;text-align:left;padding:clamp(18px,4vw,70px);gap:20px;overflow:auto}
+#overlay .menu-card{pointer-events:auto;width:min(500px,47vw);padding:clamp(22px,3vw,42px);border:1px solid #78ad7950;border-radius:24px;background:linear-gradient(155deg,#0e241ddc,#07150fe8);box-shadow:0 30px 80px #0009;backdrop-filter:blur(13px)}
+#overlay .menu-topline{color:#bbd6bd;letter-spacing:.16em;font-size:11px;font-weight:900;display:flex;justify-content:space-between;gap:14px}
+#overlay .menu-topline span{color:#d4af6c;letter-spacing:normal}
+#overlay .menu-logo{font-size:32px;margin-top:22px}
+#overlay h1{font-size:clamp(32px,4.1vw,58px);line-height:1.05;margin:12px 0 18px;color:#f2f4dc;text-shadow:none;font-weight:850;letter-spacing:-.055em}
+#overlay h1 em{font-style:normal;color:#b6e590}
+#overlay .menu-subtitle{font-size:clamp(13px,1.25vw,16px);line-height:1.6;color:#bfd0bf;max-width:350px;margin:0 0 22px}
+#overlay .menu-actions{display:grid;gap:9px}
+#overlay #start-btn,#overlay #load-btn{margin:0;width:100%;border-radius:11px;font-size:15px;min-height:47px;padding:12px 16px;letter-spacing:.01em;font-weight:850}
+#overlay #start-btn{background:#81b76d;color:#08190f}
+#overlay #start-btn:hover{background:#a4d98e}
+#overlay #load-btn{background:#193e33;color:#ecf8e4;border:1px solid #6fac7d}
+#overlay .menu-settings{border-top:1px solid #54785b66;margin-top:22px;padding-top:18px}
+#overlay .menu-settings-label{display:block;font-size:12px;color:#b7c9bc;margin-bottom:9px;font-weight:750}
+#overlay .menu-quality{display:flex;gap:7px}
+#overlay .gfx-btn{background:#183129;color:#dce9db;border:1px solid #68886d;border-radius:8px;cursor:pointer;flex:1;padding:9px 8px;font-weight:750;font-size:12px}
+#overlay .gfx-btn[aria-pressed="true"]{border-color:#b6df93;background:#365a3f;color:white}
+#overlay .menu-bottom{display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap;margin-top:18px}
+#overlay #menu-help{background:none;border:0;padding:5px 0;color:#dceccb;text-decoration:underline;cursor:pointer;font-weight:700}
+#overlay #menu-performance-tip{font-size:11px!important;color:#aac1ad!important;max-width:220px!important;margin:0;line-height:1.45}
+.menu-showcase{pointer-events:none;align-self:stretch;min-width:25%;flex:1;display:flex;justify-content:space-between;flex-direction:column;align-items:flex-end;padding:20px 12px;color:#dcebd6;text-align:right}
+.showcase-tag{border:1px solid #c7dca255;border-radius:99px;background:#071b15ae;padding:9px 16px;letter-spacing:.14em;font-size:11px;font-weight:800}
+.showcase-caption{font-size:clamp(21px,3vw,34px);line-height:1.15;font-weight:850;text-shadow:0 3px 8px #000b}
+.showcase-caption small{display:block;font-size:12px;font-weight:400;color:#bad6be;margin-top:6px}
+#campaign-hud{top:96px;right:14px;min-width:0;width:min(260px,27vw);max-width:none;padding:10px 12px;pointer-events:auto;background:#0a1d19d9;border-color:#6f947d7d;backdrop-filter:blur(5px)}
+#campaign-hud .mission-head{display:flex;justify-content:space-between;align-items:center;gap:6px}
+#campaign-hud h3{font-size:10px;margin:0;letter-spacing:.07em}
+#mission-title{font-size:12px;margin-top:8px;margin-bottom:3px}
+#mission-goal{font-size:11px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#campaign-hud:not(.expanded)>:not(.mission-head):not(#mission-title):not(#mission-goal){display:none!important}
+#campaign-hud.expanded #mission-goal{display:block;-webkit-line-clamp:unset}
+.panel-toggle{pointer-events:auto;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;border:1px solid #7a997c9c;background:#254235;color:#e2f7dd;border-radius:7px;padding:4px 7px}
+#survival-hud{top:91px;left:14px;width:172px;padding:10px 11px;border-color:#729d8180;background:#081a17df;box-shadow:0 9px 25px #0006}
+#survival-hud .survival-header{display:flex;justify-content:space-between;gap:6px;align-items:center}
+#survival-hud #clock-display{font-size:12px;margin:0}
+#survival-hud .vital{margin:7px 0;font-size:11px}
+#survival-hud .vital-track{height:5px}
+#survival-hud:not(.expanded) #survival-hint,#survival-hud:not(.expanded) #skill-hud,
+#survival-hud:not(.expanded) #tool-status,#survival-hud:not(.expanded) #survival-goal{display:none!important}
+#survival-hud{pointer-events:auto}
+#hud{padding:12px 16px;background:none}
+#left-hud,#right-hud{gap:3px}
+#left-hud{max-width:185px}
+#right-hud{max-width:180px;text-align:right}
+#score-display{font-size:13px}
+#quest-display,#dodge-display,#stealth-status,#ability-display,#combat-combo-status,#boost-display,#poison-status{display:none!important}
+#right-hud #wave-display{font-size:13px}
+#right-hud #enemies-left,#right-hud #guard-status{font-size:11px}
+#hud-shortcuts{display:flex;justify-content:center;gap:7px;position:fixed;top:15px;left:50%;transform:translateX(-50%);z-index:18}
+#hud-shortcuts .hud-button{position:static!important;top:auto!important;left:auto!important;right:auto!important;bottom:auto!important;transform:none!important;font-size:12px;padding:8px 12px;background:#102b21eb;border:1px solid #84af84aa;white-space:nowrap}
+#hud-shortcuts .hud-button:hover{background:#315b41}
+#hud-shortcuts .hud-help{min-width:32px;color:#e4daa9}
+#help-panel{position:fixed;inset:0;z-index:180;background:#020b0bcf;display:flex;align-items:center;justify-content:center;padding:16px;pointer-events:auto}
+#help-panel .help-dialog{width:min(740px,100%);max-height:90dvh;overflow:auto;background:linear-gradient(170deg,#1c3429,#0e1c17);border:1px solid #92ad85;border-radius:17px;padding:clamp(18px,3vw,30px);box-shadow:0 26px 90px #000a}
+#help-panel header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+#help-panel header h2{font-size:27px;color:#f0efce}
+#help-panel .eyebrow{font-size:10px;color:#b2d7a9;font-weight:900;letter-spacing:.13em}
+#help-close{padding:10px 14px;border:1px solid #94b397;border-radius:10px;background:#315043;color:#fff;cursor:pointer}
+.help-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.help-grid section{border:1px solid #789a774d;border-radius:10px;background:#142c23;padding:13px}
+.help-grid h3{font-size:14px;color:#dfe6ba;margin-bottom:7px}
+.help-grid p{font-size:12px;line-height:1.75;color:#d1e0d2}
+.help-grid kbd{font:700 11px system-ui;background:#395c48;border:1px solid #8aaa89;border-radius:4px;padding:2px 5px;color:white}
+#help-panel .help-note{font-size:12px;margin-top:20px;color:#b4cbba}
+@media(max-width:700px){#overlay{padding:14px;background:#04150fcf;justify-content:center}#overlay .menu-card{width:min(440px,100%);padding:20px}#overlay .menu-logo{margin-top:12px}#overlay h1{font-size:35px}#overlay .menu-showcase{display:none}#hud-shortcuts{left:auto;right:7px;top:7px;transform:none;gap:4px}#hud-shortcuts .hud-button{font-size:0;padding:8px 9px}#hud-shortcuts .hud-button::first-letter{font-size:16px}#campaign-hud{top:auto;bottom:190px;right:8px;left:auto;width:155px;padding:8px}#survival-hud{top:100px;left:8px;width:135px;padding:7px}#survival-hud .vital{font-size:10px;margin:4px 0}#right-hud #guard-status{display:none}#minimap{width:92px;height:92px;right:8px;bottom:78px}.help-grid{grid-template-columns:1fr}}
+@media(pointer:coarse){#hud-shortcuts{display:none}#campaign-hud{top:65px;bottom:auto;right:8px;width:145px}}
+@media(max-height:560px) and (pointer:coarse){#campaign-hud{display:none}#survival-hud{top:42px;left:6px}#hud{padding:4px 8px}}
+@media(prefers-reduced-motion:reduce){#overlay *,#campaign-hud *,#survival-hud *{transition:none!important}}
+
+
+/* v2.26 — loading real entre o menu e a partida, sem simular o mundo. */
+#loading-screen{position:fixed;inset:0;z-index:260;display:grid;place-items:center;
+  overflow-y:auto;overscroll-behavior:contain;padding:clamp(14px,4vw,35px);box-sizing:border-box;
+  color:#f1f7e7;background:radial-gradient(ellipse at 50% 0%,#284837 0%,#101f1b 52%,#07100f 100%);}
+.loading-panel{position:relative;isolation:isolate;overflow:hidden;width:min(560px,100%);
+  border:1px solid #789c7c88;border-radius:22px;padding:clamp(26px,5vw,42px);
+  background:linear-gradient(160deg,#142a23f4,#0a1814fa);box-shadow:0 22px 80px #0009;}
+.loading-panel>*:not(.loading-ground){position:relative;z-index:2}
+.loading-brand{display:flex;align-items:center;gap:10px;letter-spacing:.16em;font-size:11px;font-weight:900;color:#c4dec4}
+.loading-brand b{letter-spacing:0;color:#e0b46b}.loading-mark{font-size:25px}
+.loading-eyebrow{display:block;margin-top:clamp(25px,6vh,42px);font-size:10px;font-weight:800;letter-spacing:.2em;color:#a4d38f}
+#loading-title{font-size:clamp(27px,5.5vw,43px);font-weight:850;letter-spacing:-.045em;line-height:1.08;color:#f5f3da;margin:12px 0}
+#loading-detail{font-size:clamp(13px,2.6vw,15px);line-height:1.5;color:#c0d2bf;margin:0 0 32px}
+.loading-progress-header{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:12px}
+#loading-stage{font-size:13px;font-weight:750;color:#e5f3de;overflow-wrap:anywhere}
+#loading-percent{color:#c6ec9a;font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;white-space:nowrap}
+.loading-progress{height:11px;border-radius:99px;background:#15221a;border:1px solid #658c6b;overflow:hidden;box-shadow:inset 0 2px 5px #0008}
+#loading-progress-fill{height:100%;width:0%;border-radius:inherit;
+  background:linear-gradient(90deg,#569e68,#c4e78a);transition:width .18s ease-out}
+.loading-progress-footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-top:12px;font-size:11px;color:#b7d4b4;line-height:1.45}
+#loading-warning{font-size:12px;color:#f8d7a0;margin:19px 0 0}
+#loading-enter,#loading-retry{margin-top:21px;padding:12px 16px;cursor:pointer;border:1px solid #b7e6a3;
+  border-radius:9px;font-weight:800;background:#2d623c;color:#fff}
+#loading-enter{background:#8bc376;color:#071711;border-color:#c9eeae}
+#loading-enter:hover{filter:brightness(1.12)}
+#loading-screen[data-state="error"] .loading-progress{border-color:#d4a06d}
+#loading-screen[data-state="error"] #loading-progress-fill{background:#d4a06d}
+.loading-progress-footer span{min-width:0;overflow-wrap:anywhere}
+.loading-ground{position:absolute;inset:auto 0 0;height:80px;z-index:0;opacity:.10;pointer-events:none;background:linear-gradient(0deg,#2a6447,#2a644700)}
+.loading-ground span{position:absolute;bottom:0;height:65px;width:8px;border-radius:60% 60% 0 0;background:#84ae85;transform:rotate(-7deg)}
+.loading-ground span:before,.loading-ground span:after{content:"";position:absolute;bottom:20px;left:-16px;width:40px;height:48px;clip-path:polygon(50% 0,100% 100%,0 100%);background:#84ae85}
+.loading-ground span:after{bottom:42px;width:32px;height:42px;left:-12px}
+.loading-ground span:nth-child(1){left:10%;height:44px}.loading-ground span:nth-child(2){left:27%;height:70px}.loading-ground span:nth-child(3){left:57%;height:61px}.loading-ground span:nth-child(4){left:76%;height:72px}.loading-ground span:nth-child(5){left:90%;height:50px}
+body.adventure-loading #hud,body.adventure-loading #campaign-hud,body.adventure-loading #survival-hud,
+body.adventure-loading #minimap,body.adventure-loading #hud-shortcuts,body.adventure-loading #consumable-hotbar,
+body.adventure-loading #touch-controls,body.adventure-loading #player-model-status,
+body.adventure-loading #asset-loading-status,body.adventure-loading #gpu-warmup-status{display:none!important}
+@media(max-width:600px){.loading-panel{padding:25px 19px 31px;border-radius:17px}
+ .loading-progress-footer{font-size:10px;flex-direction:column;gap:4px;padding-bottom:8px}#loading-detail{margin-bottom:26px}}
+@media(prefers-reduced-motion:reduce){#loading-progress-fill{transition:none}}

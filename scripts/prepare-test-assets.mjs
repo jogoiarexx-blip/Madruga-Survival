@@ -56,7 +56,6 @@ function materializeSpider(){
   console.log('Aranha Sombria restaurada:',glb.length,'bytes');
 }
 materializeSpider();
-
 // Goblin: mesma estratégia da Aranha Sombria, preservando as 15 animações.
 // Em GitHub Pages é carregado por partes; no QA reconstrói o GLB completo.
 function materializeGoblin(){
