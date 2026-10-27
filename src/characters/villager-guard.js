@@ -1,4 +1,5 @@
 import {loadChaves} from './chaves-loader.js';
+import {createGuardNavigator} from '../gameplay/guard-navigation.js';
 import {guardTarget,createGuardShotController,CHAVES_SHOT_RANGE} from '../gameplay/guard-combat.js';
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
 import {DEFAULT_GUARD_ORDER,normalizeGuardOrder,nextGuardOrder,GUARD_ORDER_NAMES,guardWaypoint,canEngageInOrder,distanceXZ} from '../gameplay/guard-orders.js';
@@ -21,7 +22,7 @@ export function interactGuard(state,inventory){
  }
  return `🛡 Chaves de prontidão · ${state.hp}/${GUARD_MAX_HP} de vida`;
 }
-export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,getStructures,getEnemies,canSee,attackEnemy,onStatus=()=>{},onBeforeMount=async()=>{}}){
+export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,onStatus=()=>{},onBeforeMount=async()=>{}}){
  let state=createGuardState(),step=0,patrolIndex=0,patrolPause=0,shotFxTime=0;
  const model=new THREE.Group();
  const tunic=new THREE.MeshStandardMaterial({color:0x4b79a6,roughness:.9});
@@ -35,6 +36,10 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  box(model,.63,.12,.63,steel,0,2.22,0);
  let chavesVisual=null,mixer=null,activeAction=null,actions={},loadPromise=null,muzzleNode=null;
  const shotController=createGuardShotController();
+ // Replaneja quando o alvo muda ou uma construção bloqueia a rota.
+ const navigator=createGuardNavigator({
+   resolveCollision,isFree:isPositionFree||((x,z,r)=>{const p=resolveCollision(x,z,r);return Math.hypot(p.x-x,p.z-z)<.015;}),getGroundHeight
+ });
  async function preload(){
    if(chavesVisual)return true;
    if(loadPromise)return loadPromise;
@@ -109,7 +114,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  fallbackVisuals.push(...model.children);
  model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);scene.add(model);
  function getState(){return {...state};}
- function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;shotController.cancel();patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
+ function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;shotController.cancel();navigator.reset();patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
   model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function nearby(pos,radius=2.9){return Math.hypot(model.position.x-pos.x,model.position.z-pos.z)<radius;}
  function interact(inventory){const message=interactGuard(state,inventory);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return message;}
@@ -117,7 +122,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    state.hp=Math.max(0,state.hp-Math.max(0,Math.round(amount)));if(state.hp===0)shotController.cancel();model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function cycleOrder(){
    if(!state.recruited||state.hp<=0)return null;
-   state.mode=nextGuardOrder(state.mode);patrolIndex=0;patrolPause=0;shotController.cancel();
+   state.mode=nextGuardOrder(state.mode);navigator.reset();patrolIndex=0;patrolPause=0;shotController.cancel();
    return GUARD_ORDER_NAMES[state.mode];
  }
  function update(dt,elapsed,playerPosition){
@@ -146,23 +151,31 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    const moveLimit=target?7.8:2.5;
    const moving=dist>(target?moveLimit:order==='follow'?1.8:order==='patrol'?1.1:2.5) &&
      !shotController.isShooting && !(order==='patrol'&&!target&&patrolPause>0);
+   const beforeX=state.x,beforeZ=state.z;
    if(moving&&dist>.001){
-     const move=Math.min(Math.max(0,dist-(target?7.5:order==='follow'?1.5:order==='patrol'?.6:2.2)),dt*(target?4.1:3.3));
-     const next=resolveCollision(state.x+dx/dist*move,state.z+dz/dist*move,.42);
+     const next=navigator.navigate(state,destination,dt,target?4.1:3.3,
+       {stopAt:target?7.5:order==='follow'?1.5:order==='patrol'?.6:2.2});
      state.x=next.x;state.z=next.z;
-   }
-   model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);
-   if(dist>.03)model.rotation.y=Math.atan2(dx,dz);
+   }else navigator.reset();
+   // Adere ao solo, com suavização apenas visual (não altera o save/collider).
+   const groundY=getGroundHeight(state.x,state.z);
+   const followY=Number.isFinite(model.position.y)?model.position.y:groundY;
+   model.position.set(state.x,followY+(groundY-followY)*Math.min(1,Math.max(0,dt)*12),state.z);
+   const movedDistance=Math.hypot(state.x-beforeX,state.z-beforeZ);
+   const actuallyMoving=movedDistance>.001;
+   if(target && dist<=CHAVES_SHOT_RANGE && dist>.03)model.rotation.y=Math.atan2(dx,dz);
+   else if(actuallyMoving)model.rotation.y=Math.atan2(state.x-beforeX,state.z-beforeZ);
+   else if(dist>.03)model.rotation.y=Math.atan2(dx,dz);
    // O tiro é disparado no instante real do clipe (0,46 s); não se inicia
    // uma segunda animação antes de a primeira terminar.
    if(target && dist<=CHAVES_SHOT_RANGE && shotController.ready){
       if(shotController.begin(target))playAnimation('Shoot');
    }else if(!shotController.isShooting){
-      playAnimation(moving&&target?'Running':moving?'Walking':'Aim_Idle');
+      playAnimation(actuallyMoving&&target?'Running':actuallyMoving?'Walking':'Aim_Idle');
    }
    if(mixer)mixer.update(dt);
-   step+=dt*(moving?8:2.4);
-   limbs[1].rotation.x=Math.sin(step)*.55*(moving?1:.08);
+   step+=dt*(actuallyMoving?8:2.4);
+   limbs[1].rotation.x=Math.sin(step)*.55*(actuallyMoving?1:.08);
    limbs[3].rotation.x=-limbs[1].rotation.x;
    limbs[0].rotation.x=-limbs[1].rotation.x*.5;
    limbs[2].rotation.x=target?-.85:-limbs[3].rotation.x*.4;

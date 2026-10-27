@@ -1,4 +1,4 @@
-// Madruga Survival v2.32.0 — comandos de Chaves, mira e efeito de disparo.
+// Madruga Survival v2.33.0 — navegação do Chaves ao redor de estruturas e terrenos.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.13.0';
@@ -573,7 +573,7 @@ function ensureVisibleGoblinEncounter(){
     return true;
 }
 const cemetery=createCemetery({THREE,scene,getGroundHeight,addCollider:collisionWorld.add,getQuality:()=>graphicsQuality});
-const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,
+const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree,
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
     canSee:(a,b)=>!buildings.blocksLine(a,b),
     attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false),

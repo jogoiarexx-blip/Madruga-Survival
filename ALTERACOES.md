@@ -1,3 +1,14 @@
+## v2.33.0 — Chaves: navegação por obstáculos e terrenos
+
+- Nova navegação local em A* para o aliado contornar paredes, bancadas, portas fechadas e obstáculos naturais.
+- Garante que cada segmento da rota esteja livre para o raio do personagem (sem atravessar estruturas ou teleportar).
+- Recalcula a rota quando há mudança relevante no destino, uma construção aparece ou ele fica bloqueado.
+- Limite de CPU (380 expansões por tentativa), cadência de replanejamento, passos de no máximo 50 ms e limite de distância por frame.
+- Posição vertical acompanha o relevo de forma suave, mantendo as coordenadas do save e da colisão no solo real.
+- Animação de caminhada/corrida depende de deslocamento real; Chaves não corre parado contra paredes.
+- As ordens Seguir, Defender e Patrulhar, tiros sincronizados e saves legados permanecem intactos.
+- Novos testes v2.33 cobrem paredes, alteração dinâmica de obstáculos, declives, saves, reposicionamento e integração.
+
 ## v2.32.0 — comandos do Chaves e efeitos do tiro
 
 - Três ordens após contratar Chaves: Seguir, Defender base e Patrulhar com [O], [F] perto do companheiro ou botão na tela/toque.
