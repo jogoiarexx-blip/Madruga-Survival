@@ -1,4 +1,5 @@
 import {createFishSchoolVisual} from './fish-school-visual.js';
+import {createLakeWaterMaterial,useDetailedWater} from './lake-water-material.js';
 // Lagoa permanente procedural sem texturas remotas. Borda acessível para pesca.
 export const LAKE=Object.freeze({x:70,z:51,radius:14.8,shore:2.7});
 // Profundidade suave no terreno sem criar malha dinâmica ou terra atravessando a água.
@@ -22,8 +23,9 @@ export function keepOutsideLake(x,z,r=.45){
 export function createFishingLake({THREE,scene,getGroundHeight}){
  const root=new THREE.Group();root.position.set(LAKE.x,getGroundHeight(LAKE.x,LAKE.z)+lakeTerrainDrop(LAKE.x,LAKE.z)+.15,LAKE.z);
  // Polígonos concêntricos = LOD natural na água: sem tesselação pesada nem reflexões em tempo real.
- const water=new THREE.Mesh(new THREE.CircleGeometry(LAKE.radius,40),
-   new THREE.MeshStandardMaterial({color:0x318ca4,roughness:.33,metalness:.12,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide}));
+ const fallbackMaterial=new THREE.MeshStandardMaterial({color:0x318ca4,roughness:.33,metalness:.12,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide});
+ const detailedMaterial=createLakeWaterMaterial(THREE);
+ const water=new THREE.Mesh(new THREE.CircleGeometry(LAKE.radius,48),fallbackMaterial);
  water.rotation.x=-Math.PI/2;water.renderOrder=1;root.add(water);
  const school=createFishSchoolVisual({THREE,parent:root,radius:LAKE.radius});
  const shoreMat=new THREE.MeshStandardMaterial({color:0xb2a276,roughness:1});
@@ -41,7 +43,10 @@ export function createFishingLake({THREE,scene,getGroundHeight}){
    const d=Math.hypot(position.x-LAKE.x,position.z-LAKE.z);
    root.visible=d<(quality==='low'?68:quality==='medium'?95:130);
    if(root.visible)school.update(position,quality,elapsed);
-   water.material.opacity=d<32?.74:.88;
+   const detail=useDetailedWater(d,quality);
+   if(water.material!==(detail?detailedMaterial:fallbackMaterial))water.material=detail?detailedMaterial:fallbackMaterial;
+   if(detail){detailedMaterial.uniforms.uTime.value=elapsed;detailedMaterial.uniforms.uOpacity.value=d<32?.79:.88;}
+   else fallbackMaterial.opacity=d<32?.76:.88;
    // Detalhes da margem; não ocultar o cardume que vive dentro do grupo.
    for(const reed of root.children){if(reed.geometry===reedGeo)reed.visible=d<42;}
  }};

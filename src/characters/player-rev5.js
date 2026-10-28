@@ -123,7 +123,7 @@ export function findRev5Hand(root,side='Left') {
 export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallbackRig={},onStatus=()=>{},onBeforeMount=async()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
   let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0,queuedComboStep=null;
-  let restingGrip=null,fishingActive=false,fishingHand=null,fishingLeftArm=null,fishingRightArm=null;
+  let restingGrip=null,fishingActive=false,fishingPhase='idle',fishingPhaseAge=0,fishingHand=null,fishingLeftArm=null,fishingRightArm=null;
   let gearVisuals=null,desiredGear={vest:false,padding:false,boots:false};
   function setGear(equipped){
     desiredGear={...desiredGear,...equipped};
@@ -275,7 +275,10 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     });
     return promise;
   }
-  function setFishing(active){fishingActive=!!active;}
+  function setFishing(active,phase='idle'){
+    if(fishingActive!==!!active||fishingPhase!==phase)fishingPhaseAge=0;
+    fishingActive=!!active;fishingPhase=phase;
+  }
   function getFishingGrip(target){
     if(!loaded||!fishingHand||!target)return false;
     // Matrizes atualizadas após animações, sem criar Vector3 por frame.
@@ -298,9 +301,12 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     if(castLeft>0){castLeft=Math.max(0,castLeft-dt);if(castLeft===0&&magic)magic.visible=false;}
     animator.update(dt);
     if(fishingActive){
-      // Pose aditiva para segurar a vara: o rig continua responsável pelos pés.
-      if(fishingLeftArm)fishingLeftArm.rotation.x-=.42;
-      if(fishingRightArm)fishingRightArm.rotation.x-=.22;
+      fishingPhaseAge=Math.min(3,fishingPhaseAge+Math.max(0,dt));
+      // Pose de arremesso e recolhimento limitada aos braços, sem alterar esqueleto/pés.
+      const cast=fishingPhase==='waiting'?Math.max(0,1-fishingPhaseAge/.8):0;
+      const reel=fishingPhase==='reeling'?.10*Math.sin(weaponTime*11):0;
+      if(fishingLeftArm)fishingLeftArm.rotation.x-=.42+.33*cast+reel;
+      if(fishingRightArm)fishingRightArm.rotation.x-=.22+.47*cast+.4*reel;
     }
     if(weapon)weapon.visible=!fishingActive;
     if(weapon&&restingGrip){
@@ -319,7 +325,7 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     gearVisuals?.dispose();gearVisuals=null;
     if(animator)animator.dispose();
     if(meshRoot)display.remove(meshRoot);
-    handMount=null;fishingHand=null;fishingLeftArm=null;fishingRightArm=null;fishingActive=false;restingGrip=null;
+    handMount=null;fishingHand=null;fishingLeftArm=null;fishingRightArm=null;fishingActive=false;fishingPhase='idle';fishingPhaseAge=0;restingGrip=null;
     avatar.visible=true;
     display.visible=false;
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);}

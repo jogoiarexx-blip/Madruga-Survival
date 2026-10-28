@@ -68,6 +68,6 @@ test('interface contém controles duplos sincronizáveis e não grava no save',(
  assert.match(source('src/main.js'),/sfx\.footstep\(runningFast,sneaking\)/);
  assert.match(source('src/main.js'),/sfx\.chavesShot/);
  assert.match(source('src/world/wildlife.js'),/onSound\('boar',dist\)/);
- assert.equal(JSON.parse(source('package.json')).version,'2.49.0');
+ assert.equal(JSON.parse(source('package.json')).version,'2.50.0');
 });
 console.log(`v2.42.0: ${count} regressões de áudio aprovadas`);

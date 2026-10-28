@@ -53,8 +53,8 @@ test('conserva batching de peças estáticas e pivôs independentes',()=>{
  assert.match(code,/block\(doorPivot/);assert.match(code,/doorPivot\.rotation\.y/);
 });
 test('versão atualiza cache de HTML, CSS e ponto de entrada',()=>{
- assert.equal(JSON.parse(src('package.json')).version,'2.49.0');
- assert.match(src('index.html'),/2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig/);
+ assert.equal(JSON.parse(src('package.json')).version,'2.50.0');
+ assert.match(src('index.html'),/2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.50\.0-fishing-polish/);
  assert.match(src('src/main.js'),/sfx\.js\?v=2\.44\.0-quiet/);
 });
 console.log(`v2.44.0: ${count} testes aprovados`);

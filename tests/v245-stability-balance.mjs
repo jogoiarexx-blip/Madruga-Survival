@@ -79,8 +79,8 @@ test('suíte histórica testa módulos atuais e participa do CI',()=>{
  assert.doesNotMatch(src('testes.mjs'),/<script type="module">/);
 });
 test('versão e cache são os mesmos nos pontos de entrada',()=>{
- assert.equal(JSON.parse(src('package.json')).version,'2.49.0');
- assert.match(src('index.html'),/data-build="2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig"/);
- assert.match(src('index.html'),/main\.js\?v=2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig/);
+ assert.equal(JSON.parse(src('package.json')).version,'2.50.0');
+ assert.match(src('index.html'),/data-build="2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.50\.0-fishing-polish"/);
+ assert.match(src('index.html'),/main\.js\?v=2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.50\.0-fishing-polish/);
 });
 console.log(`v2.45.0: ${count} testes aprovados`);

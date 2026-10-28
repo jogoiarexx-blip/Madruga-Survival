@@ -45,11 +45,11 @@ test('vara acompanha mão REV5 e fallback do avatar original',()=>{
 });
 test('respingos são ligados à fisgada e ao recolhimento, sem assets externos',()=>{
  const s=read('src/main.js');
- for(const token of ["fishingVisual.splash('bite')","fishingVisual.splash('hook')","fishingVisual.splash('caught')","fishingLake.update(player.position,graphicsQuality,elapsed)"])assert.ok(s.includes(token),token);
+ for(const token of ["fishingVisual.splash('bite')","fishingVisual.splash('hook')","fishingVisual.showCatch(species)","fishingLake.update(player.position,graphicsQuality,elapsed)"])assert.ok(s.includes(token),token);
 });
 test('v2.49 preserva pesca por Y, cooldown e formato dos saves',()=>{
  const main=read('src/main.js');assert.match(main,/if \(e\.code === 'KeyY'\) fishNearby\(\)/);
  assert.match(read('src/gameplay/fishing-session.js'),/export const BITE_WINDOW=1\.55/);
- assert.equal(JSON.parse(read('package.json')).version,'2.49.0');
+ assert.equal(JSON.parse(read('package.json')).version,'2.50.0');
 });
 console.log('v2.49.0: '+checks+' testes de pesca visual aprovados');

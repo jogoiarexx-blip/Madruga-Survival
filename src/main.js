@@ -1,4 +1,4 @@
-// Madruga Survival v2.49.0 — pescaria com vara no rig, cardume LOD e respingos.
+// Madruga Survival v2.50.0 — arremesso/recolhimento, peixe capturado e água procedural com LOD.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -1634,12 +1634,13 @@ function updateFishingVisual(){
     fishingHud.update(state);
     const lake=nearLakeShore(player.position)?{x:LAKE.x,z:LAKE.z,y:fishingLake.root.position.y}:null;
     const hand=playerRev5.getFishingGrip(fishingHandWorld)?fishingHandWorld:null;
-    fishingVisual.update({phase:state.phase,player:player.position,heading:playerYaw,elapsed,water:lake,hand});
+    fishingVisual.update({phase:state.phase,progress:state.progress,tugs:state.species?.tugs||3,player:player.position,heading:playerYaw,elapsed,water:lake,hand});
 }
 function finishFishing(){
     const species=fishingSession.state.species;
     const caught=tryFish(survival,elapsed,nearFishingWater(),fishingBonus(skillLevel(survival,'fishing')));
-    fishingVisual.splash('caught');fishingSession.reset();fishingHud.hide();
+    if(caught.ok)fishingVisual.showCatch(species);else fishingVisual.splash('miss');
+    fishingSession.reset();fishingHud.hide();
     if(!caught.ok){showToast(caught.message);return false;}
     earnSkill('fishing',28+(species?.id==='carpa'?14:species?.id==='traira'?7:0));
     sfx.fish();updateHUD();saveProgress();
@@ -1936,7 +1937,7 @@ function animate() {
           }
         }
         const isFishing=fishingSession.state.phase!=='idle'&&fishingSession.state.phase!=='caught';
-        playerRev5.setFishing(isFishing);
+        playerRev5.setFishing(isFishing,fishingSession.state.phase);
         if(!playerRev5.loaded&&isFishing){
           rightArm.rotation.x=THREE.MathUtils.lerp(rightArm.rotation.x,-.98,blend);
           leftArm.rotation.x=THREE.MathUtils.lerp(leftArm.rotation.x,-.63,blend);

@@ -1,3 +1,11 @@
+## v2.50.0 — Arremesso e recolhimento, peixe capturado e lagoa renovada
+
+- Vara e braços acompanham a etapa da pescaria: animação curta de arremesso, movimento do recolhimento e linha ligada à ponta da vara durante toda a ação.
+- Ao concluir uma pesca válida, o peixe da espécie capturada aparece momentaneamente acima da água, sem criar geometrias a cada captura.
+- Lagoa usa shader leve com reflexos de céu simulados, ondulações e espuma de margem em qualidade média/alta perto do jogador. Qualidade baixa e distâncias maiores usam o material simples anterior.
+- Preservados o minigame Y, inventário, receitas, peixes instanciados e checkpoints.
+- Testes de movimento, renderização por qualidade/distância e integração com o evento de captura.
+
 ## v2.49.0 — Pesca visual, cardumes e LOD
 
 - A vara acompanha o osso da mão do personagem REV5, com pose aditiva nos braços; avatar procedural usa fallback de pose.
