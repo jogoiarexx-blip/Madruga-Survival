@@ -2,10 +2,12 @@
 // Não minerar ferro sem ferramenta própria. Não colher acima do limite da mochila.
 import {cargoCount,cargoFitsChest,GUARD_CARGO_LIMIT} from './guard-cargo.js';
 import {validChestItems} from './storage.js';
+import {guardCanCollect,normalizeGuardWorkPreferences} from './guard-work-preferences.js';
 export const GUARD_WORK_RADIUS=23;
 export function selectGuardWork(position,base,nodes=[],structures=[],inventory={},options={}){
  if(!position||!base)return null;
  const cargo=options.cargo||{},carried=cargoCount(cargo);
+ const preferences=normalizeGuardWorkPreferences(options.preferences);
  const chests=structures.filter(s=>s.type==='chest'&&s.items&&validChestItems(s.items)&&
     Math.hypot(s.x-base.x,s.z-base.z)<GUARD_WORK_RADIUS);
  const available=chests.filter(s=>cargoFitsChest(cargo,s.items))
@@ -16,7 +18,7 @@ export function selectGuardWork(position,base,nodes=[],structures=[],inventory={
  }
  const candidates=[];
  for(const plot of structures){
-   if(plot.type!=='farmPlot'||!plot.crop)continue;
+   if(!preferences.farm||plot.type!=='farmPlot'||!plot.crop)continue;
    const crop=plot.crop;
    const action=!crop.planted?(inventory.seeds>0?'plant':null):
      crop.growth>=125?'harvest':crop.water<=8&&inventory.water>0?'water':null;
@@ -24,7 +26,7 @@ export function selectGuardWork(position,base,nodes=[],structures=[],inventory={
      candidates.push({kind:'farm',target:plot,action,x:plot.x,z:plot.z,priority:action==='harvest'?3:2});
  }
  for(const node of nodes){
-   if(node.cooldown>0||node.type==='iron'||!Object.hasOwn(inventory,node.type)||inventory[node.type]>994)continue;
+   if(node.cooldown>0||!guardCanCollect(preferences,node.type)||!Object.hasOwn(inventory,node.type)||inventory[node.type]>994)continue;
    if(chests.length&&carried>=GUARD_CARGO_LIMIT)continue;
    if(Math.hypot(node.x-base.x,node.z-base.z)>GUARD_WORK_RADIUS)continue;
    candidates.push({kind:'resource',target:node,x:node.x,z:node.z,priority:1});

@@ -1,3 +1,12 @@
+## v2.47.0 — construção em andares e prioridades de coleta
+
+- Nova peça guarda-corpo de madeira com colisão apenas à altura da plataforma, sem bloquear personagens no térreo.
+- Nova cobertura modular plana, com custos, resistência, ímã de encaixe, proteção do clima e salvamento compatível.
+- Escadas e plataformas usam elevação do terreno no ponto de ancoragem: sem inclinação indevida quando o terreno muda sob a estrutura.
+- Painel de prioridades do Chaves no menu de pausa: madeira, pedra, fibra, frutas, água, sementes, legumes e agricultura, salvas no checkpoint.
+- Chaves respeita filtros de coleta, mas continua transportando os recursos já existentes na cesta sem descartá-los.
+- Testes da v2.47 cobrem salva/carrega, novas peças, acesso entre andares, colisões e prioridades.
+
 ## v2.46.0 — Construção elevada, crafting e logística do Chaves
 
 - Escada de madeira e plataforma elevada de 2,6 m entram no catálogo de construção e na roda radial. Geometria leve, travessia por altura calculada e encaixe de plataforma ao final da escada; antiga grade de 3 m preservada.

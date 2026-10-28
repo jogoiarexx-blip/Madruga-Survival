@@ -1,5 +1,6 @@
 import {loadChaves} from './chaves-loader.js';
 import {validGuardCargo,cargoCount,collectCargo,depositCargo,handoffCargo} from '../gameplay/guard-cargo.js';
+import {validGuardWorkPreferences,normalizeGuardWorkPreferences} from '../gameplay/guard-work-preferences.js';
 import {createGuardNavigator} from '../gameplay/guard-navigation.js';
 import {findGuardFiringPosition} from '../gameplay/guard-firing-position.js';
 import {guardTarget,createGuardShotController,CHAVES_SHOT_RANGE} from '../gameplay/guard-combat.js';
@@ -13,10 +14,12 @@ export function validGuard(data){
   Number.isInteger(data.hp)&&data.hp>=0&&data.hp<=GUARD_MAX_HP&&
   Number.isFinite(data.x)&&Math.abs(data.x)<=109&&Number.isFinite(data.z)&&Math.abs(data.z)<=109&&
   (data.mode===undefined||Object.keys(GUARD_ORDER_NAMES).includes(data.mode))&&
-  (data.cargo===undefined||validGuardCargo(data.cargo));
+  (data.cargo===undefined||validGuardCargo(data.cargo))&&
+  (data.workPreferences===undefined||validGuardWorkPreferences(data.workPreferences));
 }
 export function createGuardState(){return {recruited:false,hp:GUARD_MAX_HP,x:4,z:2,mode:DEFAULT_GUARD_ORDER};}
-export function restoreGuard(data){return data===undefined?createGuardState():validGuard(data)?{recruited:data.recruited,hp:data.hp,x:data.x,z:data.z,mode:normalizeGuardOrder(data.mode),...(data.cargo?{cargo:{...data.cargo}}:{})}:null;}
+export function restoreGuard(data){return data===undefined?createGuardState():validGuard(data)?{recruited:data.recruited,hp:data.hp,x:data.x,z:data.z,mode:normalizeGuardOrder(data.mode),...(data.cargo?{cargo:{...data.cargo}}:{}),
+   ...(data.workPreferences?{workPreferences:{...data.workPreferences}}:{})}:null;}
 export function interactGuard(state,inventory){
  if(!state.recruited){state.recruited=true;return '🛡 Chaves recrutado! Ele defenderá sua base.';}
  if(state.hp===0){
@@ -119,9 +122,11 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  // Todas as peças antigas ficam invisíveis após GLB pronto.
  fallbackVisuals.push(...model.children);
  model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);scene.add(model);
- let guardCargo={};
- function getState(){return {...state,...(cargoCount(guardCargo)>0?{cargo:{...guardCargo}}:{})};}
- function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;guardCargo={...(parsed.cargo||{})};delete state.cargo;shotController.cancel();navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;activity='idle';patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
+ let guardCargo={};let guardWorkPreferences=normalizeGuardWorkPreferences();
+ function getState(){return {...state,...(cargoCount(guardCargo)>0?{cargo:{...guardCargo}}:{}),
+   workPreferences:{...guardWorkPreferences}};}
+ function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;guardCargo={...(parsed.cargo||{})};guardWorkPreferences=normalizeGuardWorkPreferences(parsed.workPreferences);
+  delete state.cargo;delete state.workPreferences;shotController.cancel();navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;activity='idle';patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
   model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function nearby(pos,radius=2.9){return Math.hypot(model.position.x-pos.x,model.position.z-pos.z)<radius;}
  function interact(inventory){const message=interactGuard(state,inventory);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return message;}
@@ -232,5 +237,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    carryResource:(key,n)=>collectCargo(guardCargo,key,n),
    depositTo:(chest)=>depositCargo(guardCargo,chest?.items),
    handoffTo:(inventory)=>handoffCargo(guardCargo,inventory),
+   setWorkPreferences:(preferences)=>{if(!validGuardWorkPreferences(preferences))return false;guardWorkPreferences=normalizeGuardWorkPreferences(preferences);workCooldown=0;return true;},
+   get workPreferences(){return {...guardWorkPreferences}},
    get cargo(){return guardCargo},get mode(){return normalizeGuardOrder(state.mode)},get activity(){return activity},get visualLoaded(){return !!chavesVisual},get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
 }

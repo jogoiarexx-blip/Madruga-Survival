@@ -2,12 +2,12 @@
 // A grade clássica de 3 m continua válida para salvar/carregar casas existentes.
 import {BUILD_GRID,orientation} from './building-rules.js';
 export const SNAP_RANGE=1.85;
-const WALLS=new Set(['wall','door','window']);
+const WALLS=new Set(['wall','door','window','railing']);
 const round=n=>Math.round(n*1000)/1000;
 const offset=(x,z,dx,dz,label)=>({x:round(x+dx),z:round(z+dz),label});
 
 export function snapTargets(type,rotation,structures,near,maxDistance=SNAP_RANGE){
- if(!near||!Array.isArray(structures)||!['floor','roof','wall','door','window','stairs','loft'].includes(type))return [];
+ if(!near||!Array.isArray(structures)||!['floor','roof','roofFlat','wall','door','window','railing','stairs','loft'].includes(type))return [];
  const r=orientation(rotation),horizontal=r%2===0;
  const targets=[];
  const push=(point)=>{
@@ -19,7 +19,7 @@ export function snapTargets(type,rotation,structures,near,maxDistance=SNAP_RANGE
    if(Math.hypot(structure.x-near.x,structure.z-near.z)>BUILD_GRID*2.2+maxDistance)continue;
    const {x,z,type:other}=structure;
    if(WALLS.has(type)){
-     if(other==='floor'){
+     if(other==='floor'||(type==='railing'&&other==='loft')){
        const normals=horizontal?[[0,-1.5],[0,1.5]]:[[-1.5,0],[1.5,0]];
        for(const [dx,dz] of normals)push(offset(x,z,dx,dz,'borda do piso'));
      }
@@ -53,11 +53,11 @@ export function snapTargets(type,rotation,structures,near,maxDistance=SNAP_RANGE
        const normals=orientation(structure.rotation||0)%2===0?[[0,-1.5],[0,1.5]]:[[-1.5,0],[1.5,0]];
        for(const [dx,dz] of normals)push(offset(x,z,dx,dz,'junto à parede'));
      }
-   } else if(type==='roof'){
+   } else if(type==='roof'||type==='roofFlat'){
      if(other==='floor')push(offset(x,z,0,0,'acima do piso'));
      if(WALLS.has(other))for(const [dx,dz] of [[0,-1.5],[0,1.5],[-1.5,0],[1.5,0]])
        push(offset(x,z,dx,dz,'telhado junto à parede'));
-     if(other==='roof')for(const [dx,dz] of [[3,0],[-3,0],[0,3],[0,-3]])
+     if(['roof','roofFlat'].includes(other))for(const [dx,dz] of [[3,0],[-3,0],[0,3],[0,-3]])
        push(offset(x,z,dx,dz,'telhado vizinho'));
    }
  }

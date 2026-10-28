@@ -46,7 +46,7 @@ export function resourceBonus(type,level){
  if(['wood','berries','fiber','water'].includes(type))return Math.min(3,Math.floor((level-1)/5));
  return 0;
 }
-const BUILD_RECIPES=new Set(['campfire','shelter','floor','wall','door','window','bed','chest','workbench','roof','stairs','loft','farmPlot']);
+const BUILD_RECIPES=new Set(['campfire','shelter','floor','wall','door','window','bed','chest','workbench','roof','roofFlat','railing','stairs','loft','farmPlot']);
 const CRAFT_RECIPES=new Set(['fishingRod','hammer','spear','pickaxe','ironSpear','repairPickaxe','repairHammer','repairSpear','ironHammer','reinforcedGrip','hardenedSpear','spikedHammer','armoredBroom','reinforcedVest','trailBoots','medicalKit','repairKit','bandage','cooked','grilledFish','stew']);
 export function recipeCost(recipeId,baseCost,skills){
  if(!baseCost)return null;

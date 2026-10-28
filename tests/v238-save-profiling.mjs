@@ -75,6 +75,6 @@ test('interface disponibiliza backup no menu e pausa, além da instrumentação 
  assert.match(main,/if\(running&&showFps\)frameProfiler\.record\(frameSeconds\*1000\)/);
  assert.match(main,/if \(hudTick>0\.30\)/);
  assert.match(main,/gameActive=false; \/\/ impede que o pagehide sobrescreva o save importado/);
- assert.match(html,/2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.46\.0-build-logistics/);
+ assert.match(html,/2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor/);
 });
 console.log(`v2.38: ${n} regressões aprovadas`);

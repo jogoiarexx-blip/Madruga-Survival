@@ -1,4 +1,4 @@
-// Madruga Survival v2.46.0 — estabilidade, balanceamento de sobrevivência e HUD otimizado.
+// Madruga Survival v2.47.0 — estabilidade, balanceamento de sobrevivência e HUD otimizado.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -14,6 +14,7 @@ import { createMinimap } from './ui/minimap.js?v=2.41.0-ecosystem';
 import {LAKE,insideLake,nearLakeShore,keepOutsideLake,lakeTerrainDrop,createFishingLake} from './world/fishing-lake.js';
 import {segmentBlockedByCircles} from './world/line-of-sight.js';
 import {selectGuardWork} from './gameplay/guard-work.js';
+import {createGuardWorkUI} from './ui/guard-work-ui.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
 import { initAudio, sfx, setAudioSettings, getAudioSettings, setAudioPaused, updateSoundscape } from './audio/sfx.js?v=2.44.0-quiet';
@@ -323,6 +324,8 @@ function updateHUD() {
         setTextIfChanged(activityNode,title);
         activityNode.dataset.activity=key;}
     }
+    const workBtn=document.getElementById('pause-guard-work');
+    if(workBtn)workBtn.disabled=!guard.recruited||!guard.alive;
     const orderBtn=document.getElementById('guard-order');
     if(orderBtn){orderBtn.classList.toggle('hidden',!gameActive||!guard.recruited||!guard.alive);setTextIfChanged(orderBtn,guardOrderButtonLabel(guard.mode));}
     hudText('poison-status',poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'');
@@ -566,7 +569,7 @@ function isPositionFree(x, z, radius = 0.9) {
       Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)>12.9+radius &&
       collisionWorld.isPositionFree(x,z,radius)&&!buildings.isBlocked(x,z,radius);
 }
-function resolveCollision(x, z, radius = 0.45) {
+function resolveCollision(x, z, radius = 0.45, playerY=0) {
     // A câmara é uma instância fechada: a criatura não atravessa a parede de rocha.
     if(arachnidCave.inside&&Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<18){
         const dx=x-CAVE_CENTER.x,dz=z-CAVE_CENTER.z,d=Math.hypot(dx,dz);
@@ -574,7 +577,7 @@ function resolveCollision(x, z, radius = 0.45) {
     }
     const lakePoint=keepOutsideLake(x,z,radius);
     const staticPoint=collisionWorld.resolveCollision(lakePoint.x,lakePoint.z,radius);
-    const builtPoint=buildings.resolveCollision(staticPoint.x,staticPoint.z,radius);
+    const builtPoint=buildings.resolveCollision(staticPoint.x,staticPoint.z,radius,playerY);
     const entry=exploration.resolveDoor(builtPoint.x,builtPoint.z,radius);
     const result=collisionWorld.resolveCollision(entry.x,entry.z,radius);
     return keepOutsideLake(result.x,result.z,radius);
@@ -638,7 +641,7 @@ const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveC
     onShot:position=>sfx.chavesShot(Math.hypot(position.x-player.position.x,position.z-player.position.z)),
     getWorkTarget:position=>selectGuardWork(position,
       buildings.structures[0]||{x:4,z:2},resources.nodes,buildings.structures,survival.inventory,
-      {cargo:guard.cargo,player:player.position}),
+      {cargo:guard.cargo,player:player.position,preferences:guard.workPreferences}),
     onWork:job=>{
       if(!gameActive||!guard.recruited||guard.hp<=0||!job)return false;
       if(job.kind==='deposit'){
@@ -697,6 +700,9 @@ function changeChavesOrder(){
     saveProgress();updateHUD();return true;
 }
 document.getElementById('guard-order').addEventListener('click',changeChavesOrder);
+const guardWorkUI=createGuardWorkUI({getPreferences:()=>guard.workPreferences,
+ onChange:preferences=>{if(!guard.setWorkPreferences(preferences))return false;saveProgress();updateHUD();return true;}});
+document.getElementById('pause-guard-work').addEventListener('click',()=>{if(!guard.recruited||!guard.alive){showToast('Recrute o Chaves para configurar o trabalho.');return;}guardWorkUI.open();});
 const shrine = createShrineSystem({THREE,scene,shrinePosition,getGroundHeight,
     addCollider:collisionWorld.add,cameraObstacles,getGraphicsQuality:()=>graphicsQuality});
 let worldSeed = Math.floor(Math.random() * 0x100000000);
@@ -962,6 +968,7 @@ function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); setAudio
 document.addEventListener('keydown', e => {
     if(adventureLoading){e.preventDefault();return;}
     if(e.code==='F1'){e.preventDefault();setHelpOpen(helpPanel.classList.contains('hidden'));return;}
+    if(guardWorkUI.isOpen){if(e.code==='Escape')guardWorkUI.close();return;}
     if(!helpPanel.classList.contains('hidden')){if(e.code==='Escape'){e.preventDefault();setHelpOpen(false);}return;}
     if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
     // Com a roda aberta, nenhuma tecla movimenta, ataca ou fabrica inadvertidamente.
@@ -1830,8 +1837,8 @@ function animate() {
 
         // Deslizar por paredes/troncos: eixos tratados separadamente.
         const beforeMoveX=player.position.x,beforeMoveZ=player.position.z;
-        const cx = resolveCollision(player.position.x + velocity.x * dt, player.position.z, 0.46);
-        const cz = resolveCollision(cx.x, player.position.z + velocity.z * dt, 0.46);
+        const cx = resolveCollision(player.position.x + velocity.x * dt, player.position.z, 0.46,player.position.y);
+        const cz = resolveCollision(cx.x, player.position.z + velocity.z * dt, 0.46,player.position.y);
         player.position.x = cz.x;
         player.position.z = cz.z;
         const groundY = buildings.walkHeight(player.position.x,player.position.z,player.position.y);

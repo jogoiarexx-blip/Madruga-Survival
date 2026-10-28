@@ -118,6 +118,16 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
        for(const x of [-.69,.69])block(group,.095,.15,2.16,warmWood,x,.53,0);
        block(group,1.29,.03,.26,straw,0,.735,-.76);
      }
+   } else if(type==='roofFlat'){
+     // Telha baixa: variante modular da cobertura, mesma área de 3x3 m.
+     block(group,3.05,.16,3.05,warmWood,0,3.05);
+     for(const x of [-1.4,1.4])block(group,.10,.18,3.10,darkWood,x,3.05);
+     for(const z of [-1.4,1.4])block(group,3.10,.18,.10,darkWood,0,3.05,z);
+     if(detailEnabled)for(const z of [-.98,-.49,0,.49,.98])block(group,2.9,.045,.07,darkWood,0,3.15,z);
+   } else if(type==='railing'){
+     // Guarda-corpo elevado, com travessas acima do nível da plataforma.
+     for(const x of [-1.35,0,1.35])block(group,.13,1.10,.13,darkWood,x,PLATFORM_HEIGHT+.5,0);
+     for(const y of [.52,1.05])block(group,2.96,.12,.13,warmWood,0,PLATFORM_HEIGHT+y,0);
    } else if(type==='roof'){
      // Cobertura piramidal sem colisor: o jogador pode caminhar por baixo.
      for(const side of [-1,1]){const top=block(group,2.35,.16,3.34,roof,side*.80,3.30,0);top.rotation.z=side*.63;}
@@ -238,7 +248,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    if(type!=='floor'&&Math.hypot(p.x-playerPos.x,p.z-playerPos.z)<(type==='shelter'?2.4:1.15))return false;
    if(!canPlaceAmong(structures,p))return false;
    // Conferir pontas e centro dos módulos para não atravessar árvores e pedras.
-   const offsets=['floor','wall','door','window','roof','stairs','loft','farmPlot'].includes(type)?[-1.25,0,1.25]:[0];
+   const offsets=['floor','wall','door','window','roof','roofFlat','railing','stairs','loft','farmPlot'].includes(type)?[-1.25,0,1.25]:[0];
    const angle=(p.rotation||0)*Math.PI/2;
    const c=Math.cos(angle),s=Math.sin(angle);
    for(const ox of offsets){
@@ -247,8 +257,8 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    }
    return true;
  }
- function walkHeight(x,z,playerHeight){return walkSurfaceHeight(structures,x,z,getGroundHeight(x,z),playerHeight);}
- function covered(pos){return structures.some(s=>s.type==='roof'&&Math.abs(pos.x-s.x)<1.45&&Math.abs(pos.z-s.z)<1.45);}
+ function walkHeight(x,z,playerHeight){return walkSurfaceHeight(structures,x,z,getGroundHeight(x,z),playerHeight,getGroundHeight);}
+ function covered(pos){return structures.some(s=>['roof','roofFlat'].includes(s.type)&&Math.abs(pos.x-s.x)<1.45&&Math.abs(pos.z-s.z)<1.45);}
  function near(type,pos,radius=4.6){return structures.some(s=>s.type===type&&Math.hypot(s.x-pos.x,s.z-pos.z)<radius);}
  function nearest(pos,r=2.85){return nearestInteractive(structures,pos,r);}
  function toggleDoor(s){if(!['door','window'].includes(s?.type))return false;s.open=!s.open;
@@ -292,7 +302,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
      if(b.type==='chest'&&!validChestItems(b.items||{}))continue;
      place(b.type,b.x,b.z,b.rotation||0,{preserveCoordinates:true,open:!!b.open,items:b.items||{},hp:b.hp,crop:b.crop});
    }return true;}
- function resolveCollision(x,z,r=.46){return resolveStructureCollision(structures,x,z,r);}
+ function resolveCollision(x,z,r=.46,playerY=0){return resolveStructureCollision(structures,x,z,r,playerY);}
  function isBlocked(x,z,r=.46){return positionBlocked(structures,x,z,r);}
  function blocksLine(from,to){return structureBlocksLine(structures,from,to);}
  return {structures,place,createPreview,canPlace,near,covered,walkHeight,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,repairKit,update,

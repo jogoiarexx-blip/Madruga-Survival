@@ -25,6 +25,8 @@ export const RECIPES = Object.freeze({
   chest:{label:'Baú',cost:{wood:6,stone:2},hint:'Guarda 80 itens; usa F'},
   workbench:{label:'Bancada de trabalho',cost:{wood:8,stone:5},hint:'Permite ferramentas e reforços de ferro'},
   roof:{label:'Telhado de madeira',cost:{wood:7,fiber:4},hint:'Cobertura de 3 metros; reduz exposição ao frio'},
+  railing:{label:'Guarda-corpo de madeira',cost:{wood:4,fiber:1},hint:'Protege as bordas das plataformas elevadas'},
+  roofFlat:{label:'Telhado plano modular',cost:{wood:6,fiber:3},hint:'Cobertura reta e encaixável 3x3 m'},
   stairs:{label:'Escada de madeira',cost:{wood:7,stone:2},hint:'Acesso à plataforma elevada (2,6 m)'},
   loft:{label:'Plataforma elevada',cost:{wood:9,fiber:3},hint:'Piso superior com encaixe automático'},
   farmPlot:{label:'Canteiro de plantio',cost:{wood:3,stone:2,fiber:2},hint:'Plante e regue com F; colher ao amadurecer'},
