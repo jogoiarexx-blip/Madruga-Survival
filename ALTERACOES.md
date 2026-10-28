@@ -1,3 +1,12 @@
+## v2.48.0 — Pesca interativa com vara, boia e espécies
+
+- **Y** junto à água lança a linha; após espera variável, há uma fisgada breve (1,55 s) indicada na tela; pressionar Y fisga e novos toques recolhem a linha. O botão da mochila e o controle móvel usam a mesma ação. Não é possível ganhar peixes só por pressionar Y uma vez.
+- Tilápia, traíra e carpa possuem probabilidades diferentes e oferecem desafios de recolhimento de 3, 4 e 5 puxadas. As espécies aproveitam o item **peixe cru** já existente, preservando crafting, receitas e checkpoints.
+- Vara 3D procedural com linha, boia e ondulação de água; mostrada apenas durante a pesca e sem downloads externos.
+- Em caso de fuga, afastamento da água ou perda da janela de fisgada, o peixe não é adicionado e nenhum XP é concedido. Durante a pausa o tempo da pesca não avança.
+- Sem mudança no formato do save; o estado da minigame é efêmero e o antigo `fishReadyAt` continua a impor o tempo de espera após uma captura bem-sucedida.
+- Testes novos de validação, timing determinístico, espécies, intervalos de toque, penalidade de cancelamento e compatibilidade com as receitas existentes.
+
 ## v2.47.0 — construção em andares e prioridades de coleta
 
 - Nova peça guarda-corpo de madeira com colisão apenas à altura da plataforma, sem bloquear personagens no térreo.

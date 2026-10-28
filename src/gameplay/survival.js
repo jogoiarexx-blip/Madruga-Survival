@@ -30,7 +30,7 @@ export const RECIPES = Object.freeze({
   stairs:{label:'Escada de madeira',cost:{wood:7,stone:2},hint:'Acesso à plataforma elevada (2,6 m)'},
   loft:{label:'Plataforma elevada',cost:{wood:9,fiber:3},hint:'Piso superior com encaixe automático'},
   farmPlot:{label:'Canteiro de plantio',cost:{wood:3,stone:2,fiber:2},hint:'Plante e regue com F; colher ao amadurecer'},
-  fishingRod:{label:'Vara de pesca',cost:{wood:3,fiber:5,stone:1},hint:'Pesca junto à água com Y ou botão da mochila'},
+  fishingRod:{label:'Vara de pesca',cost:{wood:3,fiber:5,stone:1},hint:'Junto à água: Y lança, Y fisga e Y recolhe a linha (também pela mochila)'},
   hammer:{label:'Marreta',cost:{wood:3,stone:4},hint:'Arma mais forte'},
   spear:{label:'Lança',cost:{wood:4,stone:2,fiber:2},hint:'Ataque de maior alcance'},
   pickaxe:{label:'Picareta de pedra',cost:{wood:3,stone:5},hint:'Exige bancada; minera ferro'},

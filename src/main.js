@@ -70,6 +70,9 @@ import {createRaidState,planRaid} from './gameplay/raids.js';
 import {raidTarget,maxBuildingHP} from './gameplay/base-defense.js';
 import {workCrop,CROP_MATURITY} from './gameplay/farming.js';
 import {tryFish} from './gameplay/fishing.js';
+import {createFishingSession} from './gameplay/fishing-session.js';
+import {createFishingVisual} from './world/fishing-visual.js';
+import {createFishingHud} from './ui/fishing-hud.js';
 import {createWildlifeWorld} from './world/wildlife.js?v=2.41.0-ecosystem';
 import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
 import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
@@ -271,6 +274,9 @@ const forest = createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosi
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
 const fishingLake=createFishingLake({THREE,scene,getGroundHeight});
+const fishingSession=createFishingSession();
+const fishingHud=createFishingHud();
+const fishingVisual=createFishingVisual({THREE,scene,getGroundHeight});
 const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),findSpawnPoint:(min,max,r)=>findSpawnPoint(min,max,r)});
 const exploration=createExplorationWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),
@@ -387,7 +393,7 @@ function updateHUD() {
     hudText('mission-goal',mission?`${mission.description} · ${mission.count}/${mission.target} · +${mission.xp} XP`:
       'Continue sobrevivendo, explorando e melhorando sua base.');
     hudText('equipment-display',`Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`);
-    hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · O ordens Chaves · Y pescar · I mochila · U habilidades');
+    hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · O ordens Chaves · Y pesca interativa · I mochila · U habilidades');
     const bossWrapper=document.getElementById('boss-bar-wrapper');
     const showQueen=arachnidCave.inside&&!!queen&&queen.hp>0;
     bossWrapper.classList.toggle('hidden',!showQueen);
@@ -1619,13 +1625,37 @@ function harvestNear(){
     sfx.collect();showToast(`+${quantity} ${labels[result.type]}${result.type==='berries'?' · +1 semente':''}`);
     updateHUD();saveProgress();return true;
 }
+function nearFishingWater(){
+    return nearLakeShore(player.position) || resources.nodes.some(n=>n.type==='water'&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<3.8);
+}
+function updateFishingVisual(){
+    const state=fishingSession.state;
+    fishingHud.update(state);
+    const lake=nearLakeShore(player.position)?{x:LAKE.x,z:LAKE.z,y:fishingLake.root.position.y}:null;
+    fishingVisual.update({phase:state.phase,player:player.position,heading:playerYaw,elapsed,water:lake});
+}
+function finishFishing(){
+    const species=fishingSession.state.species;
+    const caught=tryFish(survival,elapsed,nearFishingWater(),fishingBonus(skillLevel(survival,'fishing')));
+    fishingSession.reset();fishingVisual.hide();fishingHud.hide();
+    if(!caught.ok){showToast(caught.message);return false;}
+    earnSkill('fishing',28+(species?.id==='carpa'?14:species?.id==='traira'?7:0));
+    sfx.fish();updateHUD();saveProgress();
+    showToast(`🎣 ${species?.name||'Peixe'} · ${caught.message}`);return true;
+}
 function fishNearby(){
-    if(!gameActive)return false;
-    const node=resources.nodes.find(n=>n.type==='water'&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<3.8);
-    const result=tryFish(survival,elapsed,!!node||nearLakeShore(player.position),fishingBonus(skillLevel(survival,'fishing')));
-    if(result.ok){earnSkill('fishing',28);sfx.fish();updateHUD();saveProgress();}
-    showToast(result.message);
-    return result.ok;
+    if(!gameActive||placement)return false;
+    if(survivalUI.isOpen)closeInventory();
+    const state=fishingSession.state;
+    if(state.phase==='caught')return finishFishing();
+    const event=state.phase==='idle'
+      ?fishingSession.start({survival,elapsed,nearWater:nearFishingWater(),position:player.position})
+      :fishingSession.press();
+    if(event.type==='caught')return finishFishing();
+    if(event.type==='cast'){sfx.fish();playerNoise(4,'fish-cast');}
+    if(event.type==='hook')sfx.collect();
+    if(event.type!=='wait'&&event.type!=='reel')showToast(event.message);
+    updateFishingVisual();return event.type!=='error';
 }
 function useHotbarSlot(index){
   if(!gameActive || placement || !controls.isLocked || survivalUI.isOpen || storageUI.isOpen || skillsUI.isOpen || workbenchUI.isOpen || campfireUI.isOpen ||
@@ -1788,6 +1818,11 @@ function animate() {
 
     if (running) {
         elapsed += dt;
+        const fishEvent=fishingSession.tick(dt,{position:player.position,nearWater:nearFishingWater()});
+        if(fishEvent?.type==='bite'){sfx.warning();showToast(fishEvent.message);}
+        if(fishEvent?.type==='miss'||fishEvent?.type==='cancel')showToast(fishEvent.message);
+        if(fishingSession.state.phase!=='idle')updateFishingVisual();
+        else {fishingHud.hide();fishingVisual.hide();}
         saveTick+=dt;
         if(saveTick>=15) {saveTick=0;saveProgress();}
         // Movimento relativo à direção de olhar. Aceleração e frenagem
@@ -2046,6 +2081,7 @@ function animate() {
 
 function loseGame() {
     playerRev5.die();
+    fishingSession.reset();fishingHud.hide();fishingVisual.hide();
     if(placement)releasePlacement();
     gameActive = false;
     // Permitir retomar o último checkpoint após morrer.
@@ -2062,6 +2098,7 @@ function loseGame() {
 // checkpoint. O erro fica visível e o jogador pode voltar ao menu com segurança.
 function recoverFromFrameError(error){
     console.error('[Madruga Survival] Falha durante quadro do jogo:',error);
+    fishingSession.reset();fishingHud.hide();fishingVisual.hide();
     gameActive=false;setAudioPaused(true);
     frameDriver?.stop();
     Object.keys(keys).forEach(key=>{keys[key]=false;});
