@@ -1,4 +1,4 @@
-// Madruga Survival v2.50.0 — arremesso/recolhimento, peixe capturado e água procedural com LOD.
+// Madruga Survival v2.51.0 — lagoa orgânica, peixes variados e LOD otimizado para celulares.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -11,7 +11,7 @@ import {setTextIfChanged,setWidthIfChanged} from './ui/dom-patch.js';
 import {guardOrderButtonLabel} from './gameplay/guard-orders.js';
 import { createTerrain } from './world/terrain.js?v=2.41.0-ecosystem';
 import { createMinimap } from './ui/minimap.js?v=2.41.0-ecosystem';
-import {LAKE,insideLake,nearLakeShore,keepOutsideLake,lakeTerrainDrop,createFishingLake} from './world/fishing-lake.js';
+import {LAKE,insideLake,nearLakeShore,keepOutsideLake,lakeTerrainDrop,lakeEdgeDistance,createFishingLake} from './world/fishing-lake.js';
 import {segmentBlockedByCircles} from './world/line-of-sight.js';
 import {selectGuardWork} from './gameplay/guard-work.js';
 import {createGuardWorkUI} from './ui/guard-work-ui.js';
@@ -1988,7 +1988,7 @@ function animate() {
         audioLandscapeTick+=dt;
         if(audioLandscapeTick>=.5){
             updateSoundscape({active:true,dt:audioLandscapeTick,night:vitals.night,
-              nearWater:Math.abs(Math.hypot(player.position.x-LAKE.x,player.position.z-LAKE.z)-LAKE.radius)});
+              nearWater:Math.abs(lakeEdgeDistance(player.position.x,player.position.z))});
             audioLandscapeTick=0;
         }
         for(const event of exploration.update(player.position,graphicsQuality)){

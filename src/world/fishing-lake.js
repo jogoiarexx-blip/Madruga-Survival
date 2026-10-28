@@ -1,53 +1,95 @@
 import {createFishSchoolVisual} from './fish-school-visual.js';
 import {createLakeWaterMaterial,useDetailedWater} from './lake-water-material.js';
-// Lagoa permanente procedural sem texturas remotas. Borda acessível para pesca.
+// Única geometria lógica compartilhada por água, areia, pesca, terreno e colisão.
 export const LAKE=Object.freeze({x:70,z:51,radius:14.8,shore:2.7});
-// Profundidade suave no terreno sem criar malha dinâmica ou terra atravessando a água.
+export function shorelineRadiusAt(angle){
+ const a=Number.isFinite(angle)?angle:0;
+ return LAKE.radius+.50*Math.sin(3*a)+.29*Math.sin(5*a)+.17*Math.sin(8*a);
+}
+export function lakeEdgeDistance(x,z){
+ const dx=x-LAKE.x,dz=z-LAKE.z;
+ return Math.hypot(dx,dz)-shorelineRadiusAt(Math.atan2(dz,dx));
+}
 export function lakeTerrainDrop(x,z){
- const d=Math.hypot(x-LAKE.x,z-LAKE.z);
- const t=Math.max(0,Math.min(1,(d-(LAKE.radius-3))/(LAKE.shore+3)));
+ const edge=lakeEdgeDistance(x,z);
+ const t=Math.max(0,Math.min(1,(edge+3)/(LAKE.shore+3)));
  return 1.65*(1-t*t*(3-2*t));
 }
-export function insideLake(x,z,r=0){return Math.hypot(x-LAKE.x,z-LAKE.z)<LAKE.radius+r;}
+export function insideLake(x,z,r=0){return lakeEdgeDistance(x,z)<r;}
 export function nearLakeShore(position,range=3.8){
  if(!position)return false;
- const d=Math.hypot(position.x-LAKE.x,position.z-LAKE.z);
- return d>=LAKE.radius-1.5&&d<=LAKE.radius+range;
+ const edge=lakeEdgeDistance(position.x,position.z);
+ return edge>=-1.5&&edge<=range;
 }
 export function keepOutsideLake(x,z,r=.45){
- const d=Math.hypot(x-LAKE.x,z-LAKE.z),min=LAKE.radius+r;
+ const dx=x-LAKE.x,dz=z-LAKE.z,d=Math.hypot(dx,dz);
+ const min=shorelineRadiusAt(Math.atan2(dz,dx))+r;
  if(d>=min)return {x,z};
- const dx=d>0.00001?(x-LAKE.x)/d:1,dz=d>0.00001?(z-LAKE.z)/d:0;
- return {x:LAKE.x+dx*min,z:LAKE.z+dz*min};
+ const ux=d>0.00001?dx/d:1,uz=d>0.00001?dz/d:0;
+ return {x:LAKE.x+ux*min,z:LAKE.z+uz*min};
+}
+// Entorta apenas os vértices de borda de geometrias circulares, preservando UVs.
+// O ângulo deve seguir o Z mundial, invertido após rotação -90° em X.
+function contourGeometry(THREE,geometry){
+ const attr=geometry.attributes.position;
+ for(let i=0;i<attr.count;i++){
+  const x=attr.getX(i),y=attr.getY(i),r=Math.hypot(x,y);
+  if(r<.0001)continue;
+  const a=Math.atan2(-y,x),dr=shorelineRadiusAt(a)-LAKE.radius;
+  const adjusted=Math.max(0,r+dr);
+  attr.setXY(i,x*adjusted/r,y*adjusted/r);
+ }
+ attr.needsUpdate=true;
+ geometry.computeVertexNormals();
+ return geometry;
 }
 export function createFishingLake({THREE,scene,getGroundHeight}){
  const root=new THREE.Group();root.position.set(LAKE.x,getGroundHeight(LAKE.x,LAKE.z)+lakeTerrainDrop(LAKE.x,LAKE.z)+.15,LAKE.z);
- // Polígonos concêntricos = LOD natural na água: sem tesselação pesada nem reflexões em tempo real.
  const fallbackMaterial=new THREE.MeshStandardMaterial({color:0x318ca4,roughness:.33,metalness:.12,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide});
  const detailedMaterial=createLakeWaterMaterial(THREE);
- const water=new THREE.Mesh(new THREE.CircleGeometry(LAKE.radius,48),fallbackMaterial);
+ const water=new THREE.Mesh(contourGeometry(THREE,new THREE.CircleGeometry(LAKE.radius,64)),fallbackMaterial);
  water.rotation.x=-Math.PI/2;water.renderOrder=1;root.add(water);
  const school=createFishSchoolVisual({THREE,parent:root,radius:LAKE.radius});
- const shoreMat=new THREE.MeshStandardMaterial({color:0xb2a276,roughness:1});
- const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE.radius+.1,LAKE.radius+LAKE.shore,48),shoreMat);
- shore.rotation.x=-Math.PI/2;shore.position.y=-.08;shore.receiveShadow=true;root.add(shore);
+ const wetSand=new THREE.MeshStandardMaterial({color:0x8b8669,roughness:1});
+ const drySand=new THREE.MeshStandardMaterial({color:0xb6a57c,roughness:1});
+ const fringe=new THREE.Mesh(contourGeometry(THREE,new THREE.RingGeometry(LAKE.radius+.08,LAKE.radius+.85,64)),wetSand);
+ fringe.rotation.x=-Math.PI/2;fringe.position.y=-.065;fringe.receiveShadow=true;root.add(fringe);
+ const shore=new THREE.Mesh(contourGeometry(THREE,new THREE.RingGeometry(LAKE.radius+.86,LAKE.radius+LAKE.shore,64)),drySand);
+ shore.rotation.x=-Math.PI/2;shore.position.y=-.085;shore.receiveShadow=true;root.add(shore);
+ // Uma única chamada de desenho para juncos em vez de 30 malhas independentes.
  const reedsMat=new THREE.MeshStandardMaterial({color:0x4b7b48,roughness:1});
- const reedGeo=new THREE.ConeGeometry(.12,.84,4);
- for(let i=0;i<30;i++){
-  const angle=i*2.39996,r=LAKE.radius+1+Math.sin(i*12.1)*.6;
-  const reed=new THREE.Mesh(reedGeo,reedsMat);reed.position.set(Math.cos(angle)*r,.30,Math.sin(angle)*r);
-  reed.rotation.z=.09*Math.sin(i);root.add(reed);
+ const reedGeo=new THREE.ConeGeometry(.12,.84,4),reedCount=30;
+ const reeds=new THREE.InstancedMesh(reedGeo,reedsMat,reedCount);
+ const obj=new THREE.Object3D();
+ for(let i=0;i<reedCount;i++){
+  const a=i*2.3999632297,r=shorelineRadiusAt(a)+1.05+Math.sin(i*12.1)*.42;
+  obj.position.set(Math.cos(a)*r,.30,Math.sin(a)*r);
+  obj.rotation.set(0,a,.09*Math.sin(i));obj.scale.setScalar(.78+(i%5)*.09);obj.updateMatrix();
+  reeds.setMatrixAt(i,obj.matrix);
  }
+ reeds.instanceMatrix.needsUpdate=true;reeds.castShadow=false;root.add(reeds);
+ const pebblesMat=new THREE.MeshStandardMaterial({color:0x85877e,roughness:1});
+ const pebbleGeo=new THREE.IcosahedronGeometry(.11,0);
+ const pebbles=new THREE.InstancedMesh(pebbleGeo,pebblesMat,28);
+ for(let i=0;i<28;i++){
+  const a=i*2.3999632297+.3,r=shorelineRadiusAt(a)+1.18+(i%4)*.26;
+  obj.position.set(Math.cos(a)*r,-.035,Math.sin(a)*r);
+  obj.rotation.set(0,a,0);obj.scale.set(.8+(i%5)*.2,.40,1.1+(i%3)*.3);obj.updateMatrix();
+  pebbles.setMatrixAt(i,obj.matrix);
+ }
+ pebbles.instanceMatrix.needsUpdate=true;root.add(pebbles);
  scene.add(root);
+ let lastDetail=null,lastReeds=null;
  return {root,school,position:LAKE,near:nearLakeShore,update(position,quality='medium',elapsed=0){
    const d=Math.hypot(position.x-LAKE.x,position.z-LAKE.z);
    root.visible=d<(quality==='low'?68:quality==='medium'?95:130);
-   if(root.visible)school.update(position,quality,elapsed);
+   if(!root.visible)return;
+   school.update(position,quality,elapsed);
    const detail=useDetailedWater(d,quality);
-   if(water.material!==(detail?detailedMaterial:fallbackMaterial))water.material=detail?detailedMaterial:fallbackMaterial;
+   if(detail!==lastDetail){water.material=detail?detailedMaterial:fallbackMaterial;lastDetail=detail;}
    if(detail){detailedMaterial.uniforms.uTime.value=elapsed;detailedMaterial.uniforms.uOpacity.value=d<32?.79:.88;}
-   else fallbackMaterial.opacity=d<32?.76:.88;
-   // Detalhes da margem; não ocultar o cardume que vive dentro do grupo.
-   for(const reed of root.children){if(reed.geometry===reedGeo)reed.visible=d<42;}
+   else {const opacity=d<32?.76:.88;if(opacity!==fallbackMaterial.opacity)fallbackMaterial.opacity=opacity;}
+   const showDecor=quality!=='low'&&d<44;
+   if(lastReeds!==showDecor){reeds.visible=showDecor;pebbles.visible=showDecor;lastReeds=showDecor;}
  }};
 }

@@ -1,4 +1,4 @@
-import {SCHOOL_COUNT,visibleFishCount,sampleFishSwim} from './fish-school.js';
+import {SCHOOL_COUNT,visibleFishCount,sampleFishSwim,fishBodyScale,fishUpdateInterval} from './fish-school.js';
 // Instanced meshes: desenho com dois materiais e matrizes atualizadas somente perto da água.
 export function createFishSchoolVisual({THREE,parent,radius=14.8}){
  const root=new THREE.Group();root.name='Cardume_LOD';parent.add(root);
@@ -11,7 +11,7 @@ export function createFishSchoolVisual({THREE,parent,radius=14.8}){
  bodies.name='Peixes_LOD';bodies.frustumCulled=false;tails.frustumCulled=false;
  bodies.castShadow=false;tails.castShadow=false;
  root.add(bodies,tails);
- const position=new THREE.Vector3(),scale=new THREE.Vector3(),quat=new THREE.Quaternion();
+ // Reuso de um único Object3D para atualizar matrizes, sem alocações por peixe.
  const obj=new THREE.Object3D();const color=new THREE.Color();
  for(let i=0;i<SCHOOL_COUNT;i++){
   const tint=i%3===0?0x667b63:i%3===1?0x8a815a:0x536c7c;
@@ -24,16 +24,17 @@ export function createFishSchoolVisual({THREE,parent,radius=14.8}){
   const count=visibleFishCount(distance,quality);
   root.visible=count>0;
   if(!count){activeCount=0;return;}
-  if(count===activeCount && elapsed-lastUpdate<.09)return;
+  if(count===activeCount && elapsed-lastUpdate<fishUpdateInterval(quality))return;
   activeCount=count;lastUpdate=elapsed;
   bodies.count=count;tails.count=count;
   for(let i=0;i<count;i++){
    const fish=sampleFishSwim(i,elapsed,radius);
    obj.position.set(fish.x,fish.y,fish.z);obj.rotation.set(0,fish.heading,0);
-   obj.scale.set(i%3===2?.78:1,.57,1.5);obj.updateMatrix();bodies.setMatrixAt(i,obj.matrix);
-   obj.position.set(fish.x-Math.sin(fish.heading)*.34,fish.y,fish.z-Math.cos(fish.heading)*.34);
+   const fishScale=fishBodyScale(i);
+   obj.scale.set(fishScale.width,fishScale.height,fishScale.length);obj.updateMatrix();bodies.setMatrixAt(i,obj.matrix);
+   obj.position.set(fish.x-Math.sin(fish.heading)*(.24*fishScale.length),fish.y,fish.z-Math.cos(fish.heading)*(.24*fishScale.length));
    obj.rotation.set(Math.PI/2,fish.heading+fish.tail,0);
-   obj.scale.set(1,1,1);obj.updateMatrix();tails.setMatrixAt(i,obj.matrix);
+   obj.scale.setScalar(fishScale.length*.80);obj.updateMatrix();tails.setMatrixAt(i,obj.matrix);
   }
   bodies.instanceMatrix.needsUpdate=true;tails.instanceMatrix.needsUpdate=true;
  }

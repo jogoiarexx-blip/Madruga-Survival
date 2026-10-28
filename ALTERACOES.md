@@ -1,3 +1,12 @@
+## v2.51.0 — Lagoa orgânica, cardumes variados e LOD móvel
+
+- A margem deixa de ser um círculo perfeito: borda harmônica determinística compartilhada entre água, areia, profundidade do terreno, colisão e verificação de pesca.
+- Praia úmida, faixa de areia seca, juncos e pedras agora seguem a mesma borda. Juncos e pedras usam InstancedMesh e ficam ocultos em qualidade baixa ou distância elevada.
+- Peixes instanciados variam de tamanho (escala 0,62–1,62) e sua velocidade muda levemente com o tamanho.
+- LOD de peixes: próximo, baixo 5 / médio 12 / alto 22; longe, baixo 2 / demais 5. Atualização de matrizes desacelerada em gráficos baixos (0,28s).
+- Materiais de água alternados só quando muda o nível de detalhe; nenhum custo de reflexão em tempo real. Saves e itens de pesca permanecem no mesmo formato.
+- Testes novos para geometria, colisão, margens, pesca, cardume e desempenho; testes históricos atualizados para v2.51.0.
+
 ## v2.50.0 — Arremesso e recolhimento, peixe capturado e lagoa renovada
 
 - Vara e braços acompanham a etapa da pescaria: animação curta de arremesso, movimento do recolhimento e linha ligada à ponta da vara durante toda a ação.

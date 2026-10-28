@@ -81,6 +81,6 @@ test('integração tela Y, mochila, celular, HUD de pesca e linha 3D',()=>{
  assert.match(html,/data-action="KeyY"/);
  assert.match(read('src/ui/survival-ui.js'),/onFish\(\)/);
  assert.match(read('src/world/fishing-visual.js'),/RingGeometry/);
- assert.equal(JSON.parse(read('package.json')).version,'2.50.0');
+ assert.equal(JSON.parse(read('package.json')).version,'2.51.0');
 });
 console.log(`v2.48.0: ${checks} testes novos aprovados`);
