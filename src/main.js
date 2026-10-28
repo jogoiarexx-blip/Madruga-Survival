@@ -1,4 +1,4 @@
-// Madruga Survival v2.47.0 — estabilidade, balanceamento de sobrevivência e HUD otimizado.
+// Madruga Survival v2.49.0 — pescaria com vara no rig, cardume LOD e respingos.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -277,6 +277,7 @@ const fishingLake=createFishingLake({THREE,scene,getGroundHeight});
 const fishingSession=createFishingSession();
 const fishingHud=createFishingHud();
 const fishingVisual=createFishingVisual({THREE,scene,getGroundHeight});
+const fishingHandWorld=new THREE.Vector3();
 const resources=createResourceWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),findSpawnPoint:(min,max,r)=>findSpawnPoint(min,max,r)});
 const exploration=createExplorationWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),
@@ -1632,12 +1633,13 @@ function updateFishingVisual(){
     const state=fishingSession.state;
     fishingHud.update(state);
     const lake=nearLakeShore(player.position)?{x:LAKE.x,z:LAKE.z,y:fishingLake.root.position.y}:null;
-    fishingVisual.update({phase:state.phase,player:player.position,heading:playerYaw,elapsed,water:lake});
+    const hand=playerRev5.getFishingGrip(fishingHandWorld)?fishingHandWorld:null;
+    fishingVisual.update({phase:state.phase,player:player.position,heading:playerYaw,elapsed,water:lake,hand});
 }
 function finishFishing(){
     const species=fishingSession.state.species;
     const caught=tryFish(survival,elapsed,nearFishingWater(),fishingBonus(skillLevel(survival,'fishing')));
-    fishingSession.reset();fishingVisual.hide();fishingHud.hide();
+    fishingVisual.splash('caught');fishingSession.reset();fishingHud.hide();
     if(!caught.ok){showToast(caught.message);return false;}
     earnSkill('fishing',28+(species?.id==='carpa'?14:species?.id==='traira'?7:0));
     sfx.fish();updateHUD();saveProgress();
@@ -1653,7 +1655,7 @@ function fishNearby(){
       :fishingSession.press();
     if(event.type==='caught')return finishFishing();
     if(event.type==='cast'){sfx.fish();playerNoise(4,'fish-cast');}
-    if(event.type==='hook')sfx.collect();
+    if(event.type==='hook'){sfx.collect();fishingVisual.splash('hook');}
     if(event.type!=='wait'&&event.type!=='reel')showToast(event.message);
     updateFishingVisual();return event.type!=='error';
 }
@@ -1819,10 +1821,10 @@ function animate() {
     if (running) {
         elapsed += dt;
         const fishEvent=fishingSession.tick(dt,{position:player.position,nearWater:nearFishingWater()});
-        if(fishEvent?.type==='bite'){sfx.warning();showToast(fishEvent.message);}
-        if(fishEvent?.type==='miss'||fishEvent?.type==='cancel')showToast(fishEvent.message);
+        if(fishEvent?.type==='bite'){sfx.warning();fishingVisual.splash('bite');showToast(fishEvent.message);}
+        if(fishEvent?.type==='miss'||fishEvent?.type==='cancel'){fishingVisual.splash('miss');showToast(fishEvent.message);}
         if(fishingSession.state.phase!=='idle')updateFishingVisual();
-        else {fishingHud.hide();fishingVisual.hide();}
+        else {fishingHud.hide();if(fishingVisual.hasSplash)updateFishingVisual();else fishingVisual.hide();}
         saveTick+=dt;
         if(saveTick>=15) {saveTick=0;saveProgress();}
         // Movimento relativo à direção de olhar. Aceleração e frenagem
@@ -1933,9 +1935,17 @@ function animate() {
             weapon.rotation.z=THREE.MathUtils.lerp(weapon.rotation.z,grip.z,blend);
           }
         }
+        const isFishing=fishingSession.state.phase!=='idle'&&fishingSession.state.phase!=='caught';
+        playerRev5.setFishing(isFishing);
+        if(!playerRev5.loaded&&isFishing){
+          rightArm.rotation.x=THREE.MathUtils.lerp(rightArm.rotation.x,-.98,blend);
+          leftArm.rotation.x=THREE.MathUtils.lerp(leftArm.rotation.x,-.63,blend);
+          weapon.visible=false;
+        }else if(!playerRev5.loaded){weapon.visible=true;}
         playerRev5.update(dt,{speed:realMovementSpeed,sprinting:runningFast,grounded:isGrounded,
           attackProgress:combat.isAttacking?THREE.MathUtils.clamp(1-combat.attackAnimTimer/combat.attackAnimDuration,0,1):null,
           attackStep:combat.comboStep});
+        if(isFishing)updateFishingVisual();
         webSlowTimer=Math.max(0,webSlowTimer-dt);
         invulnerableTimer = Math.max(0, invulnerableTimer-dt);
         player.visible = invulnerableTimer<=0 || Math.floor(invulnerableTimer*12)%2 === 0;
@@ -1973,7 +1983,7 @@ function animate() {
 
         zombieSenses.prune(elapsed);
         resources.update(dt,player.position,graphicsQuality);
-        fishingLake.update(player.position,graphicsQuality);
+        fishingLake.update(player.position,graphicsQuality,elapsed);
         audioLandscapeTick+=dt;
         if(audioLandscapeTick>=.5){
             updateSoundscape({active:true,dt:audioLandscapeTick,night:vitals.night,

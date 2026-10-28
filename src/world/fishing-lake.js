@@ -1,3 +1,4 @@
+import {createFishSchoolVisual} from './fish-school-visual.js';
 // Lagoa permanente procedural sem texturas remotas. Borda acessível para pesca.
 export const LAKE=Object.freeze({x:70,z:51,radius:14.8,shore:2.7});
 // Profundidade suave no terreno sem criar malha dinâmica ou terra atravessando a água.
@@ -24,6 +25,7 @@ export function createFishingLake({THREE,scene,getGroundHeight}){
  const water=new THREE.Mesh(new THREE.CircleGeometry(LAKE.radius,40),
    new THREE.MeshStandardMaterial({color:0x318ca4,roughness:.33,metalness:.12,transparent:true,opacity:.88,depthWrite:false,side:THREE.DoubleSide}));
  water.rotation.x=-Math.PI/2;water.renderOrder=1;root.add(water);
+ const school=createFishSchoolVisual({THREE,parent:root,radius:LAKE.radius});
  const shoreMat=new THREE.MeshStandardMaterial({color:0xb2a276,roughness:1});
  const shore=new THREE.Mesh(new THREE.RingGeometry(LAKE.radius+.1,LAKE.radius+LAKE.shore,48),shoreMat);
  shore.rotation.x=-Math.PI/2;shore.position.y=-.08;shore.receiveShadow=true;root.add(shore);
@@ -35,10 +37,12 @@ export function createFishingLake({THREE,scene,getGroundHeight}){
   reed.rotation.z=.09*Math.sin(i);root.add(reed);
  }
  scene.add(root);
- return {root,position:LAKE,near:nearLakeShore,update(position,quality='medium'){
+ return {root,school,position:LAKE,near:nearLakeShore,update(position,quality='medium',elapsed=0){
    const d=Math.hypot(position.x-LAKE.x,position.z-LAKE.z);
    root.visible=d<(quality==='low'?68:quality==='medium'?95:130);
-   // Juncos são detalhes próximos; a água permanece visível à distância.
-   for(let i=2;i<root.children.length;i++)root.children[i].visible=d<42;
+   if(root.visible)school.update(position,quality,elapsed);
+   water.material.opacity=d<32?.74:.88;
+   // Detalhes da margem; não ocultar o cardume que vive dentro do grupo.
+   for(const reed of root.children){if(reed.geometry===reedGeo)reed.visible=d<42;}
  }};
 }

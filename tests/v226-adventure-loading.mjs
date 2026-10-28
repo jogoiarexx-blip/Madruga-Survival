@@ -59,7 +59,7 @@ await test('HTML oferece loading acessível, retomada e confirmação para point
  }
  assert.match(html,/aria-modal="true"[^>]*aria-labelledby="loading-title"/);
  assert.match(html,/role="progressbar"[^>]*aria-valuemin="0"[^>]*aria-valuemax="100"/);
- assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing"/);
+ assert.match(html,/data-build="2\.27\.0-recovery|2\.28\.0-model-cache|2\.29\.0-enemy-pool|2\.29\.1-goblin-visible|2\.30\.0-chaves-workbench|2\.31\.0-chaves-patrol-ai|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig"/);
 });
 await test('main bloqueia simulação no loading e libera o mouse somente via clique final',async()=>{
  const code=read('src/main.js');
@@ -83,7 +83,7 @@ await test('estilos mantêm loading legível em celular e sem assets ou animaç�
  assert.match(css,/@media\(max-width:600px\)/);
  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
  const pkg=JSON.parse(read('package.json'));
- assert.equal(pkg.version,'2.48.0');
+ assert.equal(pkg.version,'2.49.0');
  assert.match(pkg.scripts.test,/v226-adventure-loading/);
 });
 console.log(`v2.26: ${n} cenários de loading aprovados`);

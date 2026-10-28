@@ -70,8 +70,8 @@ test('jogo integra os samples sem remover WebAudio ou a ambiência',()=>{
  assert.match(sfxSource,/MAX_VOICES=18/);
 });
 test('saves não incorporam dados de áudio e HTML usa build atualizado',()=>{
- assert.equal(JSON.parse(source('package.json')).version,'2.48.0');
- assert.match(source('index.html'),/2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.48\.0-interactive-fishing/);
+ assert.equal(JSON.parse(source('package.json')).version,'2.49.0');
+ assert.match(source('index.html'),/2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig/);
  assert.match(source('src/main.js'),/sfx\.js\?v=2\.44\.0-quiet/);
  assert.doesNotMatch(source('src/gameplay/save-system.js'),/sampleBank|kenney|audioBlob/);
  assert.match(source('ASSETS-SONS-CC0.md'),/Creative Commons Zero/);

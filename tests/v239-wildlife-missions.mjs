@@ -76,6 +76,6 @@ test('interface exibe missão e módulo de animais não aplica dano instantâneo
  assert.match(main,/advanceMission\(missionProgress,context\)/);
  assert.match(main,/missions:missionProgress/);assert.match(main,/recordMissionEvent\(missionProgress,'cook'/);
  assert.match(wild,/if\(boar\?\.hit\)onHurt\(8/);assert.doesNotMatch(wild,/onHurt\(5,a.group.position\)/);
- assert.match(html,/2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.48\.0-interactive-fishing/);
+ assert.match(html,/2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig/);
 });
 console.log('v2.39.0: '+n+' regressões aprovadas');

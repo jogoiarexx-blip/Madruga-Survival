@@ -123,7 +123,7 @@ export function findRev5Hand(root,side='Left') {
 export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallbackRig={},onStatus=()=>{},onBeforeMount=async()=>{},url=PLAYER_REV5_URL}) {
   let loaded=false,failed=false,promise=null,animator=null,meshRoot=null,magic=null,sword=null;
   let equipped=0,castLeft=0,handMount=null,swingIndex=0,comboWindow=0,weaponTime=0,queuedComboStep=null;
-  let restingGrip=null;
+  let restingGrip=null,fishingActive=false,fishingHand=null,fishingLeftArm=null,fishingRightArm=null;
   let gearVisuals=null,desiredGear={vest:false,padding:false,boots:false};
   function setGear(equipped){
     desiredGear={...desiredGear,...equipped};
@@ -237,6 +237,9 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
       // Find sanitized Three.js bone name; never reject a valid GLB just because
       // its original rig named the bone with a colon.
       const hand=findRev5Hand(meshRoot,'Left');
+      fishingHand=hand;
+      const findBone=(name)=>{let bone=null;meshRoot.traverse(o=>{if(!bone&&o.isBone&&String(o.name).replace(/[^a-z]/gi,'').toLowerCase()===name)bone=o;});return bone;};
+      fishingLeftArm=findBone('mixamorigleftarm');fishingRightArm=findBone('mixamorigrightarm');
       handMount=hand||meshRoot;
       if(!hand)console.warn('[Player REV5] Osso da mão não encontrado; arma ancorada temporariamente ao corpo.');
       animator=new WandererAnimator(THREE,gltf,()=>{},()=>{},
@@ -272,6 +275,14 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     });
     return promise;
   }
+  function setFishing(active){fishingActive=!!active;}
+  function getFishingGrip(target){
+    if(!loaded||!fishingHand||!target)return false;
+    // Matrizes atualizadas após animações, sem criar Vector3 por frame.
+    player.updateMatrixWorld(true);
+    fishingHand.getWorldPosition(target);
+    return true;
+  }
   function update(dt,{speed=0,sprinting=false,grounded=true,attackProgress=null,attackStep=0}={}){
     if(!loaded)return;
     comboWindow=Math.max(0,comboWindow-dt);weaponTime+=dt;
@@ -286,6 +297,12 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     } else if(animator.speed!==1)animator.setSpeed(1);
     if(castLeft>0){castLeft=Math.max(0,castLeft-dt);if(castLeft===0&&magic)magic.visible=false;}
     animator.update(dt);
+    if(fishingActive){
+      // Pose aditiva para segurar a vara: o rig continua responsável pelos pés.
+      if(fishingLeftArm)fishingLeftArm.rotation.x-=.42;
+      if(fishingRightArm)fishingRightArm.rotation.x-=.22;
+    }
+    if(weapon)weapon.visible=!fishingActive;
     if(weapon&&restingGrip){
       const motion=sampleRiggedWeaponMotion(equipped,attackProgress===null?0:attackProgress,
         Math.min(1,speed/5),weaponTime,attackStep);
@@ -302,13 +319,13 @@ export function createPlayerRev5({THREE,GLTFLoader,player,avatar,weapon,fallback
     gearVisuals?.dispose();gearVisuals=null;
     if(animator)animator.dispose();
     if(meshRoot)display.remove(meshRoot);
-    handMount=null;restingGrip=null;
+    handMount=null;fishingHand=null;fishingLeftArm=null;fishingRightArm=null;fishingActive=false;restingGrip=null;
     avatar.visible=true;
     display.visible=false;
     if(weaponParent && weapon?.parent!==weaponParent){weaponParent.add(weapon);weapon.position.y=weaponStartY;weapon.scale.setScalar(1);weapon.rotation.set(.24,0,-.56);}
     loaded=false;
   }
-  return {preload,update,equip,setGear,attack,setComboStep,special,jump,hurt,die,dispose,
+  return {preload,update,equip,setGear,setFishing,getFishingGrip,attack,setComboStep,special,jump,hurt,die,dispose,
     get loaded(){return loaded},get failed(){return failed},get animator(){return animator},
     get model(){return meshRoot},get handMount(){return handMount},get visualVisible(){return display.visible},
     get oldVisualVisible(){return avatar.visible}};

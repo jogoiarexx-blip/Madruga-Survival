@@ -81,9 +81,9 @@ test('guard prefs e guarda-corpo são válidos no formato atual de save',()=>{
  assert.equal(validateSave({...data,guard:{...data.guard,workPreferences:{wood:3}}}),null);
 });
 test('painel real, hotkeys e arquivos de v2.47 integrados',()=>{
- assert.equal(JSON.parse(source('package.json')).version,'2.48.0');
+ assert.equal(JSON.parse(source('package.json')).version,'2.49.0');
  assert.match(source('index.html'),/id="pause-guard-work"/);
- assert.match(source('index.html'),/2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.48\.0-interactive-fishing/);
+ assert.match(source('index.html'),/2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig/);
  assert.match(source('src/main.js'),/createGuardWorkUI/);
  assert.match(source('src/main.js'),/preferences:guard\.workPreferences/);
  assert.match(source('src/main.js'),/player\.position\.y\)/);

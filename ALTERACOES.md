@@ -1,3 +1,12 @@
+## v2.49.0 — Pesca visual, cardumes e LOD
+
+- A vara acompanha o osso da mão do personagem REV5, com pose aditiva nos braços; avatar procedural usa fallback de pose.
+- A boia, a linha e a vara formam um único rig visual; os sons e respingos seguem os eventos reais de fisgada, recolhimento e captura.
+- Lagoa ganha 22 peixes procedurais em movimento, renderizados em apenas dois InstancedMesh (corpos e caudas).
+- Cardume usa LOD conforme distância e qualidade: 0 longe, 3-6 no médio alcance, 8-22 perto.
+- Sem alteração do inventário, recompensas de pesca, checkpoint ou receitas; buffers e geometrias não são recriados por frame.
+- Testes cobrem posição/LOD, trajetória determinística, atualização, integração e compatibilidade.
+
 ## v2.48.0 — Pesca interativa com vara, boia e espécies
 
 - **Y** junto à água lança a linha; após espera variável, há uma fisgada breve (1,55 s) indicada na tela; pressionar Y fisga e novos toques recolhem a linha. O botão da mochila e o controle móvel usam a mesma ação. Não é possível ganhar peixes só por pressionar Y uma vez.
