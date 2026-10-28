@@ -5,6 +5,7 @@ import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientatio
   resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js?v=2.41.0-ecosystem';
 import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding,repairBuildingWithKit} from '../gameplay/base-defense.js?v=2.41.0-ecosystem';
 import {validChestItems} from '../gameplay/storage.js';
+import {walkSurfaceHeight,PLATFORM_HEIGHT} from './build-walk-surface.js';
 import {makeCrop,advanceCrop,validCrop} from '../gameplay/farming.js';
 export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium',mergeGeometries=null}) {
  const structures=[];
@@ -128,6 +129,25 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
          slat.rotation.z=side*.63;
        }
      }
+   } else if(type==='stairs'){
+     // O avanço local -Z para +Z acompanha o plano de colisão walkSurfaceHeight.
+     for(let i=0;i<8;i++){
+       const d=(i+.5)/8;
+       block(group,2.63,.14,.39,warmWood,0,d*PLATFORM_HEIGHT-.11,-1.5+d*3);
+       if(detailEnabled)for(const x of [-1.29,1.29])
+         block(group,.11,.30,.38,darkWood,x,d*PLATFORM_HEIGHT-.15,-1.5+d*3);
+     }
+     for(const x of [-1.36,1.36]){
+       const rail=block(group,.10,3.72,.11,darkWood,x,PLATFORM_HEIGHT*.5+.36,0);
+       rail.rotation.x=-Math.atan2(PLATFORM_HEIGHT,3);
+     }
+   } else if(type==='loft'){
+     block(group,2.95,.18,2.95,warmWood,0,PLATFORM_HEIGHT-.09,0);
+     for(const x of [-1.31,1.31])for(const z of [-1.31,1.31])
+       block(group,.19,PLATFORM_HEIGHT,.19,darkWood,x,PLATFORM_HEIGHT*.5,z);
+     if(detailEnabled){
+       for(const z of [-.92,-.31,.31,.92])block(group,2.89,.05,.08,darkWood,0,PLATFORM_HEIGHT+.018,z);
+     }
    } else if(type==='farmPlot'){
      block(group,2.75,.20,2.75,darkWood,0,.16);
      block(group,2.48,.10,2.48,stone,0,.29);
@@ -218,7 +238,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    if(type!=='floor'&&Math.hypot(p.x-playerPos.x,p.z-playerPos.z)<(type==='shelter'?2.4:1.15))return false;
    if(!canPlaceAmong(structures,p))return false;
    // Conferir pontas e centro dos módulos para não atravessar árvores e pedras.
-   const offsets=['floor','wall','door','window','roof','farmPlot'].includes(type)?[-1.25,0,1.25]:[0];
+   const offsets=['floor','wall','door','window','roof','stairs','loft','farmPlot'].includes(type)?[-1.25,0,1.25]:[0];
    const angle=(p.rotation||0)*Math.PI/2;
    const c=Math.cos(angle),s=Math.sin(angle);
    for(const ox of offsets){
@@ -227,6 +247,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    }
    return true;
  }
+ function walkHeight(x,z,playerHeight){return walkSurfaceHeight(structures,x,z,getGroundHeight(x,z),playerHeight);}
  function covered(pos){return structures.some(s=>s.type==='roof'&&Math.abs(pos.x-s.x)<1.45&&Math.abs(pos.z-s.z)<1.45);}
  function near(type,pos,radius=4.6){return structures.some(s=>s.type===type&&Math.hypot(s.x-pos.x,s.z-pos.z)<radius);}
  function nearest(pos,r=2.85){return nearestInteractive(structures,pos,r);}
@@ -274,6 +295,6 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  function resolveCollision(x,z,r=.46){return resolveStructureCollision(structures,x,z,r);}
  function isBlocked(x,z,r=.46){return positionBlocked(structures,x,z,r);}
  function blocksLine(from,to){return structureBlocksLine(structures,from,to);}
- return {structures,place,createPreview,canPlace,near,covered,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,repairKit,update,
+ return {structures,place,createPreview,canPlace,near,covered,walkHeight,updateCropVisual,nearest,toggleDoor,setChestOpen,remove,damage,repair,repairKit,update,
    resolveCollision,isBlocked,blocksLine,serialize,restore};
 }

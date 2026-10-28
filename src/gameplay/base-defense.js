@@ -1,5 +1,5 @@
 // Integridade persistente da base, defesa e reparo.
-export const BUILDING_MAX_HP=Object.freeze({campfire:45,shelter:90,floor:70,wall:140,window:100,door:105,bed:65,chest:110,workbench:120,roof:85,farmPlot:60});
+export const BUILDING_MAX_HP=Object.freeze({campfire:45,shelter:90,floor:70,wall:140,window:100,door:105,bed:65,chest:110,workbench:120,roof:85,stairs:90,loft:100,farmPlot:60});
 export function maxBuildingHP(type){return BUILDING_MAX_HP[type]||0;}
 export function buildingHP(type,saved){
  const max=maxBuildingHP(type);return Number.isInteger(saved)&&saved>0&&saved<=max?saved:max;

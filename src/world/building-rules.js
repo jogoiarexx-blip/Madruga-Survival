@@ -1,6 +1,6 @@
 // Geometria pura do modo construção: encaixe, orientação e colisão sem Three.js.
 export const BUILD_GRID=3;
-export const MODULAR_TYPES=Object.freeze(['floor','wall','door','window','bed','chest','workbench','roof','farmPlot']);
+export const MODULAR_TYPES=Object.freeze(['floor','wall','door','window','bed','chest','workbench','roof','stairs','loft','farmPlot']);
 export const STRUCTURE_TYPES=Object.freeze(['campfire','shelter',...MODULAR_TYPES]);
 export const MAX_STRUCTURES=160;
 export const orientation=angle=>((Math.round(angle)%4)+4)%4;
@@ -63,7 +63,7 @@ function wallOverlap(a,b){
 }
 export function canPlaceAmong(structures,candidate){
  if(structures.length>=MAX_STRUCTURES||!STRUCTURE_TYPES.includes(candidate.type)||!Number.isFinite(candidate.x)||!Number.isFinite(candidate.z)||Math.abs(candidate.x)>104||Math.abs(candidate.z)>104)return false;
- const isFloor=candidate.type==='floor',isRoof=candidate.type==='roof';
+ const isFloor=candidate.type==='floor'||candidate.type==='loft',isRoof=candidate.type==='roof';
  for(const s of structures){
    const dist=Math.hypot(s.x-candidate.x,s.z-candidate.z);
    if(isFloor||isRoof){if(s.type===candidate.type&&flatOverlap(s,candidate))return false;continue;}

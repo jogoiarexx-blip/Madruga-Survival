@@ -1,4 +1,4 @@
-// Madruga Survival v2.45.0 — estabilidade, balanceamento de sobrevivência e HUD otimizado.
+// Madruga Survival v2.46.0 — estabilidade, balanceamento de sobrevivência e HUD otimizado.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -313,7 +313,7 @@ function updateHUD() {
     hudText('score-display',`🌲 Acampamento livre`);
     hudText('quest-display',`🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`);
     hudText('wave-display',`Perigo: ${wave}/6 · Invasões: ${raidState.waves}`);
-    hudText('guard-status',guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':guard.mode==='gather'?'coletando e plantando':'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)');
+    hudText('guard-status',guard.hp===0?'🛡 Chaves caído · F para reanimar':guard.recruited?`🛡 Chaves ${guard.mode==='follow'?'seguindo':guard.mode==='patrol'?'patrulhando':guard.mode==='gather'?`coletando · ${Object.values(guard.cargo).reduce((a,b)=>a+b,0)}/18 na cesta`:'defendendo a base'} · ${guard.hp}/80 PV · [O] ordem`:'🛡 Encontre o Chaves perto do acampamento (F)');
     const activityNode=document.getElementById('guard-activity');
     if(activityNode){
       const activities={gathering:'Coletando recursos',idle:'Aguardando',down:'Precisa de ajuda',shooting:'Em combate',engaging:'Protegendo área',blocked:'Caminho obstruído',repositioning:'Procurando ângulo de tiro',pathfinding:'Procurando caminho',following:'Acompanhando',patrolling:'Em ronda',defending:'Guardando a base'};
@@ -637,14 +637,37 @@ const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveC
     getStructures:()=>buildings.structures,getEnemies:()=>enemies,
     onShot:position=>sfx.chavesShot(Math.hypot(position.x-player.position.x,position.z-player.position.z)),
     getWorkTarget:position=>selectGuardWork(position,
-      buildings.structures[0]||{x:4,z:2},resources.nodes,buildings.structures,survival.inventory),
+      buildings.structures[0]||{x:4,z:2},resources.nodes,buildings.structures,survival.inventory,
+      {cargo:guard.cargo,player:player.position}),
     onWork:job=>{
       if(!gameActive||!guard.recruited||guard.hp<=0||!job)return false;
+      if(job.kind==='deposit'){
+        if(!buildings.structures.includes(job.target)||job.target.type!=='chest')return false;
+        const transferred=guard.depositTo(job.target);
+        if(!transferred)return false;
+        showToast(`📦 Chaves guardou ${transferred} recursos no baú da base.`);
+        saveProgress();return true;
+      }
+      if(job.kind==='handoff'){
+        const transferred=guard.handoffTo(survival.inventory);
+        if(!transferred)return false;
+        showToast(`🧺 Chaves entregou ${transferred} recursos para você.`);
+        updateHUD();saveProgress();return true;
+      }
       if(job.kind==='farm'){
         if(!buildings.structures.includes(job.target)||job.target.type!=='farmPlot')return false;
         const result=workCrop(job.target.crop,survival.inventory);
         if(!result.ok)return false;
         buildings.updateCropVisual(job.target);
+        if(result.action==='harvest'&&buildings.structures.some(s=>s.type==='chest'&&s.items&&
+          Math.hypot(s.x-guard.position.x,s.z-guard.position.z)<23)){
+          // A colheita usa as regras existentes; transferimos a produção para a cesta
+          // apenas após o resultado confirmado, sem criar itens extras.
+          for(const [key,amount] of [['vegetables',result.amount||0],['seeds',2]]){
+            const carried=guard.carryResource(key,amount);
+            survival.inventory[key]-=carried;
+          }
+        }
         earnSkill('farming',result.action==='harvest'?14:5);
         showToast('🌾 Chaves: '+result.message.replace(/^[^a-zA-ZÀ-ÿ]+/u,''));
         saveProgress();return true;
@@ -653,8 +676,11 @@ const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveC
         if((survival.inventory[job.target.type]||0)>990)return false;
         const found=resources.harvestTarget(job.target,guard.position);
         if(!found)return false;
-        addResource(survival,found.type,found.amount);
-        earnSkill('gathering',6);showToast(`🧺 Chaves coletou ${found.amount} ${RESOURCES[found.type]?.label||found.type}`);
+        const hasChest=buildings.structures.some(s=>s.type==='chest'&&s.items&&
+          Math.hypot(s.x-guard.position.x,s.z-guard.position.z)<23);
+        const carried=hasChest?guard.carryResource(found.type,found.amount):0;
+        if(found.amount>carried)addResource(survival,found.type,found.amount-carried);
+        earnSkill('gathering',6);showToast(`🧺 Chaves coletou ${found.amount} ${RESOURCES[found.type]?.label||found.type}${carried?' · carregando para o baú':''}`);
         saveProgress();return true;
       }
       return false;
@@ -1808,7 +1834,8 @@ function animate() {
         const cz = resolveCollision(cx.x, player.position.z + velocity.z * dt, 0.46);
         player.position.x = cz.x;
         player.position.z = cz.z;
-        const groundY = getGroundHeight(player.position.x, player.position.z);
+        const groundY = buildings.walkHeight(player.position.x,player.position.z,player.position.y);
+        if(isGrounded&&player.position.y>groundY+.40){isGrounded=false;verticalVelocity=0;}
         if (!isGrounded) {
             verticalVelocity += gravity * dt;
             player.position.y += verticalVelocity * dt;

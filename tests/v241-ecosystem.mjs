@@ -88,8 +88,8 @@ check('Entradas de ruínas abrem por F e são persistidas',()=>{
  assert.match(source('src/main.js'),/exploration\.toggleFixture\(player\.position\)/);
 });
 check('Integração da versão e módulos não remove recursos antigos',()=>{
- assert.equal(JSON.parse(source('package.json')).version,'2.45.0');
- assert.match(source('index.html'),/2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play/);
+ assert.equal(JSON.parse(source('package.json')).version,'2.46.0');
+ assert.match(source('index.html'),/2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.46\.0-build-logistics/);
  assert.match(source('src/main.js'),/resources\.harvestTarget/);
  assert.match(source('src/main.js'),/tryFish\(survival,elapsed,!!node\|\|nearLakeShore/);
 });

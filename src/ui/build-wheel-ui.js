@@ -4,7 +4,7 @@ import {RECIPES,RESOURCES} from '../gameplay/survival.js?v=2.41.0-ecosystem';
 
 export const BUILD_WHEEL_ICONS=Object.freeze({
   campfire:'🔥',shelter:'⛺',floor:'🪵',wall:'🧱',door:'🚪',window:'🪟',bed:'🛏️',
-  chest:'📦',workbench:'🛠️',roof:'🏠',farmPlot:'🌱'
+  chest:'📦',workbench:'🛠️',roof:'🏠',stairs:'🪜',loft:'🏗️',farmPlot:'🌱'
 });
 export const BUILD_WHEEL_TYPES=Object.freeze([...STRUCTURE_TYPES]);
 

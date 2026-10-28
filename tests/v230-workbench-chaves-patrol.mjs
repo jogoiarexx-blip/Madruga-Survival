@@ -71,7 +71,7 @@ test('Chaves substitui visual e mantém recrutamento salvo',()=>{
   assert.match(main,/guard\.setState\(data\.guard\)/);
 });
 test('versão e nomes de cache invalidados',()=>{
-  assert.equal(JSON.parse(read('package.json')).version,'2.45.0');
-  assert.match(read('index.html'),/data-build="2\.30\.0-chaves-workbench|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play"/);
+  assert.equal(JSON.parse(read('package.json')).version,'2.46.0');
+  assert.match(read('index.html'),/data-build="2\.30\.0-chaves-workbench|2\.32\.0-chaves-orders|2\.34\.0-chaves-combat|2\.35\.0-stability|2\.36\.0-wildlife-inventory|2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.46\.0-build-logistics"/);
 });
 console.log('v2.30: '+passed+' novos testes aprovados');

@@ -492,7 +492,7 @@ body.placing #interact-hint{display:none}
  max-height:calc(100dvh - 130px);position:relative;border:2px solid #647c61;border-radius:50%;
  background:radial-gradient(circle,#273c30 0%,#14271e 31%,#263e2f 34%,#1b3025 67%,#121e18 100%);
  box-shadow:0 0 0 8px #1b2c1fa8,0 15px 60px #000b,inset 0 0 38px #06100a;flex-shrink:0}
-.build-wheel-option{position:absolute;transform:translate(-50%,-50%);width:clamp(52px,13%,76px);height:clamp(55px,14%,79px);
+.build-wheel-option{position:absolute;transform:translate(-50%,-50%);width:clamp(44px,12%,69px);height:clamp(48px,12.8%,69px);
  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;
  background:linear-gradient(160deg,#4f7053,#243d31);color:white;border:2px solid #99b991;border-radius:14px;
  box-shadow:0 4px 10px #0008;cursor:pointer;touch-action:manipulation;padding:4px;text-align:center}

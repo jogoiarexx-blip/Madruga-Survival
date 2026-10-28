@@ -1,3 +1,12 @@
+## v2.46.0 — Construção elevada, crafting e logística do Chaves
+
+- Escada de madeira e plataforma elevada de 2,6 m entram no catálogo de construção e na roda radial. Geometria leve, travessia por altura calculada e encaixe de plataforma ao final da escada; antiga grade de 3 m preservada.
+- Correção no ímã de construção: janelas passam a encaixar em bordas de piso, paredes e outras janelas; telhados procuram âncoras próximas.
+- Chaves passa a transportar até 18 unidades numa cesta própria até baús válidos na base, respeitando capacidade de 80 por baú, sem teletransportar material. Se os baús estiverem lotados, tenta entregar presencialmente ao jogador.
+- Colheitas de legumes e sementes também usam a cesta quando existe baú dentro da base; outras ações de agricultura continuam iguais. Saves antigos mantêm a ordem e a posição do Chaves, e o cargo é campo opcional validado do mesmo save v2.
+- Custo de estrutura só é debitado após confirmar a posição; interface da mochila orienta por categorias e diferencia as telas da bancada/fogueira. Mais 11 testes de logística e construção, com suíte de regressão atualizada.
+- Limitação: teste de geometria/altura de escadas é automatizado; movimentação 3D precisa de validação manual no navegador. Não promete escadas de vários andares nem interiores completos.
+
 ## v2.45.0 — Estabilidade, equilíbrio de sobrevivência e HUD
 
 - Frio noturno menos abrupto (0,75 pontos/s em vez de 3,2), dano por congelamento reduzido de 2,5 para 1,0 PV/s. Fogueira e abrigo mantêm seu efeito integral.

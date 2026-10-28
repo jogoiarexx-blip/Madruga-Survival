@@ -79,8 +79,8 @@ test('suíte histórica testa módulos atuais e participa do CI',()=>{
  assert.doesNotMatch(src('testes.mjs'),/<script type="module">/);
 });
 test('versão e cache são os mesmos nos pontos de entrada',()=>{
- assert.equal(JSON.parse(src('package.json')).version,'2.45.0');
- assert.match(src('index.html'),/data-build="2\.45\.0-stable-play"/);
- assert.match(src('index.html'),/main\.js\?v=2\.45\.0-stable-play/);
+ assert.equal(JSON.parse(src('package.json')).version,'2.46.0');
+ assert.match(src('index.html'),/data-build="2\.46\.0-build-logistics"/);
+ assert.match(src('index.html'),/main\.js\?v=2\.46\.0-build-logistics/);
 });
 console.log(`v2.45.0: ${count} testes aprovados`);
