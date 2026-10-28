@@ -1,3 +1,12 @@
+## v2.45.0 — Estabilidade, equilíbrio de sobrevivência e HUD
+
+- Frio noturno menos abrupto (0,75 pontos/s em vez de 3,2), dano por congelamento reduzido de 2,5 para 1,0 PV/s. Fogueira e abrigo mantêm seu efeito integral.
+- Corrida consome 16 de vigor/s (12 com botas) em vez de 19/15; recuperação andando e parado ajustada para 12/20 vigor/s.
+- Botão de ordens do Chaves agora identifica corretamente a ordem Coletar, além de Seguir, Defender e Patrulhar.
+- HUD aplica textos e larguras só quando os valores mudam; percepção de zumbis próximos passa por uma só varredura sem arrays temporários.
+- Testes históricos de regressão migrados para os módulos reais, incluindo colisões, lagoa, sobrevivência, crafting e progressão. Teste de navegador atualizado para v2.45.
+- Salves, assets e modelos antigos preservados. Testes longos de regras não substituem gameplay no navegador.
+
 ## v2.44.0 — Correção do zumbido e visual das estruturas
 
 - Removido o oscilador senoidal noturno contínuo de 4200 Hz, provável origem do zumbido ouvido durante o jogo. Os grilos agora emitem chamados curtos e espaçados.

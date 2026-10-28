@@ -19,7 +19,7 @@ test('corrida consome energia e descanso a regenera',()=>{
  const afterRun=s.stamina;advanceSurvival(s,.1,{});assert.ok(s.stamina>afterRun);
 });
 test('frio noturno sem fogueira e abrigo causa dano gradual',()=>{
- const s=createSurvival();s.time=DAY_SECONDS*.9;s.warmth=.2;
+ const s=createSurvival();s.time=DAY_SECONDS*.9;s.warmth=.05;
  const exposed=advanceSurvival(s,.1,{});
  assert.equal(s.warmth,0);assert.ok(exposed.damage>0);
  const sheltered=advanceSurvival(s,.1,{sheltered:true});assert.ok(s.warmth>0);

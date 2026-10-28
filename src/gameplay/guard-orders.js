@@ -22,3 +22,6 @@ export function canEngageInOrder(enemyPosition,mode,player,structures,{spawn={x:
  const leash=mode==='follow'?player:basePosition(structures,spawn);
  return distanceXZ(enemyPosition,leash)<=(mode==='patrol'?radius+2:radius);
 }
+
+export const GUARD_ORDER_BUTTON_LABELS=Object.freeze({follow:'Seguir',defend:'Defender',patrol:'Patrulhar',gather:'Coletar'});
+export function guardOrderButtonLabel(mode){return `🛡 ${GUARD_ORDER_BUTTON_LABELS[normalizeGuardOrder(mode)]} [O]`;}

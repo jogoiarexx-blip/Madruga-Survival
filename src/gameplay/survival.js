@@ -52,6 +52,8 @@ export const RECIPES = Object.freeze({
   stew:{label:'Cozinhar ensopado',cost:{vegetables:2,water:1},hint:'Exige fogueira próxima'}
 });
 export const DAY_SECONDS = 480;
+// Balanco: frio permanece perigoso durante a noite inteira, sem eliminar o jogador em poucos segundos.
+export const SURVIVAL_BALANCE=Object.freeze({nightColdRate:.75,coldDamageRate:1.0,sprintDrain:16,bootSprintDrain:12,walkRecovery:12,restRecovery:20});
 export const clamp = n => Math.max(0,Math.min(100,n));
 export function createSurvival() {
   return {hunger:85,thirst:80,stamina:100,warmth:100,days:1,time:DAY_SECONDS*.34,
@@ -75,12 +77,12 @@ export function advanceSurvival(state,dt,{sprinting=false,moving=false,nearFire=
   state.hunger=clamp(state.hunger-d*(moving?.055:.038)*drain);
   state.thirst=clamp(state.thirst-d*(sprinting?.135:.080)*drain);
   const canRun=state.stamina>4 && state.hunger>5 && state.thirst>5;
-  state.stamina=clamp(state.stamina+d*(sprinting&&canRun?(trailBoots?-15:-19):moving?10:18));
+  state.stamina=clamp(state.stamina+d*(sprinting&&canRun?(trailBoots?-SURVIVAL_BALANCE.bootSprintDrain:-SURVIVAL_BALANCE.sprintDrain):moving?SURVIVAL_BALANCE.walkRecovery:SURVIVAL_BALANCE.restRecovery));
   const exposed=isNight(state)&&!nearFire&&!sheltered;
-  state.warmth=clamp(state.warmth+d*(exposed?-3.2:nearFire?9:sheltered?5:3));
+  state.warmth=clamp(state.warmth+d*(exposed?-SURVIVAL_BALANCE.nightColdRate:nearFire?9:sheltered?5:3));
   const starving=state.hunger<=0||state.thirst<=0;
   const freezing=state.warmth<=0;
-  return {canRun,damage:d*((starving?2:0)+(freezing?2.5:0)),night:isNight(state)};
+  return {canRun,damage:d*((starving?2:0)+(freezing?SURVIVAL_BALANCE.coldDamageRate:0)),night:isNight(state)};
 }
 export function canAfford(state,recipeId,costOverride=null) {
   const recipe=RECIPES[recipeId];

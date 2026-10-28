@@ -17,3 +17,5 @@ jobs:
         run: npm run check
       - name: Reconstruir GLBs e executar regressão
         run: npm test
+      - name: Regressão histórica modernizada
+        run: npm run test:legacy

@@ -1,4 +1,4 @@
-// Madruga Survival v2.44.0 — correção do zumbido e estruturas com detalhes leves.
+// Madruga Survival v2.45.0 — estabilidade, balanceamento de sobrevivência e HUD otimizado.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -7,7 +7,8 @@ import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/s
 import {createFrameProfiler} from './render/frame-profiler.js';
 import {createMissionProgress,restoreMissionProgress,recordMissionEvent,currentMission,advanceMission} from './gameplay/mission-progress.js';
 import {missionWaypoint} from './gameplay/mission-navigation.js';
-import {setTextIfChanged} from './ui/dom-patch.js';
+import {setTextIfChanged,setWidthIfChanged} from './ui/dom-patch.js';
+import {guardOrderButtonLabel} from './gameplay/guard-orders.js';
 import { createTerrain } from './world/terrain.js?v=2.41.0-ecosystem';
 import { createMinimap } from './ui/minimap.js?v=2.41.0-ecosystem';
 import {LAKE,insideLake,nearLakeShore,keepOutsideLake,lakeTerrainDrop,createFishingLake} from './world/fishing-lake.js';
@@ -299,16 +300,16 @@ function getGroundHeight(x, z) {
 
 function hudText(id,value){return setTextIfChanged(document.getElementById(id),value);}
 function updateHUD() {
-    document.getElementById('health-bar').style.width = Math.max(0, health / maxHealth * 100) + '%';
+    setWidthIfChanged(document.getElementById('health-bar'),Math.max(0, health / maxHealth * 100) + '%');
     hudText('level-display',`Nível ${level} · XP ${xp}/${xpRequired()} · KOs ${kills}`);
-    document.getElementById('xp-bar').style.width = `${100 * xp / xpRequired()}%`;
+    setWidthIfChanged(document.getElementById('xp-bar'),`${100 * xp / xpRequired()}%`);
     playerRev5.setGear?.(survival.equippedGear);
     const ability = document.getElementById('ability-display');
-    ability.textContent = combat.specialCooldown > 0 ? `E · Giratório: ${combat.specialCooldown.toFixed(1)}s` : 'E · Golpe giratório pronto';
+    setTextIfChanged(ability,combat.specialCooldown > 0 ? `E · Giratório: ${combat.specialCooldown.toFixed(1)}s` : 'E · Golpe giratório pronto');
     ability.classList.toggle('ready', combat.specialCooldown <= 0);
     const combo=document.getElementById('combat-combo-status');
-    if(combo){combo.textContent=combat.isAttacking?`⚔ Combo ${combat.comboStep+1}/3`:
-      combat.attackBuffered?'⚔ Próximo golpe preparado':combat.comboActive?'⚔ Continue atacando para combinar golpes':'⚔ J/clique: 3 golpes em sequência';}
+    if(combo){setTextIfChanged(combo,combat.isAttacking?`⚔ Combo ${combat.comboStep+1}/3`:
+      combat.attackBuffered?'⚔ Próximo golpe preparado':combat.comboActive?'⚔ Continue atacando para combinar golpes':'⚔ J/clique: 3 golpes em sequência');}
     hudText('score-display',`🌲 Acampamento livre`);
     hudText('quest-display',`🪵 ${survival.inventory.wood}  🪨 ${survival.inventory.stone}  🫐 ${survival.inventory.berries}  💧 ${survival.inventory.water}`);
     hudText('wave-display',`Perigo: ${wave}/6 · Invasões: ${raidState.waves}`);
@@ -319,11 +320,11 @@ function updateHUD() {
       const active=gameActive&&guard.recruited;
       activityNode.classList.toggle('hidden',!active);
       if(active){const key=guard.activity;const title=activities[key]||'Aguardando';
-        if(activityNode.textContent!==title)activityNode.textContent=title;
+        setTextIfChanged(activityNode,title);
         activityNode.dataset.activity=key;}
     }
     const orderBtn=document.getElementById('guard-order');
-    if(orderBtn){orderBtn.classList.toggle('hidden',!gameActive||!guard.recruited||!guard.alive);orderBtn.textContent=`🛡 ${guard.mode==='follow'?'Seguir':guard.mode==='patrol'?'Patrulhar':'Defender'} [O]`;}
+    if(orderBtn){orderBtn.classList.toggle('hidden',!gameActive||!guard.recruited||!guard.alive);setTextIfChanged(orderBtn,guardOrderButtonLabel(guard.mode));}
     hudText('poison-status',poisonTimer>0?`☣ Envenenado: ${Math.ceil(poisonTimer)}s`:'');
     hudText('cemetery-status',withinCemetery(player.position)?'🪦 Cemitério assombrado — inimigos mais perigosos':'');
     document.getElementById('raid-alert').classList.toggle('hidden',!(gameActive&&elapsed<raidAlertUntil));
@@ -331,30 +332,35 @@ function updateHUD() {
     const goblinHint=nearbyGoblin && nearbyGoblin.distance<65 ?
       ` · 👺 Goblin ${Math.round(nearbyGoblin.distance)}m${goblinModels.failed?' (visual simples)':''}`:'';
     hudText('enemies-left',`Criaturas: ${enemies.length}${goblinHint}`);
-    const nearbyZombies=enemies.filter(e=>e.isZombie&&e.awareness&&
-      Math.hypot(e.mesh.position.x-player.position.x,e.mesh.position.z-player.position.z)<24);
-    const following=nearbyZombies.filter(e=>e.awareness.state==='chase').length;
-    const investigating=nearbyZombies.filter(e=>e.awareness.state==='investigate'||e.awareness.state==='search').length;
+    // Uma passagem sem criar três arrays e sem trabalho em inimigos distantes.
+    let following=0,investigating=0;
+    for(const enemy of enemies){
+      if(!enemy.isZombie||!enemy.awareness)continue;
+      const dx=enemy.mesh.position.x-player.position.x,dz=enemy.mesh.position.z-player.position.z;
+      if(dx*dx+dz*dz>=24*24)continue;
+      if(enemy.awareness.state==='chase')following++;
+      else if(enemy.awareness.state==='investigate'||enemy.awareness.state==='search')investigating++;
+    }
     const stealthStatus=document.getElementById('stealth-status');
-    stealthStatus.textContent=following?`⚠️ Detectado · ${following} zumbi(s) na perseguição`:
+    setTextIfChanged(stealthStatus,following?`⚠️ Detectado · ${following} zumbi(s) na perseguição`:
       investigating?`👂 ${investigating} zumbi(s) investigando a área`:
-      sneaking?'🤫 Furtividade ativa · ruído reduzido':'👣 Passos normais · C para andar silenciosamente';
+      sneaking?'🤫 Furtividade ativa · ruído reduzido':'👣 Passos normais · C para andar silenciosamente');
     stealthStatus.dataset.alert=following?'danger':investigating?'caution':sneaking?'quiet':'normal';
     hudText('boost-display',webSlowTimer>0?`🕸 Teia: ${webSlowTimer.toFixed(1)}s`:speedBoostTimer > 0 ? `⚡ Velocidade: ${speedBoostTimer.toFixed(1)}s` : '');
     hudText('dodge-display',dashCooldown > 0 ? `Q · Esquiva: ${dashCooldown.toFixed(1)}s` : 'Q · Esquiva pronta');
     const explorationGoal=exploration.objective(player.position);
     const explorationStatus=document.getElementById('exploration-status');
-    explorationStatus.textContent=!explorationGoal.ready?'🧭 Procure suprimentos nas casas abandonadas':
+    setTextIfChanged(explorationStatus,!explorationGoal.ready?'🧭 Procure suprimentos nas casas abandonadas':
       explorationGoal.complete?'🗺 Todos os locais vasculhados!':
-      `🧭 Explorar: ${explorationGoal.site.discovered?explorationGoal.site.label:'Local desconhecido'} · ${explorationGoal.direction} · ${explorationGoal.meters}m · caixas ${explorationGoal.opened}/${explorationGoal.total}`;
+      `🧭 Explorar: ${explorationGoal.site.discovered?explorationGoal.site.label:'Local desconhecido'} · ${explorationGoal.direction} · ${explorationGoal.meters}m · caixas ${explorationGoal.opened}/${explorationGoal.total}`);
     const queen=enemies.find(e=>e.spiderVariant==='matriarch');
     const nestCount=spiderNests.nests.reduce((sum,n)=>sum+n.eggs,0);
-    document.getElementById('cave-status').textContent=arachnidCave.inside?
+    hudText('cave-status',arachnidCave.inside?
       (arachnidCave.state.bossDefeated?'💎 Caverna segura · recolha os cristais e procure a saída':queen?`🕷 Rainha das Aranhas: ${Math.max(0,Math.ceil(queen.hp))}/${queen.maxHp} PV · FASE ${queen.enraged?2:1}`:'🕷 Caverna perigosa: aproxime-se da Rainha!'):
-      (arachnidCave.state.bossDefeated?'💎 Rainha derrotada · recursos restantes na caverna':'⛏ Encontre a entrada da caverna perto da Colônia das Tecelãs');
-    document.getElementById('spider-nest-status').textContent=nestCount?
+      (arachnidCave.state.bossDefeated?'💎 Rainha derrotada · recursos restantes na caverna':'⛏ Encontre a entrada da caverna perto da Colônia das Tecelãs'));
+    hudText('spider-nest-status',nestCount?
       `🕸 Ninhos: ${nestCount} ovos restantes · F recolhe seda e quitina · cuidado com as teias!`:
-      '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens';
+      '🕸 Ninhos explorados · procure seda e quitina nas aranhas selvagens');
     const context={firesBuilt:survival.firesBuilt>0||buildings.structures.some(s=>s.type==='campfire'),
       hasFarm:buildings.structures.some(s=>s.type==='farmPlot'),guardRecruited:guard.recruited,
       // Estado existente dos locais já descobertos/vasculhados: não é necessário
@@ -384,7 +390,7 @@ function updateHUD() {
     bossWrapper.classList.toggle('hidden',!showQueen);
     if(showQueen){
       hudText('boss-name',queen.enraged?'🕷 RAINHA DAS ARANHAS · FASE 2':'🕷 Rainha das Aranhas · Fase 1');
-      document.getElementById('boss-bar').style.width=`${Math.max(0,Math.min(100,queen.hp/queen.maxHp*100))}%`;
+      setWidthIfChanged(document.getElementById('boss-bar'),`${Math.max(0,Math.min(100,queen.hp/queen.maxHp*100))}%`);
       bossWrapper.classList.toggle('rage',!!queen.enraged);
     }
     survivalUI.update();
@@ -1971,7 +1977,7 @@ function animate() {
             }
         }
         hudTick+=dt;
-        if (hudTick>0.25) { hudTick=0;updateHUD(); }
+        if (hudTick>0.30) { hudTick=0;updateHUD(); }
 
         // Dia/noite só evolui durante o jogo ativo.
         dayTime=survival.time;
