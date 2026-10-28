@@ -1,5 +1,6 @@
 import {createFishSchoolVisual} from './fish-school-visual.js';
 import {createLakeWaterMaterial,useDetailedWater} from './lake-water-material.js';
+import {lakeHabitatSamples,habitatVisibility,HABITAT_PADS,HABITAT_CATTAILS} from './lake-habitat.js';
 // Única geometria lógica compartilhada por água, areia, pesca, terreno e colisão.
 export const LAKE=Object.freeze({x:70,z:51,radius:14.8,shore:2.7});
 export function shorelineRadiusAt(angle){
@@ -78,18 +79,45 @@ export function createFishingLake({THREE,scene,getGroundHeight}){
   pebbles.setMatrixAt(i,obj.matrix);
  }
  pebbles.instanceMatrix.needsUpdate=true;root.add(pebbles);
+ // Plantas flutuantes e taboas na faixa rasa; duas draw calls no máximo.
+ // InstancedMesh mantém o número de objetos estável e o LOD só muda count.
+ const padGeo=new THREE.CircleGeometry(.34,7);
+ const padMat=new THREE.MeshStandardMaterial({color:0x608a48,side:THREE.DoubleSide,roughness:.88});
+ const lilyPads=new THREE.InstancedMesh(padGeo,padMat,HABITAT_PADS);
+ lilyPads.name='Vegetacao_aquatica_LOD';lilyPads.rotation.x=-Math.PI/2;
+ const pads=lakeHabitatSamples(HABITAT_PADS,shorelineRadiusAt,'pad');
+ for(let i=0;i<pads.length;i++){
+  const p=pads[i];obj.position.set(p.x,-p.z,-.005);
+  obj.rotation.set(0,0,p.angle);obj.scale.set(p.scale,p.scale*.78,1);obj.updateMatrix();
+  lilyPads.setMatrixAt(i,obj.matrix);
+ }
+ lilyPads.instanceMatrix.needsUpdate=true;root.add(lilyPads);
+ const catGeo=new THREE.CylinderGeometry(.065,.085,.76,5);
+ const catMat=new THREE.MeshStandardMaterial({color:0x66583b,roughness:.95});
+ const cattails=new THREE.InstancedMesh(catGeo,catMat,HABITAT_CATTAILS);
+ const tails=lakeHabitatSamples(HABITAT_CATTAILS,shorelineRadiusAt,'cattail');
+ for(let i=0;i<tails.length;i++){
+  const p=tails[i];obj.position.set(p.x,.25,p.z);
+  obj.rotation.set(.12*Math.sin(i),p.angle,.08*Math.cos(i));
+  obj.scale.set(.75*p.scale,.85*p.scale,.75*p.scale);obj.updateMatrix();
+  cattails.setMatrixAt(i,obj.matrix);
+ }
+ cattails.instanceMatrix.needsUpdate=true;root.add(cattails);
  scene.add(root);
- let lastDetail=null,lastReeds=null;
- return {root,school,position:LAKE,near:nearLakeShore,update(position,quality='medium',elapsed=0){
+ let lastDetail=null,lastReeds=null,lastHabitat=-1;
+ return {root,school,position:LAKE,near:nearLakeShore,update(position,quality='medium',elapsed=0,isFishing=false){
    const d=Math.hypot(position.x-LAKE.x,position.z-LAKE.z);
    root.visible=d<(quality==='low'?68:quality==='medium'?95:130);
    if(!root.visible)return;
-   school.update(position,quality,elapsed);
+   school.update(position,quality,elapsed,isFishing);
    const detail=useDetailedWater(d,quality);
    if(detail!==lastDetail){water.material=detail?detailedMaterial:fallbackMaterial;lastDetail=detail;}
    if(detail){detailedMaterial.uniforms.uTime.value=elapsed;detailedMaterial.uniforms.uOpacity.value=d<32?.79:.88;}
    else {const opacity=d<32?.76:.88;if(opacity!==fallbackMaterial.opacity)fallbackMaterial.opacity=opacity;}
    const showDecor=quality!=='low'&&d<44;
    if(lastReeds!==showDecor){reeds.visible=showDecor;pebbles.visible=showDecor;lastReeds=showDecor;}
+   const habitat=habitatVisibility(d,quality),total=habitat.pads*100+habitat.cattails;
+   if(total!==lastHabitat){lilyPads.count=habitat.pads;cattails.count=habitat.cattails;
+     lilyPads.visible=habitat.pads>0;cattails.visible=habitat.cattails>0;lastHabitat=total;}
  }};
 }

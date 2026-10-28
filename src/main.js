@@ -1,4 +1,4 @@
-// Madruga Survival v2.51.0 — lagoa orgânica, peixes variados e LOD otimizado para celulares.
+// Madruga Survival v2.52.0 — margem refinada, vegetação aquática e peixes reativos com LOD.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
@@ -1984,7 +1984,7 @@ function animate() {
 
         zombieSenses.prune(elapsed);
         resources.update(dt,player.position,graphicsQuality);
-        fishingLake.update(player.position,graphicsQuality,elapsed);
+        fishingLake.update(player.position,graphicsQuality,elapsed,fishingSession.state.phase!=='idle');
         audioLandscapeTick+=dt;
         if(audioLandscapeTick>=.5){
             updateSoundscape({active:true,dt:audioLandscapeTick,night:vitals.night,

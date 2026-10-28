@@ -104,8 +104,8 @@ test('save v2 aceita escadas e carga, sem mudar chave de armazenamento',()=>{
  assert.match(source('src/characters/villager-guard.js'),/guardCargo=\{\.\.\.\(parsed\.cargo\|\|\{\}\)\}/);
 });
 test('menu, texto e build wheel apresentam nova versão',()=>{
- assert.equal(JSON.parse(source('package.json')).version,'2.51.0');
- assert.match(source('index.html'),/2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.51\.0-lake-shore-lod/);
+ assert.equal(JSON.parse(source('package.json')).version,'2.52.0');
+ assert.match(source('index.html'),/2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.51\.0-lake-shore-lod|2\.52\.0-lake-ecology/);
  assert.match(source('src/ui/build-wheel-ui.js'),/stairs:'🪜',loft:'🏗️'/);
  assert.match(source('src/world/buildings.js'),/function walkHeight\(/);
 });

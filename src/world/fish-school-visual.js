@@ -18,9 +18,13 @@ export function createFishSchoolVisual({THREE,parent,radius=14.8}){
   bodies.setColorAt(i,color.setHex(tint));
  }
  if(bodies.instanceColor)bodies.instanceColor.needsUpdate=true;
- let lastUpdate=-Infinity,activeCount=0;
- function update(player,quality='medium',elapsed=0){
+ let lastUpdate=-Infinity,activeCount=0,alarm=0,lastTick=null;
+ function update(player,quality='medium',elapsed=0,isFishing=false){
   const distance=Math.hypot(player.x-(parent.position.x||0),player.z-(parent.position.z||0));
+  const delta=lastTick===null?0:Math.max(0,Math.min(.25,elapsed-lastTick));lastTick=elapsed;
+  // Aproximação exponencial: o cardume não teleporta quando a linha cai na água.
+  const target=isFishing?1:0;
+  alarm+=(target-alarm)*(1-Math.exp(-delta*(target?2.4:1.2)));
   const count=visibleFishCount(distance,quality);
   root.visible=count>0;
   if(!count){activeCount=0;return;}
@@ -28,7 +32,7 @@ export function createFishSchoolVisual({THREE,parent,radius=14.8}){
   activeCount=count;lastUpdate=elapsed;
   bodies.count=count;tails.count=count;
   for(let i=0;i<count;i++){
-   const fish=sampleFishSwim(i,elapsed,radius);
+   const fish=sampleFishSwim(i,elapsed,radius,{x:0,z:0,intensity:alarm,radius:8.4});
    obj.position.set(fish.x,fish.y,fish.z);obj.rotation.set(0,fish.heading,0);
    const fishScale=fishBodyScale(i);
    obj.scale.set(fishScale.width,fishScale.height,fishScale.length);obj.updateMatrix();bodies.setMatrixAt(i,obj.matrix);

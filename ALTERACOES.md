@@ -1,3 +1,11 @@
+## v2.52.0 — Ecossistema da lagoa e otimização
+
+- Terreno de 96 × 96 subdivisões (antes 60 × 60), com coloração gradual da faixa costeira pela distância à margem física existente. Uma malha somente, sem novas texturas de rede.
+- Vegetação aquática com 15 folhas flutuantes e 19 taboas, ambas instanciadas; o modo baixo as oculta e o modo médio reduz o número de instâncias.
+- Cardumes variados com acelerações curtas e evasão suave ao lançamento da linha. O susto diminui progressivamente, preservando margens e posições determinísticas.
+- O LOD de peixes, a pesca interativa, itens, colisões e saves continuam compatíveis. Sem dependência de assets externos.
+- Novos testes cobrem a margem, habitat, comportamento do cardume, LOD e regressões do jogo.
+
 ## v2.51.0 — Lagoa orgânica, cardumes variados e LOD móvel
 
 - A margem deixa de ser um círculo perfeito: borda harmônica determinística compartilhada entre água, areia, profundidade do terreno, colisão e verificação de pesca.

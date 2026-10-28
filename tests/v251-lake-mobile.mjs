@@ -73,8 +73,8 @@ check('HUD e física da pesca utilizam a mesma margem irregular',()=>{
  assert.match(source('src/world/terrain.js'),/lakeTerrainDrop\(x,z\)/);
 });
 check('versão atual e cache de scripts estão sincronizados',()=>{
- assert.equal(JSON.parse(source('package.json')).version,'2.51.0');
- assert.match(source('index.html'),/2\.51\.0-lake-shore-lod/);
- assert.match(source('src/main.js'),/v2\.51\.0/);
+ assert.equal(JSON.parse(source('package.json')).version,'2.52.0');
+ assert.match(source('index.html'),/2\.51\.0-lake-shore-lod|2\.52\.0-lake-ecology/);
+ assert.match(source('src/main.js'),/v2\.52\.0/);
 });
 console.log('v2.51.0: '+n+' testes aprovados');

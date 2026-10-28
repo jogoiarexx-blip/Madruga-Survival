@@ -59,15 +59,18 @@ test('terreno reconstrói malha usando eixo local Z',()=>{
     constructor(){this.attributes={position:{count:4,getX:i=>pos[i][0],getY:i=>pos[i][1],
       setZ(i,z){pos[i][2]=z}}}}
     computeVertexNormals(){this.normalsReady=true}
+    setAttribute(name,attribute){this.attributes[name]=attribute}
   }
   class FakeMesh {constructor(geometry,material){this.geometry=geometry;this.material=material;this.rotation={};}}
   const lib={...THREE,PlaneGeometry:FakePlaneGeometry,CanvasTexture:class {
       constructor(canvas){this.canvas=canvas;this.repeat={set(){}}}
-    },Mesh:FakeMesh,RepeatWrapping:1,SRGBColorSpace:2};
+    },Mesh:FakeMesh,BufferAttribute:class {constructor(array,itemSize){this.array=array;this.itemSize=itemSize}},RepeatWrapping:1,SRGBColorSpace:2};
   const scene={items:[],add(m){this.items.push(m)}};
   const calculate=(x,z)=>Math.sin(x*.08)*Math.cos(z*.08)*.6+Math.sin(x*.3)*.15;
   const mesh=createTerrain(lib,scene,calculate);
   assert.equal(mesh.geometry.normalsReady,true);
+  assert.equal(mesh.geometry.attributes.color.itemSize,3);
+  assert.equal(mesh.geometry.attributes.color.array.length,12);
   assert.equal(scene.items[0],mesh);
   for(let i=0;i<4;i++)assert.ok(Math.abs(pos[i][2]-calculate(pos[i][0],-pos[i][1]))<1e-9);
   globalThis.document=oldDocument;

@@ -86,8 +86,8 @@ test('não cozinha à distância ou pela mochila, nem mistura bancada com foguei
 test('fogão não altera inventário pronto; HTML, cache e scripts consistentes',()=>{
  const html=read('index.html');const pkg=JSON.parse(read('package.json'));
  for(const id of ['campfire-panel','campfire-recipes','campfire-close','campfire-stock','campfire-message'])assert.ok(html.includes(`id="${id}"`));
- assert.match(html,/data-build="2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.51\.0-lake-shore-lod"/);
- assert.equal(pkg.version,'2.51.0');
+ assert.match(html,/data-build="2\.37\.0-campfire-ui|2\.38\.0-save-profiling|2\.39\.0-wildlife-quests|2\.40\.0-fauna-exploration|2\.41\.0-ecosystem|2\.42\.0-soundscape|2\.43\.0-foley|2\.44\.0-quiet-builds|2\.45\.0-stable-play|2\.47\.0-multi-floor|2\.48\.0-interactive-fishing|2\.49\.0-fish-lod-rig|2\.51\.0-lake-shore-lod|2\.52\.0-lake-ecology"/);
+ assert.equal(pkg.version,'2.52.0');
  assert.ok(pkg.scripts.test.includes('v237-campfire-ui.mjs'));
  assert.match(read('src/main.js'),/onClose:\(\)=>\{if\(gameActive\)resumeGame\(\);\}/);
  assert.match(html,/id="use-cooked"/);
