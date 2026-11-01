@@ -107,7 +107,7 @@ def run():
     DEST.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="forest-webp-") as temporary:
         temp = Path(temporary)
-        subprocess.run(["blender", "--background", "--factory-startup",
+        subprocess.run(["blender", "--background", "--factory-startup", "--python-exit-code", "1",
                         "--python", str(Path(__file__).resolve()), "--",
                         "--in-blender", "--out", str(temp)], check=True)
         for key in MODELS:
