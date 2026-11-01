@@ -35,5 +35,7 @@ jobs:
             echo "Sem imagens novas."
           else
             git commit -m "assets: WebP transparentes 8 angulos dos GLBs reais"
-            git push
+            git fetch origin feat/forest-webp-lod-v257
+            git rebase origin/feat/forest-webp-lod-v257
+            git push origin HEAD:feat/forest-webp-lod-v257
           fi
