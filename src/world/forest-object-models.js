@@ -31,6 +31,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
   const sources=new Map(FOREST_OBJECT_MODELS.map(s=>[s.id,{spec:s,batches:[],loaded:false,error:null,loading:false,failed:false}]));
   const billboards=createForestBillboards({THREE,scene,trees,bushPositions});
   let pending=null;
+  let billboardsRequested=false;
   let syncElapsed=Infinity;
   const dummy=new THREE.Object3D();
   function hideProceduralTree(tree,hide){
@@ -106,6 +107,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
   // O WebP eh pequeno: carregamos primeiro. Os quatro GLBs de ~30 MiB sao
   // baixados somente quando o jogador entra no raio detalhado.
   function maybeLoadRealModel(position,quality){
+    if(!billboardsRequested)return;
     if(!GLTFLoader||[...sources.values()].some(s=>s.loading))return;
     for(const source of sources.values()){
       if(source.loaded||source.failed||source.loading)continue;
@@ -190,7 +192,8 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
     }
     return true;
   }
-  return {preload,preloadBillboards:billboards.preload,update,
+  async function preloadBillboards(){billboardsRequested=true;return billboards.preload();}
+  return {preload,preloadBillboards,update,
     get billboardStatus(){return billboards.status;},
     get stats(){return Object.fromEntries([...sources].map(([id,s])=>[id,{
       loaded:s.loaded,error:s.error,drawCalls:s.batches.length,
