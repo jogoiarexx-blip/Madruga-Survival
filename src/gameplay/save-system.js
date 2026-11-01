@@ -12,6 +12,7 @@ import {restoreRaid} from './raids.js';
 import {validCrop} from './farming.js';
 import {validWildlife} from '../world/wildlife.js';
 import {restoreMissionProgress} from './mission-progress.js';
+import {restoreNpcQuestProgress} from './npc-questlines.js';
 import {validExplorationSave} from '../world/exploration.js?v=2.41.0-ecosystem';
 import {validSpiderNestSave} from '../world/spider-nests.js';
 import {validCaveSave} from '../world/arachnid-cave.js';
@@ -58,11 +59,12 @@ export function validateSave(data){
      (b.hp===undefined||integer(b.hp,1,maxBuildingHP(b.type)))))return null;
  if(data.wildlife!==undefined&&!validWildlife(data.wildlife))return null;
  const missions=restoreMissionProgress(data.missions);if(!missions)return null;
+ const npcQuests=restoreNpcQuestProgress(data.npcQuests);if(!npcQuests)return null;
  if(!validExplorationSave(data.exploration)||!validSpiderNestSave(data.spiderNests)||!validCaveSave(data.arachnidCave))return null;
  const raid=restoreRaid(data.raid);if(!raid)return null;
  const guard=restoreGuard(data.guard);if(!guard)return null;
  if(data.poisonTimer!==undefined&&!number(data.poisonTimer,0,30))return null;
- const result={...data,survival,hotbar,inventorySlots,raid,...(data.missions===undefined?{}:{missions}),...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
+ const result={...data,survival,hotbar,inventorySlots,raid,...(data.npcQuests===undefined?{}:{npcQuests}),...(data.missions===undefined?{}:{missions}),...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
  if(result.savedAt!==undefined&&!number(result.savedAt,0,1e14))delete result.savedAt;
  return result;
 }

@@ -1,4 +1,4 @@
-// Madruga Survival v2.54.0 — Sol/Lua, opções do menu, confirmação e nova bancada.
+// Madruga Survival v2.57.0 (base v2.54.0) — Chiquinha, horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.57.0-webp-lod';
@@ -87,7 +87,9 @@ import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createCampfireUI} from './ui/campfire-ui.js';
 import {createVillagerGuard} from './characters/villager-guard.js?v=2.41.0-ecosystem';
-import {createForestNpcs} from './characters/forest-npcs.js';
+import {createForestNpcs} from './characters/forest-npcs.js?v=2.57.0-npc-quests';
+import {createNpcQuestProgress,restoreNpcQuestProgress,nearestChiquinhaFarm,advanceChiquinhaWork,interactNpcQuest,npcQuestStatus} from './gameplay/npc-questlines.js?v=2.57.0';
+import {createWitchCabin} from './world/witch-cabin.js?v=2.57.0';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
 import {SKILLS,awardSkill,skillLevel,fishingBonus,farmingBonus,huntingBonus,
@@ -223,6 +225,7 @@ let health = 100;
 let maxHealth = 100;
 let level = 1, xp = 0, kills = 0;
 let missionProgress=createMissionProgress();
+let npcQuests=createNpcQuestProgress();
 // As ruínas continuam como ponto de exploração e marco visual da floresta.
 const shrinePosition = Object.freeze({x:32,z:-28});
 
@@ -298,6 +301,7 @@ const spiderNests=createSpiderNestWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)});
 const arachnidCave=createArachnidCave({THREE,scene,getGroundHeight});
 const buildings=createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r),getQuality:()=>graphicsQuality,mergeGeometries});
+const witchCabin=createWitchCabin({THREE,scene,getGroundHeight});
 const wildlife=createWildlifeWorld({THREE,scene,getGroundHeight,
     isPositionFree:(x,z,r)=>collisionWorld.isPositionFree(x,z,r)&&!buildings.isBlocked(x,z,r),
     canSee:(from,to)=>!buildings.blocksLine(from,to)&&!exploration.blocksDoorAtSight?.(from,to)&&
@@ -404,6 +408,9 @@ function updateHUD() {
     hudText('mission-title',mission?`🎯 ${mission.title}`:'🏆 Missões do acampamento concluídas');
     hudText('mission-goal',mission?`${mission.description} · ${mission.count}/${mission.target} · +${mission.xp} XP`:
       'Continue sobrevivendo, explorando e melhorando sua base.');
+    const sideQuests=npcQuestStatus(npcQuests,{farms:buildings.structures,day:survival.days});
+    hudText('npc-chiquinha',sideQuests.chiquinha);
+    hudText('npc-bruxa',sideQuests.bruxa);
     hudText('equipment-display',`Arma [${currentWeapon+1}]: ${weaponTypes[currentWeapon].name} · Durabilidade ${currentWeapon===0?'∞':survival.durability[currentWeapon===1?'hammer':'spear']}`);
     hudText('target-hint',placement?'🧱 Construção: F confirma · G gira · Esc cancela':'F interagir · O ordens Chaves · Y pesca interativa · I mochila · U habilidades');
     const bossWrapper=document.getElementById('boss-bar-wrapper');
@@ -436,7 +443,7 @@ function updateHUD() {
         prompt.textContent=guard.hp===0?'[F] Reanimar Chaves com 2 frutas e 1 água':guard.recruited?'[F/O] Mudar ordem do Chaves':'[F] Contratar Chaves para defender sua base';
         prompt.classList.remove('hidden');
     }else if(nearForestNpc&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
-        prompt.textContent='[F] Conversar com '+nearForestNpc.spec.name;
+        prompt.textContent='[F] Missão / conversar com '+nearForestNpc.spec.name;
         prompt.classList.remove('hidden');
     }else if(arachnidCave.nearPortal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent='[F] Entrar na Caverna das Aranhas';prompt.classList.remove('hidden');
@@ -583,7 +590,7 @@ function spawnParticle(pos, color, count = 8) {
 
 
 function isPositionFree(x, z, radius = 0.9) {
-    return !insideLake(x,z,radius)&&!exploration.blocksDoor(x,z,radius)&&
+    return !witchCabin.blocks(x,z,radius)&&!insideLake(x,z,radius)&&!exploration.blocksDoor(x,z,radius)&&
       Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)>12.9+radius &&
       collisionWorld.isPositionFree(x,z,radius)&&!buildings.isBlocked(x,z,radius);
 }
@@ -598,7 +605,7 @@ function resolveCollision(x, z, radius = 0.45, playerY=0) {
     const builtPoint=buildings.resolveCollision(staticPoint.x,staticPoint.z,radius,playerY);
     const entry=exploration.resolveDoor(builtPoint.x,builtPoint.z,radius);
     const result=collisionWorld.resolveCollision(entry.x,entry.z,radius);
-    return keepOutsideLake(result.x,result.z,radius);
+    return witchCabin.resolve(keepOutsideLake(result.x,result.z,radius),radius);
 }
 function findSpawnPoint(minRange = 10, maxRange = 70, radius = 1) {
     for (let i = 0; i < 100; i++) {
@@ -789,7 +796,7 @@ function serializeProgress() {
     const progress=clampProgress({level,xp,kills,maxHealth,health});
     return {
         seed:worldSeed,graphicsQuality,...progress,wave,elapsed,savedAt:Date.now(),
-        missions:missionProgress,
+        missions:missionProgress,npcQuests,
         currentWeapon,hotbar:hotbarSlots,inventorySlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
         wildlife:wildlife.serialize(),exploration:exploration.serialize(),spiderNests:spiderNests.serialize(),
@@ -832,6 +839,8 @@ function restoreProgress(data) {
     level=data.level;xp=data.xp;kills=data.kills;maxHealth=data.maxHealth;health=data.health;
     wave=data.wave;elapsed=data.elapsed;spawnTimer=15;
     missionProgress=restoreMissionProgress(data.missions)||createMissionProgress();
+    npcQuests=restoreNpcQuestProgress(data.npcQuests)||createNpcQuestProgress();
+    witchCabin.setBuilt(npcQuests.bruxa.stage>=1);
     zombieSenses.clear();sneaking=false;runningFastNow=false;footstepTimer=0;webSlowTimer=0;
     survival=data.survival;hotbarSlots=[...data.hotbar];inventorySlots=data.inventorySlots.map(s=>s?{...s}:null);raidState=data.raid||createRaidState();raidAlertUntil=0;
     poisonTimer=data.poisonTimer||0;cemeterySpawnTimer=5;guard.setState(data.guard);
@@ -1137,7 +1146,7 @@ async function beginAdventure(restore=false) {
         ...(worldInitialized?[]:initWorld()),
         {name:save?'Restaurando inventário e progresso':'Organizando a nova sobrevivência',load:()=>{
             if(save)restoreProgress(save);
-            else{missionProgress=createMissionProgress();hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
+            else{missionProgress=createMissionProgress();npcQuests=createNpcQuestProgress();witchCabin.setBuilt(false);hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
         }},
         {name:'Preparando WebP de árvores e arbustos (8 ângulos)',optional:true,load:async()=>{
             await forest.preloadModels();forest.updateVisibility(player.position,graphicsQuality,0,true);
@@ -1641,8 +1650,18 @@ function harvestNear(){
         if(guard.recruited&&guard.alive)return changeChavesOrder();
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
     }
-    const npcDialogue=forestNpcs.interact(player.position,{insideCave:arachnidCave.inside});
-    if(npcDialogue){showToast(npcDialogue,4400);return true;}
+    const nearNpc=forestNpcs.nearest(player.position,{insideCave:arachnidCave.inside});
+    if(nearNpc){
+        forestNpcs.interact(player.position,{insideCave:false});
+        const result=interactNpcQuest(npcQuests,nearNpc.spec.id,{
+            inventory:survival.inventory,farms:buildings.structures,day:survival.days});
+        if(result.changed){
+            if(result.builtCabin)witchCabin.setBuilt(true);
+            if(result.xp)gainXP(result.xp);
+            sfx.collect();saveProgress();updateHUD();
+        }
+        showToast(result.message,5000);return true;
+    }
     if(spiderNests.nearest(player.position)){
         const result=spiderNests.harvest(player.position,survival.inventory);
         if(!result.ok){showToast('🎒 '+result.reason);return false;}
@@ -2083,9 +2102,20 @@ function animate() {
             }
         }
         buildings.update(elapsed,dt);
+        const farmWork=advanceChiquinhaWork(npcQuests,buildings.structures,survival.inventory,dt);
+        if(farmWork){
+            buildings.updateCropVisual(farmWork.plot);
+            if(farmWork.action==='harvest'){
+                if(Math.hypot(player.position.x-10,player.position.z+8)<18)
+                    showToast('🌾 Chiquinha colheu +3 legumes para sua mochila!');
+                saveProgress();updateHUD();
+            }
+        }
         wildlife.update(dt,player.position,graphicsQuality);
         guard.update(dt,elapsed,player.position);
-        forestNpcs.update(dt,player.position,{insideCave:arachnidCave.inside});
+        forestNpcs.update(dt,player.position,{insideCave:arachnidCave.inside,
+            chiquinhaTarget:npcQuests.chiquinha.stage>=1?
+              nearestChiquinhaFarm(buildings.structures):null});
         enemyAI.update(dt,elapsed);
         zombieModels.updateCorpses(dt,removeMesh);
         spiderModels.updateCorpses(dt,removeMesh);
