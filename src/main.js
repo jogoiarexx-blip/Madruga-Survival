@@ -282,7 +282,7 @@ const trees = [];
 const particles = [];
 const treeColliders = [];
 
-const forest = createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosition,
+const forest = createForest({THREE,GLTFLoader,scene,natureAssets,getGroundHeight,shrinePosition,
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
 const fishingLake=createFishingLake({THREE,scene,getGroundHeight});
@@ -1138,6 +1138,9 @@ async function beginAdventure(restore=false) {
         {name:save?'Restaurando inventário e progresso':'Organizando a nova sobrevivência',load:()=>{
             if(save)restoreProgress(save);
             else{missionProgress=createMissionProgress();hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
+        }},
+        {name:'Preparando árvores e arbustos dos seus modelos 3D',optional:true,load:async()=>{
+            await forest.preloadModels();forest.updateVisibility(player.position,graphicsQuality,0,true);
         }},
         {name:'Compilando shaders e texturas do cenário',optional:true,load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
         {name:'Preparando Seu Madruga e animações',optional:true,load:()=>playerRev5.preload()},
