@@ -39,7 +39,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
     if(!lod)return;
     if(lod.trunk)lod.trunk.visible=!hide;
     for(const child of lod.detailedLeaves)child.visible=!hide&&!lod.far;
-    lod.distant.visible=!hide&&lod.far;
+    if(lod.distant)lod.distant.visible=!hide&&lod.far;
   }
   function loadOne(source){
     return new Promise(resolve=>{
