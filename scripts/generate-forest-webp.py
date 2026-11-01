@@ -43,11 +43,11 @@ def render_in_blender(folder):
             raise RuntimeError("GLB sem altura: " + key)
         max_width = max(maxs[0] - mins[0], maxs[1] - mins[1])
         scene = bpy.context.scene
-        # Eevee permite cores, UV, normal map e materiais originais do GLB.
-        try:
-            scene.render.engine = "BLENDER_EEVEE_NEXT"
-        except TypeError:
-            scene.render.engine = "BLENDER_EEVEE"
+        # Cycles CPU dispensa EGL/GPU em CI headless. Mantem materiais do GLB.
+        scene.render.engine = "CYCLES"
+        scene.cycles.device = "CPU"
+        scene.cycles.samples = 8
+        scene.cycles.use_denoising = False
         scene.render.film_transparent = True
         scene.render.image_settings.file_format = "PNG"
         scene.render.image_settings.color_mode = "RGBA"
