@@ -1,7 +1,7 @@
 // Madruga Survival v2.57.0 — Chiquinha na horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
-import { createForest } from './world/forest.js?v=2.56.0-vegetacao-glb';
+import { createForest } from './world/forest.js?v=2.57.0-webp-lod';
 import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
 import {mountMenuDialogs} from './ui/menu-dialogs.js';
@@ -1148,7 +1148,7 @@ async function beginAdventure(restore=false) {
             if(save)restoreProgress(save);
             else{missionProgress=createMissionProgress();npcQuests=createNpcQuestProgress();witchCabin.setBuilt(false);hotbarSlots=defaultHotbar();inventorySlots=createBag(survival.inventory);updateHUD();}
         }},
-        {name:'Preparando árvores e arbustos dos seus modelos 3D',optional:true,load:async()=>{
+        {name:'Preparando WebP de árvores e arbustos (8 ângulos)',optional:true,load:async()=>{
             await forest.preloadModels();forest.updateVisibility(player.position,graphicsQuality,0,true);
         }},
         {name:'Compilando shaders e texturas do cenário',optional:true,load:()=>gpuWarmup.prepare(scene,'Mundo e vegetação')},
@@ -2035,7 +2035,7 @@ function animate() {
         }
 
         // Árvore distante fica invisível, mas mantém seu collider físico.
-        forest.updateVisibility(player.position,graphicsQuality,dt);
+        forest.updateVisibility(player.position,graphicsQuality,dt,false,camera.position);
         cameraImpact=Math.max(0,cameraImpact-dt*.25);
         cameraRig.update(dt,playerYaw,mousePitch+cameraImpact);
 
