@@ -7,7 +7,7 @@ export const FOREST_NPC_SPECS=Object.freeze([
     clothes:0xc75470,skin:0xf0b78d,
     dialogue:Object.freeze([
       'Chiquinha: Seu Madruga! Achei um cantinho seguro perto da base.',
-      'Chiquinha: Quero ajudar na horta. Ainda precisamos organizar as tarefas!',
+      'Chiquinha: Agora posso plantar, regar e colher para o acampamento!',
       'Chiquinha: Cuidado ao sair sozinho. O Chaves pode proteger o acampamento.'
     ])
   }),
@@ -18,7 +18,7 @@ export const FOREST_NPC_SPECS=Object.freeze([
     dialogue:Object.freeze([
       'Bruxa do 71: A floresta guarda segredos, principalmente depois do anoitecer.',
       'Bruxa do 71: Seda de aranha e cristais da caverna podem ser muito uteis.',
-      'Bruxa do 71: Volte quando estiver preparado. A historia desta mata ainda vai crescer.'
+      'Bruxa do 71: Minha cabana e os cristais da caverna precisam de sua ajuda.'
     ])
   })
 ]);
@@ -135,7 +135,7 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
     agent.mixer.update(dt);
     agent.greetTimer=Math.max(0,agent.greetTimer-dt);
   }
-  function update(dt,playerPosition,{insideCave=false}={}){
+  function update(dt,playerPosition,{insideCave=false,chiquinhaTarget=null}={}){
     const step=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
     for(const agent of agents){
       const dist=npcDistance(agent.model.position,playerPosition);
@@ -145,7 +145,11 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
       if(dist>55)continue; // Nao simula animacoes distantes.
       agent.clock+=step;
       const closeToPlayer=dist<3.2;
-      const goal=npcPatrolGoal(agent.spec,agent.clock);
+      const nearFarm=agent.spec.id==='chiquinha'&&chiquinhaTarget&&
+        Number.isFinite(chiquinhaTarget.x)&&Number.isFinite(chiquinhaTarget.z);
+      // A Chiquinha se aproxima da lateral do canteiro, sem pisar sobre a lavoura.
+      const goal=nearFarm?{x:chiquinhaTarget.x+1.8,z:chiquinhaTarget.z+1.8}:
+        npcPatrolGoal(agent.spec,agent.clock);
       const dx=goal.x-agent.model.position.x,dz=goal.z-agent.model.position.z;
       const length=Math.hypot(dx,dz);
       const moving=!closeToPlayer&&length>.36;
