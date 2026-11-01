@@ -64,7 +64,7 @@ export function validateSave(data){
  const raid=restoreRaid(data.raid);if(!raid)return null;
  const guard=restoreGuard(data.guard);if(!guard)return null;
  if(data.poisonTimer!==undefined&&!number(data.poisonTimer,0,30))return null;
- const result={...data,survival,hotbar,inventorySlots,raid,npcQuests,...(data.missions===undefined?{}:{missions}),...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
+ const result={...data,survival,hotbar,inventorySlots,raid,...(data.npcQuests===undefined?{}:{npcQuests}),...(data.missions===undefined?{}:{missions}),...(data.guard===undefined?{}:{guard}),...(data.poisonTimer===undefined?{}:{poisonTimer:data.poisonTimer})};
  if(result.savedAt!==undefined&&!number(result.savedAt,0,1e14))delete result.savedAt;
  return result;
 }
