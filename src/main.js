@@ -87,6 +87,7 @@ import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createCampfireUI} from './ui/campfire-ui.js';
 import {createVillagerGuard} from './characters/villager-guard.js?v=2.41.0-ecosystem';
+import {createForestNpcs} from './characters/forest-npcs.js';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
 import {SKILLS,awardSkill,skillLevel,fishingBonus,farmingBonus,huntingBonus,
@@ -423,6 +424,7 @@ function updateHUD() {
     const closestLoot=exploration.nearest(player.position);
     const closestFixture=exploration.nearestFixture(player.position);
     const nearNest=spiderNests.nearest(player.position);
+    const nearForestNpc=forestNpcs.nearest(player.position,{insideCave:arachnidCave.inside});
     const prompt=document.getElementById('interact-hint');
     if(placement){
         prompt.classList.add('hidden');
@@ -432,6 +434,9 @@ function updateHUD() {
         prompt.classList.remove('hidden');
     }else if(guard.nearby(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=guard.hp===0?'[F] Reanimar Chaves com 2 frutas e 1 água':guard.recruited?'[F/O] Mudar ordem do Chaves':'[F] Contratar Chaves para defender sua base';
+        prompt.classList.remove('hidden');
+    }else if(nearForestNpc&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+        prompt.textContent='[F] Conversar com '+nearForestNpc.spec.name;
         prompt.classList.remove('hidden');
     }else if(arachnidCave.nearPortal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent='[F] Entrar na Caverna das Aranhas';prompt.classList.remove('hidden');
@@ -461,11 +466,11 @@ function flashDamage() {
     clearTimeout(el._flashTimer);
     el._flashTimer = setTimeout(() => el.style.opacity = '0', 160);
 }
-function showToast(message) {
+function showToast(message,duration=1800) {
     const toast = document.getElementById('toast');
     toast.textContent = message; toast.style.opacity = '1';
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.style.opacity = '0', 1800);
+    toastTimer = setTimeout(() => toast.style.opacity = '0', duration);
 }
 function earnSkill(id,amount){
     const gained=awardSkill(survival,id,amount);
@@ -705,6 +710,9 @@ const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveC
     attackEnemy:(enemy,damage)=>combat.damageEnemy(enemy,damage,.08,false),
     onStatus:(message,state)=>console.info('[Chaves]',state,message),
     onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label)});
+const forestNpcs=createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,
+    onBeforeMount:(root,label)=>gpuWarmup.prepare(root,label),
+    onStatus:(id,state,clips)=>console.info('[NPC]',id,state,'animacoes:',clips)});
 function changeChavesOrder(){
     if(!gameActive||!guard.recruited||!guard.alive){showToast('Recrute e mantenha o Chaves vivo para dar ordens.');return false;}
     const order=guard.cycleOrder();
@@ -1121,6 +1129,7 @@ async function beginAdventure(restore=false) {
     menuPreparing=false;
     if(save){worldSeed=save.seed;graphicsQuality=save.graphicsQuality;}
     zombieSenses.clear();sneaking=false;runningFastNow=false;
+    forestNpcs.reset();
     footstepTimer=0;webSlowTimer=0;spawnTimer=15;
 
     // initWorld() descreve etapas executadas progressivamente somente após o clique.
@@ -1629,6 +1638,8 @@ function harvestNear(){
         if(guard.recruited&&guard.alive)return changeChavesOrder();
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
     }
+    const npcDialogue=forestNpcs.interact(player.position,{insideCave:arachnidCave.inside});
+    if(npcDialogue){showToast(npcDialogue,4400);return true;}
     if(spiderNests.nearest(player.position)){
         const result=spiderNests.harvest(player.position,survival.inventory);
         if(!result.ok){showToast('🎒 '+result.reason);return false;}
@@ -2071,6 +2082,7 @@ function animate() {
         buildings.update(elapsed,dt);
         wildlife.update(dt,player.position,graphicsQuality);
         guard.update(dt,elapsed,player.position);
+        forestNpcs.update(dt,player.position,{insideCave:arachnidCave.inside});
         enemyAI.update(dt,elapsed);
         zombieModels.updateCorpses(dt,removeMesh);
         spiderModels.updateCorpses(dt,removeMesh);
