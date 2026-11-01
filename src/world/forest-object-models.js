@@ -26,7 +26,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
     const lod=tree.userData?.lod;
     if(!lod)return;
     if(lod.trunk)lod.trunk.visible=!hide;
-    for(const child of lod.detailedLeaves)child.visible=!hide;
+    for(const child of lod.detailedLeaves)child.visible=!hide&&!lod.far;
     // A copa distante fica sob responsabilidade do culling legado.
   }
   function loadOne(source){
