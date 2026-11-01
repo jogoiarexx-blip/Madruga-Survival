@@ -22,7 +22,7 @@ jobs:
       - name: Preparar Blender e encoder WebP
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender python3-numpy
           python -m pip install Pillow
       - name: Renderizar 8 vistas por modelo GLB original
         run: python scripts/generate-forest-webp.py
