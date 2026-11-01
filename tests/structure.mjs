@@ -1,6 +1,7 @@
 import {readFileSync,existsSync,readdirSync} from 'node:fs';
 import {resolve,dirname} from 'node:path';
 import assert from 'node:assert/strict';
+import {MENU_DIALOGS_HTML} from '../src/ui/menu-dialogs.js';
 import {fileURLToPath} from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const load = path => readFileSync(resolve(root,path),'utf8');
@@ -25,8 +26,9 @@ for (const from of listJs('src')) {
     count++;
   }
 }
+const markup=html+MENU_DIALOGS_HTML;
 for (const id of main.matchAll(/getElementById\('([\w-]+)'\)/g)) {
-  assert.ok(html.includes(`id="${id[1]}"`),`Falta o elemento ${id[1]}`);
+  assert.ok(markup.includes(`id="${id[1]}"`),`Falta o elemento ${id[1]}`);
 }
 assert.match(main,/minimapTick >= 0\.10/,'Limite de frequência no minimapa ausente');
 assert.match(main,/if \(document\.hidden\) return/,'Aba oculta não deve renderizar');

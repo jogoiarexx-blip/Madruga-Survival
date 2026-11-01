@@ -1,12 +1,17 @@
-// Madruga Survival v2.53.0 — saves protegidos no nível máximo, menu responsivo e versão única.
+// Madruga Survival v2.54.0 — Sol/Lua, opções do menu, confirmação e nova bancada.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
-import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.53.0-save-guard';
+import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
+import {mountMenuDialogs} from './ui/menu-dialogs.js';
+import {debugEnabled,sceneInventory,rendererStats,triangleHotspots} from './render/debug-probe.js';
+import {createSkyBodies,skyState} from './world/sky.js';
+import {loadOptions,saveOptions,lookDelta,describeSave,DEFAULT_OPTIONS} from './ui/game-options.js';
 import {syncBuildLabels} from './ui/build-label.js';
 syncBuildLabels();
-import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js?v=2.53.0-save-guard';
+mountMenuDialogs();
+import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js?v=2.54.0-sky-menu-bench';
 import {createFrameProfiler} from './render/frame-profiler.js';
 import {createMissionProgress,restoreMissionProgress,recordMissionEvent,currentMission,advanceMission} from './gameplay/mission-progress.js';
 import {missionWaypoint} from './gameplay/mission-navigation.js';
@@ -48,7 +53,7 @@ import { createCombatSystem } from './gameplay/combat.js?v=2.13.0';
 import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
-import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES} from './gameplay/survival.js?v=2.41.0-ecosystem';
+import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES,DAY_SECONDS,cycleClock} from './gameplay/survival.js?v=2.41.0-ecosystem';
 import {createResourceWorld} from './world/resources.js?v=2.41.0-ecosystem';
 import {createExplorationWorld} from './world/exploration.js?v=2.41.0-ecosystem';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
@@ -122,6 +127,9 @@ scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xfff8e7, 1.3);
 sun.position.set(70, 100, 50);
 let dayTime = 0;
+const skyBodies=createSkyBodies({THREE,scene,getQuality:()=>graphicsQuality});
+skyBodies.group.visible=false;
+const sunDayColor=new THREE.Color(0xfff8e7),sunWarmColor=new THREE.Color(0xffb27a),moonLightColor=new THREE.Color(0x9fb4e6);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 sun.shadow.camera.near = 1;
@@ -772,7 +780,7 @@ function serializeProgress() {
     inventorySlots=reconcileBag(inventorySlots,survival.inventory) || createBag(survival.inventory);
     const progress=clampProgress({level,xp,kills,maxHealth,health});
     return {
-        seed:worldSeed,graphicsQuality,...progress,wave,elapsed,
+        seed:worldSeed,graphicsQuality,...progress,wave,elapsed,savedAt:Date.now(),
         missions:missionProgress,
         currentWeapon,hotbar:hotbarSlots,inventorySlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
@@ -863,7 +871,10 @@ function restoreProgress(data) {
 function updateContinueButton() {
     const button=document.getElementById('load-btn');
     button.classList.toggle('hidden',!availableSave);
-    if(availableSave) button.textContent=`Retomar Dia ${availableSave.survival.days} · Nível ${availableSave.level}`;
+    document.querySelector('.menu-actions')?.classList.toggle('has-save',!!availableSave);
+    const summary=document.getElementById('save-summary');
+    if(summary){summary.classList.toggle('hidden',!availableSave);summary.textContent=availableSave?'💾 Partida salva: '+describeSave(availableSave):'';}
+    if(availableSave) button.textContent=`▶ Continuar · Dia ${availableSave.survival.days} · Nível ${availableSave.level}`;
 }
 
 // ========== INPUT / COMBATE / PAUSA ==========
@@ -987,6 +998,8 @@ function showPauseMenu(message = '') {
 function resumeGame() { pauseMenu.classList.add('hidden'); initAudio(); setAudioPaused(false); controls.lock(); frameDriver?.wake(); }
 document.addEventListener('keydown', e => {
     if(adventureLoading){e.preventDefault();return;}
+    if(!optionsPanel.classList.contains('hidden')){if(e.code==='Escape'){e.preventDefault();closeOptions();}return;}
+    if(!newGameConfirm.classList.contains('hidden')){if(e.code==='Escape'){e.preventDefault();closeNewGameConfirm();}return;}
     if(e.code==='F1'){e.preventDefault();setHelpOpen(helpPanel.classList.contains('hidden'));return;}
     if(guardWorkUI.isOpen){if(e.code==='Escape')guardWorkUI.close();return;}
     if(!helpPanel.classList.contains('hidden')){if(e.code==='Escape'){e.preventDefault();setHelpOpen(false);}return;}
@@ -1146,12 +1159,28 @@ async function beginAdventure(restore=false) {
         loadingScreen.removeAttribute('aria-busy');
     }
 }
-document.getElementById('start-btn').onclick=()=>void beginAdventure(false);
+document.getElementById('start-btn').onclick=()=>requestNewGame();
+const newGameConfirm=document.getElementById('new-game-confirm');
+function requestNewGame(){
+    if(adventureLoading||gameActive)return;
+    if(!availableSave){void beginAdventure(false);return;}
+    document.getElementById('confirm-detail').textContent=`Já existe uma partida salva (${describeSave(availableSave)}). A nova sobrevivência vai substituí-la no primeiro salvamento automático. Exporte antes se quiser guardá-la.`;
+    newGameConfirm.classList.remove('hidden');
+    document.getElementById('confirm-cancel').focus();
+}
+function closeNewGameConfirm(){newGameConfirm.classList.add('hidden');document.getElementById('start-btn').focus();}
+document.getElementById('confirm-cancel').addEventListener('click',closeNewGameConfirm);
+document.getElementById('confirm-new').addEventListener('click',()=>{newGameConfirm.classList.add('hidden');void beginAdventure(false);});
+document.getElementById('confirm-export-new').addEventListener('click',()=>{
+    if(!downloadSave())return;
+    newGameConfirm.classList.add('hidden');void beginAdventure(false);
+});
+newGameConfirm.addEventListener('click',event=>{if(event.target===newGameConfirm)closeNewGameConfirm();});
 document.getElementById('load-btn').onclick=()=>void beginAdventure(true);
 document.getElementById('save-btn').onclick = () => saveProgress(true);
 // Exportação usa apenas checkpoint validado; não executa código de arquivos importados.
 function downloadSave(){
-  if(gameActive && !saveProgress()){showToast('⚠ Não foi possível salvar antes da exportação.');return;}
+  if(gameActive && !saveProgress()){showToast('⚠ Não foi possível salvar antes da exportação.');return false;}
   try{
     const json=exportStoredSave(progressStorage);
     const blob=new Blob([json],{type:'application/json'});
@@ -1161,7 +1190,8 @@ function downloadSave(){
     document.body.append(anchor);anchor.click();anchor.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1500);
     showToast('💾 Backup da partida exportado.');
-  }catch(error){showToast('⚠ '+String(error?.message||error));}
+    return true;
+  }catch(error){showToast('⚠ '+String(error?.message||error));return false;}
 }
 const saveFileInput=document.getElementById('save-file-input');
 for(const id of ['export-save-menu','export-save-pause'])document.getElementById(id).addEventListener('click',downloadSave);
@@ -1197,8 +1227,9 @@ document.addEventListener('wheel', e => {
 }, {passive:false});
 document.addEventListener('mousemove', e => {
     if (!controls.isLocked || !gameActive) return;
-    playerYaw -= e.movementX * 0.003;
-    mousePitch = THREE.MathUtils.clamp(mousePitch + e.movementY * 0.003, -0.30, 0.76);
+    const look=lookDelta(gameOptions,e.movementX,e.movementY);
+    playerYaw += look.yaw;
+    mousePitch = THREE.MathUtils.clamp(mousePitch + look.pitch, -0.30, 0.76);
 });
 
 let cameraImpact=0;
@@ -1477,7 +1508,7 @@ const survivalUI=createSurvivalUI({getState:()=>survival,onCraft:craft,onConsume
     getCraftStatus:(id,cost)=>craftingStatus(id,cost),
     getRecipeCost:id=>recipeCost(id,RECIPES[id]?.cost,survival.skills),
     getSelectedItem:()=>selectedInventoryItem,onSelectItem:chooseInventoryItem,onQuickAssign:quickAssignInventoryItem});
-const workbenchUI=createWorkbenchUI({getStatus:(id)=>craftingStatus(id),onCraft:(id)=>craft(id),
+const workbenchUI=createWorkbenchUI({getStatus:(id)=>craftingStatus(id),onCraft:(id,quantity=1)=>craft(id,quantity),getInventory:()=>survival.inventory,
     onClose:()=>{if(gameActive)resumeGame();}});
 const campfireUI=createCampfireUI({getStatus:id=>craftingStatus(id),onCraft:id=>craft(id),
     onClose:()=>{if(gameActive)resumeGame();}});
@@ -1809,6 +1840,7 @@ const drawMinimap = createMinimap(document.getElementById('minimap'), () => ({
 const clock = new THREE.Clock();
 let walkTime = 0, hudTick = 0, minimapTick = 0, fpsTime = 0, fpsFrames = 0, audioLandscapeTick=0;
 let showFps = false;
+let debugForceRun=false;
 const frameProfiler=createFrameProfiler();
 let lastIdleRenderAt=-Infinity;
 const fpsDisplay = document.getElementById('fps-display');
@@ -1821,9 +1853,9 @@ function animate() {
     const frameSeconds=clock.getDelta();
     const dt = Math.min(frameSeconds, 0.05);
     if (document.hidden) return;
-    const running = gameActive && controls.isLocked && health > 0;
+    const running = gameActive && (controls.isLocked||debugForceRun) && health > 0;
     setAudioPaused(!running);
-    if(running&&showFps)frameProfiler.record(frameSeconds*1000);
+    if(running&&(showFps||debugForceRun))frameProfiler.record(frameSeconds*1000);
     // Pausa: o driver agenda 4 FPS via timer, evitando RAF contínuo a 60/144 Hz.
     // Relógio é atualizado primeiro, evitando salto de física ao retomar.
     if (!running) {
@@ -2081,7 +2113,12 @@ function animate() {
         const graveAtmosphere=THREE.MathUtils.clamp((26-graveDist)/14,0,1);
         sun.intensity=arachnidCave.inside?.08:(.13+intensity*1.35)*(1-graveAtmosphere*.47);
         ambient.intensity=arachnidCave.inside?.18:(.12+intensity*.49)*(1-graveAtmosphere*.30);
-        scene.background.setHSL(.59,.38-graveAtmosphere*.21,.065+intensity*.55-graveAtmosphere*.075);
+        const sky=skyState((dayTime%DAY_SECONDS)/DAY_SECONDS,{graveAtmosphere,inCave:arachnidCave.inside});
+        scene.background.setHex(sky.sky);
+        if(sky.night)sun.color.copy(moonLightColor);
+        else sun.color.copy(sunWarmColor).lerp(sunDayColor,THREE.MathUtils.smoothstep(sky.sun.y,0,.3));
+        if(arachnidCave.inside)skyBodies.hide();else skyBodies.update(sky,camera);
+        skyBodies.group.visible=true;
         scene.fog.density=arachnidCave.inside?.025:(graphicsQuality==='low'?.012:graphicsQuality==='high'?.006:.008);
         if(arachnidCave.inside){scene.background.setHex(0x130e20);scene.fog.color.setHex(0x1d1828);}
         else scene.fog.color.copy(scene.background);
@@ -2176,7 +2213,64 @@ function setupSoundSettings(){
  redraw();
 }
 setupSoundSettings();
+// Opções locais do jogador: independentes do checkpoint.
+function applyOptions(){
+    if(camera.fov!==gameOptions.fov){camera.fov=gameOptions.fov;camera.updateProjectionMatrix();}
+    showFps=gameOptions.showFps;fpsDisplay.classList.toggle('hidden',!showFps);
+    document.getElementById('opt-fov').value=String(gameOptions.fov);
+    document.getElementById('opt-fov-value').textContent=gameOptions.fov+'°';
+    document.getElementById('opt-sensitivity').value=String(gameOptions.sensitivity);
+    document.getElementById('opt-sensitivity-value').textContent=gameOptions.sensitivity.toFixed(2)+'×';
+    document.getElementById('opt-invert-y').checked=gameOptions.invertY;
+    document.getElementById('opt-show-fps').checked=gameOptions.showFps;
+}
+function setOption(patch){gameOptions=saveOptions(progressStorage,{...gameOptions,...patch});applyOptions();}
+const optionsPanel=document.getElementById('options-panel');
+let optionsReturnFocus=null;
+function openOptions(){
+    optionsReturnFocus=document.activeElement;
+    if(gameActive){controls.unlock();Object.keys(keys).forEach(key=>{keys[key]=false;});}
+    applyOptions();optionsPanel.classList.remove('hidden');document.getElementById('opt-fov').focus();
+}
+function closeOptions(){optionsPanel.classList.add('hidden');optionsReturnFocus?.focus?.();}
+document.getElementById('menu-options').addEventListener('click',openOptions);
+document.getElementById('pause-options').addEventListener('click',openOptions);
+document.getElementById('options-close').addEventListener('click',closeOptions);
+optionsPanel.addEventListener('click',event=>{if(event.target===optionsPanel)closeOptions();});
+document.getElementById('opt-fov').addEventListener('input',e=>setOption({fov:Number(e.target.value)}));
+document.getElementById('opt-sensitivity').addEventListener('input',e=>setOption({sensitivity:Number(e.target.value)}));
+document.getElementById('opt-invert-y').addEventListener('change',e=>setOption({invertY:e.target.checked}));
+document.getElementById('opt-show-fps').addEventListener('change',e=>{setOption({showFps:e.target.checked});frameProfiler.reset();});
+document.getElementById('opt-reset').addEventListener('click',()=>setOption({...DEFAULT_OPTIONS}));
+const fullscreenButton=document.getElementById('opt-fullscreen');
+if(!document.documentElement.requestFullscreen)fullscreenButton.classList.add('hidden');
+fullscreenButton.addEventListener('click',()=>{
+    const request=document.fullscreenElement?document.exitFullscreen?.():document.documentElement.requestFullscreen?.();
+    request?.catch?.(()=>showToast('⚠ O navegador não permitiu tela cheia.'));
+});
+document.addEventListener('fullscreenchange',()=>{fullscreenButton.textContent=document.fullscreenElement?'⛶ Sair da tela cheia':'⛶ Tela cheia';});
+let gameOptions=loadOptions(progressStorage);
+applyOptions();
+
 window.__madrugaReady = true;
+if(debugEnabled()){
+    window.__madrugaDebug={
+        run(on=true){debugForceRun=!!on;frameProfiler.reset();frameDriver?.wake();return debugForceRun;},
+        resetProfile(){frameProfiler.reset();},
+        teleport(x,z,yaw=playerYaw){player.position.set(x,getGroundHeight(x,z),z);playerYaw=yaw;return {x,z};},
+        setDayFraction(f){survival.time=(survival.days-1)*DAY_SECONDS+((f%1)+1)%1*DAY_SECONDS;return cycleClock(survival);},
+        enterCave(){const e=arachnidCave.entry();if(!e)return false;player.position.set(e.x,getGroundHeight(e.x,e.z),e.z);return harvestNear()&&arachnidCave.state.inside;},
+        points(){const e=arachnidCave.entry();return {base:{x:0,z:0},lake:{x:LAKE.x-LAKE.radius-4,z:LAKE.z},cemetery:{x:CEMETERY_POS.x+8,z:CEMETERY_POS.z},cave:e?{x:e.x+3,z:e.z+3}:null,sites:Object.fromEntries(exploration.sites.map(s=>[s.id,{x:s.x,z:s.z}]))};},
+        stats(){return {quality:graphicsQuality,clock:cycleClock(survival),inCave:arachnidCave.state.inside,enemies:enemies.length,trees:{...forest.visibilityStats},frame:frameProfiler.snapshot(),renderer:rendererStats(renderer)};},
+        inventory(){return sceneInventory(scene);},
+        hotspots(limit=12){return triangleHotspots(scene,limit);},
+        give(items){for(const [k,v] of Object.entries(items||{}))addResource(survival,k,v);updateHUD();return {...survival.inventory};},
+        placeNear(type,dx=2.5,dz=0){const placed=buildings.place(type,player.position.x+dx,player.position.z+dz,0);refreshBuildingCamera();return !!placed;},
+        openWorkbench(){openWorkbench();return workbenchUI.isOpen;},
+        crafted(){return {...survival.crafted};},
+        shadows(){return {enabled:renderer.shadowMap.enabled,size:sun.shadow.mapSize.x,cast:sun.castShadow};}
+    };
+}
 
 window.addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
