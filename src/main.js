@@ -1,4 +1,4 @@
-// Madruga Survival v2.57.0 — Chiquinha na horta e cabana da Bruxa do 71.
+// Madruga Survival v2.57.0 (base v2.54.0) — Chiquinha, horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.57.0-webp-lod';
