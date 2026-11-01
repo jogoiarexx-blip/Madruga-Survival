@@ -5,12 +5,16 @@ import {CAVE_CENTER,CAVE_RADIUS} from './arachnid-cave.js';
 import {createSeededRandom} from './random.js';
 import {createDistanceVisibility} from '../render/visibility.js?v=2.41.0-ecosystem';
 import {insideLake} from './fishing-lake.js';
+import {createForestObjectModels,forestTreeVariant} from './forest-object-models.js';
 
-export function createForest({THREE,scene,natureAssets,getGroundHeight,shrinePosition,
+export function createForest({THREE,GLTFLoader=null,scene,natureAssets,getGroundHeight,shrinePosition,
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees}) {
     let random = Math.random;
     const rockMeshes=[];
+    const bushPositions=[];
+    const bushFallback=[];
     const visibility=createDistanceVisibility({trees,rocks:rockMeshes});
+    const objectModels=createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPositions,bushFallback});
     const distantLeafGeometry=new THREE.ConeGeometry(1,1,6);
 function createRock(x, z, scale = 1) {
     if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3||insideLake(x,z,2))return;
@@ -57,7 +61,9 @@ function createTree(x, z) {
     distant.position.y=trunkH+1.1*heightVar;
     distant.scale.set(1.25*heightVar,2.5*heightVar,1.25*heightVar);
     distant.visible=false;distant.castShadow=false;g.add(distant);
-    g.userData.lod={detailedLeaves,distant,far:false};
+    g.userData.lod={trunk,detailedLeaves,distant,far:false};
+    g.userData.modelVariant=['tree1','tree2','tree3'][forestTreeVariant(x,z)];
+    g.userData.modelScale=heightVar;
     g.position.set(x, getGroundHeight(x, z), z);
     g.rotation.y = random() * Math.PI * 2;
     scene.add(g);
@@ -83,6 +89,7 @@ function createBushes(count) {
         dummy.scale.set(size,size*.7,size);
         dummy.rotation.set(0,0,0);dummy.updateMatrix();
         matrices[materialIndex].push(dummy.matrix.clone());
+        bushPositions.push({x,z,y:getGroundHeight(x,z),scale:.60+size*.66,rotation:forestTreeVariant(x,z)*2.0944});
     }
     for(let i=0;i<materials.length;i++) {
         if(!matrices[i].length) continue;
@@ -91,6 +98,7 @@ function createBushes(count) {
         batch.instanceMatrix.needsUpdate=true;
         batch.computeBoundingSphere();
         scene.add(batch);
+        bushFallback.push(batch);
     }
 }
 
@@ -189,5 +197,11 @@ function generate(quality, seed) {
     createCampsite(quality);
     scene.updateMatrixWorld(true);
 }
-return {generate,updateVisibility:visibility.update,visibilityStats:visibility.stats};
+function updateVisibility(position,quality='medium',dt=0,force=false){
+    const changed=visibility.update(position,quality,dt,force);
+    if(changed||force)objectModels.update(position,quality,dt,true);
+    return changed;
+}
+return {generate,updateVisibility,preloadModels:objectModels.preload,
+    get objectModelStats(){return objectModels.stats;},visibilityStats:visibility.stats};
 }
