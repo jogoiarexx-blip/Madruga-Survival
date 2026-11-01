@@ -1,9 +1,12 @@
-// Madruga Survival v2.52.0 — margem refinada, vegetação aquática e peixes reativos com LOD.
+// Madruga Survival v2.53.0 — saves protegidos no nível máximo, menu responsivo e versão única.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
 import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
-import { readSave, writeSave } from './gameplay/save-system.js?v=2.41.0-ecosystem';
-import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js?v=2.41.0-ecosystem';
+import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.53.0-save-guard';
+import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
+import {syncBuildLabels} from './ui/build-label.js';
+syncBuildLabels();
+import {exportStoredSave,importPortableSave,MAX_IMPORT_BYTES} from './gameplay/save-transfer.js?v=2.53.0-save-guard';
 import {createFrameProfiler} from './render/frame-profiler.js';
 import {createMissionProgress,restoreMissionProgress,recordMissionEvent,currentMission,advanceMission} from './gameplay/mission-progress.js';
 import {missionWaypoint} from './gameplay/mission-navigation.js';
@@ -219,7 +222,7 @@ let currentWeapon = 0, unlockedWeaponCount = 1;
 let dashCooldown = 0, dashTimer = 0;
 const dashDirection = new THREE.Vector3();
 
-const xpRequired = () => 4 + level * 3;
+const xpRequired = () => xpRequiredFor(level);
 let invulnerableTimer = 0, elapsed = 0;
 let spawnTimer = 15;
 let sneaking=false,runningFastNow=false,footstepTimer=0,webSlowTimer=0;
@@ -383,8 +386,7 @@ function updateHUD() {
       if(completed){
         for(const [item,amount] of Object.entries(completed.items))addResource(survival,item,amount);
         // A experiência recompensa a etapa; evitando chamar gainXP() (que atualiza o HUD).
-        xp+=completed.xp;
-        while(xp>=xpRequired()&&level<100){xp-=xpRequired();level++;maxHealth+=12;health=Math.min(maxHealth,health+30);}
+        ({level,xp,maxHealth,health}=applyExperience({level,xp,maxHealth,health},completed.xp));
         showToast(`🏆 Missão concluída: ${completed.title} · +${completed.xp} XP`);
         saveProgress();
       }
@@ -471,13 +473,9 @@ function earnSkill(id,amount){
     return gained;
 }
 function gainXP(amount) {
-    xp += amount;
-    while (xp >= xpRequired()) {
-        xp -= xpRequired(); level++;
-        maxHealth += 12;
-        health = Math.min(maxHealth, health + 30);
-        sfx.heal(); showToast(`⭐ Nível ${level}! +vida e +força`);
-    }
+    const result=applyExperience({level,xp,maxHealth,health},amount);
+    ({level,xp,maxHealth,health}=result);
+    if(result.gained>0){sfx.heal(); showToast(`⭐ Nível ${level}! +vida e +força`);}
     updateHUD();
 }
 function equipWeapon(index) {
@@ -772,8 +770,9 @@ function refreshBuildingCamera(){
 }
 function serializeProgress() {
     inventorySlots=reconcileBag(inventorySlots,survival.inventory) || createBag(survival.inventory);
+    const progress=clampProgress({level,xp,kills,maxHealth,health});
     return {
-        seed:worldSeed,graphicsQuality,level,xp,kills,health,maxHealth,wave,elapsed,
+        seed:worldSeed,graphicsQuality,...progress,wave,elapsed,
         missions:missionProgress,
         currentWeapon,hotbar:hotbarSlots,inventorySlots,player:{x:player.position.x,z:player.position.z,yaw:playerYaw},
         survival,raid:raidState,guard:guard.getState(),poisonTimer,resources:resources.serialize(),buildings:buildings.serialize(),
@@ -787,11 +786,25 @@ function serializeProgress() {
     };
 }
 
+const SAVE_FAILURE_MESSAGES={
+    'no-storage':'⚠ Este navegador bloqueou o armazenamento local. Use ⬇ Exportar save para guardar o progresso.',
+    storage:'⚠ Armazenamento do navegador cheio ou bloqueado. Use ⬇ Exportar save para não perder o progresso.',
+    'too-large':'⚠ O save ficou grande demais. Desmonte peças ou esvazie baús e tente novamente.',
+    invalid:'⚠ Não foi possível montar um checkpoint válido. Exporte o save e informe o problema.'
+};
+let saveWarningShown=false;
 function saveProgress(manual=false) {
     if (!worldInitialized || !gameActive || health<=0) return false;
     const saved = writeSave(progressStorage,serializeProgress());
-    if (saved) {availableSave=readSave(progressStorage);if (manual) showToast('💾 Progresso salvo neste navegador');}
-    else if (manual) showToast('⚠ Armazenamento indisponível. Não foi possível salvar.');
+    if (saved) {availableSave=readSave(progressStorage);saveWarningShown=false;if (manual) showToast('💾 Progresso salvo neste navegador');}
+    else {
+        const reason=lastSaveError();
+        if(manual||!saveWarningShown){
+            saveWarningShown=true;
+            console.warn('[Madruga Survival] Checkpoint não gravado:',reason);
+            showToast(SAVE_FAILURE_MESSAGES[reason]||SAVE_FAILURE_MESSAGES.storage);
+        }
+    }
     return saved;
 }
 function replaceItems(items, data, create) {
@@ -1193,7 +1206,7 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
     getGroundHeight,resolveCollision,removeMesh,spawnParticle,gainXP,showToast,sfx,
     spawnEnemy,spawnHealthPack,spawnSpeedBoost,advanceQuestIfReady,updateHUD,
     onBossDefeated:()=>{shrine.hideBossTelegraph();showToast('Guardião derrotado! A floresta continua perigosa.');},
-    onEnemyKilled:(type,drop,enemy)=>{kills++;recordMissionEvent(missionProgress,'defeat');if(type==='spider'){
+    onEnemyKilled:(type,drop,enemy)=>{kills=Math.min(MAX_KILLS,kills+1);recordMissionEvent(missionProgress,'defeat');if(type==='spider'){
         if(enemy?.spiderVariant==='matriarch'&&arachnidCave.defeatBoss()){
             showToast('🏆 Rainha derrotada! O grande cristal da caverna foi revelado.');
             saveProgress();

@@ -76,11 +76,15 @@ export function readSave(storage){
     return current||parseCheckpoint(storage?.getItem(SAVE_BACKUP_KEY));
   }catch(_){return null;}
 }
+let lastWriteError=null;
+export function lastSaveError(){return lastWriteError;}
 export function writeSave(storage,data){
+  lastWriteError=null;
   try{
-    const parsed=validateSave({version:2,...data});if(!parsed||!storage)return false;
+    if(!storage){lastWriteError='no-storage';return false;}
+    const parsed=validateSave({version:2,...data});if(!parsed){lastWriteError='invalid';return false;}
     const serialized=JSON.stringify(parsed);
-    if(serialized.length> SAVE_MAX_BYTES)return false;
+    if(serialized.length> SAVE_MAX_BYTES){lastWriteError='too-large';return false;}
     const original=storage.getItem(SAVE_KEY);
     if(parseCheckpoint(original)){
       // O localStorage.setItem é atômico por chave; uma falha aqui não elimina o último primário.
@@ -89,7 +93,7 @@ export function writeSave(storage,data){
     }
     storage.setItem(SAVE_KEY,serialized);
     return true;
-  }catch(_){return false;}
+  }catch(_){lastWriteError='storage';return false;}
 }
 export function clearSave(storage){
   if(!storage)return false;
