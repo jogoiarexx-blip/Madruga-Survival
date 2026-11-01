@@ -200,11 +200,11 @@ function generate(quality, seed) {
     createCampsite(quality);
     scene.updateMatrixWorld(true);
 }
-function updateVisibility(position,quality='medium',dt=0,force=false){
+function updateVisibility(position,quality='medium',dt=0,force=false,viewer=position){
     const changed=visibility.update(position,quality,dt,force);
-    if(changed||force)objectModels.update(position,quality,dt,true);
+    if(changed||force)objectModels.update(position,quality,dt,true,viewer);
     return changed;
 }
-return {generate,updateVisibility,preloadModels:objectModels.preload,
+return {generate,updateVisibility,preloadModels:objectModels.preloadBillboards,
     get objectModelStats(){return objectModels.stats;},visibilityStats:visibility.stats};
 }
