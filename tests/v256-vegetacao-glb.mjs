@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {FOREST_OBJECT_MODELS,forestTreeVariant,forestObjectRange,createForestObjectModels}
+import {FOREST_OBJECT_MODELS,forestTreeVariant,forestObjectRange,forestObjectCap,createForestObjectModels}
   from '../src/world/forest-object-models.js';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 assert.equal(FOREST_OBJECT_MODELS.length,4);
@@ -8,6 +8,8 @@ assert.deepEqual(FOREST_OBJECT_MODELS.map(x=>x.id),['tree1','tree2','tree3','bus
 assert.ok(forestObjectRange('low','tree1')<forestObjectRange('high','tree1'));
 assert.ok(forestObjectRange('low','bush')<forestObjectRange('medium','bush'));
 assert.equal(forestTreeVariant(25,-10),forestTreeVariant(25,-10));
+for(const id of ['tree1','tree2','tree3','bush'])assert.ok(
+ forestObjectCap('low',id)<forestObjectCap('high',id),'limite de triangulos por perfil');
 for(const model of FOREST_OBJECT_MODELS){
   const filepath='../'+model.url.replace('./','').replaceAll('%20',' ');
   const buf=readFileSync(new URL(filepath,import.meta.url));
@@ -72,8 +74,10 @@ function tree(id,x,z){return {position:{x,y:0,z},rotation:{y:.4},visible:true,
  userData:{modelVariant:id,modelScale:1,lod:{trunk:{visible:true},
  detailedLeaves:[{visible:true}],far:false}}};}
 const trees=[tree('tree1',5,0),tree('tree2',11,0),tree('tree3',15,0)];
-const shrubs=[{x:3,y:0,z:2,scale:1,rotation:0},{x:100,y:0,z:100,scale:1,rotation:0}];
-const fallback=[{visible:true}];
+const shrubs=[{x:3,y:0,z:2,scale:1,rotation:0,materialIndex:0,originalMatrix:{}},
+ {x:100,y:0,z:100,scale:1,rotation:0,materialIndex:0,originalMatrix:{}}];
+const fallback=[{visible:true,instanceMatrix:{needsUpdate:false},userData:{forestBushMaterial:0},
+ count:2,setMatrixAt(i,m){this.matrices??=[];this.matrices[i]=m;}}];
 const manager=createForestObjectModels({THREE,GLTFLoader:Loader,scene,trees,bushPositions:shrubs,bushFallback:fallback});
 assert.deepEqual(Object.keys(manager.stats),['tree1','tree2','tree3','bush']);
 await manager.preload();
@@ -84,10 +88,12 @@ assert.equal(manager.stats.tree2.instances,1);
 assert.equal(manager.stats.tree3.instances,1);
 assert.equal(manager.stats.bush.instances,1);
 assert.equal(trees[0].userData.lod.trunk.visible,false);
-assert.equal(fallback[0].visible,false);
+assert.equal(fallback[0].visible,true,'arbusto distante permanece com malha leve');
+assert.equal(fallback[0].count,1,'nao duplica arbusto GLB sobre o fallback');
 manager.update({x:100,z:100},'medium',0,true);
 assert.equal(manager.stats.tree1.instances,0);
 assert.equal(manager.stats.bush.instances,1);
+assert.equal(fallback[0].count,1);
 assert.equal(trees[0].userData.lod.trunk.visible,true);
 const once=await manager.preload();assert.equal(once,4);
 const failed=createForestObjectModels({THREE,GLTFLoader:null,scene,trees,bushPositions:shrubs,bushFallback:[{visible:true}]});
