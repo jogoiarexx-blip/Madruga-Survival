@@ -89,13 +89,16 @@ function createBushes(count) {
         dummy.scale.set(size,size*.7,size);
         dummy.rotation.set(0,0,0);dummy.updateMatrix();
         matrices[materialIndex].push(dummy.matrix.clone());
-        bushPositions.push({x,z,y:getGroundHeight(x,z),scale:.60+size*.66,rotation:forestTreeVariant(x,z)*2.0944});
+        bushPositions.push({x,z,y:getGroundHeight(x,z),scale:.60+size*.66,rotation:forestTreeVariant(x,z)*2.0944,
+            materialIndex,originalMatrix:dummy.matrix.clone()});
     }
     for(let i=0;i<materials.length;i++) {
         if(!matrices[i].length) continue;
         const batch=new THREE.InstancedMesh(natureAssets.bushGeometry,materials[i],matrices[i].length);
         matrices[i].forEach((matrix,index)=>batch.setMatrixAt(index,matrix));
         batch.instanceMatrix.needsUpdate=true;
+        batch.instanceMatrix.setUsage?.(THREE.DynamicDrawUsage);
+        batch.userData.forestBushMaterial=i;
         batch.computeBoundingSphere();
         scene.add(batch);
         bushFallback.push(batch);
