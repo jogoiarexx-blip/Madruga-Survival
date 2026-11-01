@@ -64,7 +64,7 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
     fallback.traverse(object=>{if(object.isMesh)object.castShadow=false;});
     scene.add(model);
     return {spec,model,fallback,loaded:false,loading:false,failed:false,
-      mixer:null,actions:{},current:null,clock:0,dialogueIndex:0,animationCount:0};
+      mixer:null,actions:{},current:null,clock:0,dialogueIndex:0,animationCount:0,idleFrozen:false,greetTimer:0};
   });
   async function load(agent){
     if(agent.loaded||agent.loading||agent.failed||!GLTFLoader)return false;
@@ -111,13 +111,29 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
       agent.fallback.position.y=Math.sin(agent.clock*2)*.013;
       return;
     }
-    const name=chooseNpcClip(Object.keys(agent.actions),moving);
+    const names=Object.keys(agent.actions);
+    const greeting=agent.greetTimer>0&&names.find(n=>/wave|greet|acen/i.test(n));
+    const name=greeting||chooseNpcClip(names,moving);
     const action=name&&agent.actions[name];
     if(action&&action!==agent.current){
-      agent.current?.fadeOut(.18);
-      agent.current=action;action.reset().setLoop(THREE.LoopRepeat,Infinity).fadeIn(.18).play();
+      if(agent.current){agent.current.paused=false;agent.current.fadeOut(.18);}
+      agent.current=action;
+      action.reset().setLoop(greeting?THREE.LoopOnce:THREE.LoopRepeat,greeting?1:Infinity).fadeIn(.18).play();
+    }
+    if(action){
+      // Os GLBs atuais nao possuem Idle: quando parado, mantenha a pose da
+      // caminhada congelada em vez de fazer os pes deslizar pelo terreno.
+      const frozen=!moving&&!greeting&&/walk|andar|locomot|camin/i.test(name)&&
+        !names.some(n=>/idle|stand|parad|wait|respir|breath/i.test(n));
+      if(frozen&&!agent.idleFrozen){
+        if(action.time<.03)action.time=Math.min(action.getClip().duration*.30,.45);
+        action.setEffectiveWeight(1);
+      }
+      action.paused=Boolean(frozen);
+      agent.idleFrozen=Boolean(frozen);
     }
     agent.mixer.update(dt);
+    agent.greetTimer=Math.max(0,agent.greetTimer-dt);
   }
   function update(dt,playerPosition,{insideCave=false}={}){
     const step=Math.max(0,Math.min(.05,Number.isFinite(dt)?dt:0));
@@ -166,11 +182,12 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
     if(!agent)return null;
     const msg=agent.spec.dialogue[agent.dialogueIndex%agent.spec.dialogue.length];
     agent.dialogueIndex++;
+    if(agent.spec.id==='bruxa71')agent.greetTimer=2;
     return msg;
   }
   function reset(){
     for(const agent of agents){
-      agent.clock=0;agent.dialogueIndex=0;
+      agent.clock=0;agent.dialogueIndex=0;agent.greetTimer=0;agent.idleFrozen=false;
       const p=resolveCollision(agent.spec.x,agent.spec.z,.50);
       agent.model.position.set(p.x,getGroundHeight(p.x,p.z),p.z);
     }
