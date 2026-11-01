@@ -26,7 +26,7 @@ for(const npc of FOREST_NPC_SPECS){
   assert.equal(bytes.toString('ascii',16,20),'JSON','chunk JSON GLB');
   const gltf=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString('utf8'));
   assert.ok(gltf.scenes?.length>0&&gltf.meshes?.length>0,'GLB com malhas/cena');
-  console.log(npc.name+': '+(statSync(new URL('../'+npc.url.replace('./','').replaceAll('%20',' '),import.meta.url)).size/1048576).toFixed(1)+' MiB, '+(gltf.animations?.length||0)+' animacoes, '+(gltf.skins?.length||0)+' skins');
+  console.log(npc.name+': '+(statSync(new URL('../'+npc.url.replace('./','').replaceAll('%20',' '),import.meta.url)).size/1048576).toFixed(1)+' MiB, '+(gltf.animations?.length||0)+' animacoes, '+(gltf.skins?.length||0)+' skins; clipes: '+(gltf.animations||[]).map(a=>a.name).join(', '));
 }
 class Node{
   constructor(){this.children=[];this.position={x:0,y:0,z:0,set(x,y,z){this.x=x;this.y=y;this.z=z;}};
