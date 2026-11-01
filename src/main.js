@@ -1,7 +1,7 @@
 // Madruga Survival v2.54.0 — Sol/Lua, opções do menu, confirmação e nova bancada.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
-import { createForest } from './world/forest.js?v=2.41.0-ecosystem';
+import { createForest } from './world/forest.js?v=2.56.0-vegetacao-glb';
 import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
 import {mountMenuDialogs} from './ui/menu-dialogs.js';
