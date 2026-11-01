@@ -39,7 +39,7 @@ const main=read('src/main.js');
 assert.match(main,/forest\.preloadModels\(\)/);
 assert.match(main,/forest\.updateVisibility\(player\.position,graphicsQuality,dt(?:,false,camera\.position)?\)/);
 const gui=read('index.html');
-assert.match(gui,/forest-glb-r1/);
+assert.match(gui,/forest-(?:glb|webp)-r1/);
 
 class Obj {
  constructor(){
