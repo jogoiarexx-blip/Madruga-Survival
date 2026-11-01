@@ -16,6 +16,15 @@ export function forestObjectRange(quality,type){
   if(type==='bush')return quality==='low'?23:quality==='high'?48:36;
   return quality==='low'?25:quality==='high'?40:34;
 }
+// Limites por especie evitam extrapolar o orcamento de triangulos em aparelhos fracos.
+export function forestObjectCap(quality,id){
+  const cap={
+    low:{tree1:1,tree2:3,tree3:1,bush:1},
+    medium:{tree1:4,tree2:8,tree3:4,bush:4},
+    high:{tree1:9,tree2:14,tree3:9,bush:8}
+  };
+  return (cap[quality]||cap.medium)[id]||0;
+}
 export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPositions,bushFallback,
   onStatus=()=>{}}){
   const sources=new Map(FOREST_OBJECT_MODELS.map(s=>[s.id,{spec:s,batches:[],loaded:false,error:null}]));
@@ -100,11 +109,14 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
       if(!source.loaded||!source.batches.length)continue;
       const nearRange=forestObjectRange(quality,source.spec.id);
       const rangeSq=nearRange*nearRange;
+      const cap=forestObjectCap(quality,source.spec.id);
       let count=0;
       if(source.spec.id==='bush'){
-        for(const shrub of bushPositions){
-          const dx=shrub.x-position.x,dz=shrub.z-position.z;
-          if(dx*dx+dz*dz>rangeSq)continue;
+        const nearest=bushPositions.map(shrub=>({
+          shrub,d2:(shrub.x-position.x)**2+(shrub.z-position.z)**2
+        })).filter(record=>record.d2<=rangeSq).sort((a,b)=>a.d2-b.d2).slice(0,cap);
+        const selected=new Set(nearest.map(r=>r.shrub));
+        for(const {shrub} of nearest){
           dummy.position.set(shrub.x,shrub.y,shrub.z);
           dummy.rotation.set(0,shrub.rotation,0);
           dummy.scale.setScalar(shrub.scale);
@@ -112,17 +124,30 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
           for(const batch of source.batches)batch.setMatrixAt(count,dummy.matrix);
           count++;
         }
-        // LOD de arbusto: so renderiza GLB na proximidade; nunca duplica o modelo antigo.
-        for(const batch of bushFallback)batch.visible=false;
+        // Arbustos que ultrapassam o orcamento continuam com o modelo leve.
+        for(const batch of bushFallback){
+          let fallbackCount=0;
+          for(const shrub of bushPositions){
+            if(shrub.materialIndex!==batch.userData?.forestBushMaterial||selected.has(shrub))continue;
+            batch.setMatrixAt(fallbackCount++,shrub.originalMatrix);
+          }
+          batch.count=fallbackCount;
+          batch.visible=fallbackCount>0;
+          if(fallbackCount)batch.instanceMatrix.needsUpdate=true;
+        }
       }else{
+        const nearest=trees.filter(tree=>{
+          if(tree.userData.modelVariant!==source.spec.id||!tree.visible)return false;
+          const d2=(tree.position.x-position.x)**2+(tree.position.z-position.z)**2;
+          return d2<=rangeSq&&d2<=35*35;
+        }).sort((a,b)=>
+          ((a.position.x-position.x)**2+(a.position.z-position.z)**2)-
+          ((b.position.x-position.x)**2+(b.position.z-position.z)**2)).slice(0,cap);
+        const selected=new Set(nearest);
         for(const tree of trees){
-          if(tree.userData.modelVariant!==source.spec.id)continue;
-          const dx=tree.position.x-position.x,dz=tree.position.z-position.z;
-          const d2=dx*dx+dz*dz;
-          const near=tree.visible&&d2<=rangeSq&&d2<=35*35;
-          // Proximo = GLB real; distante = cone de LOD ja existente.
-          hideProceduralTree(tree,near);
-          if(!near)continue;
+          if(tree.userData.modelVariant===source.spec.id)hideProceduralTree(tree,selected.has(tree));
+        }
+        for(const tree of nearest){
           dummy.position.copy(tree.position);
           dummy.rotation.set(0,tree.rotation.y,0);
           dummy.scale.setScalar(tree.userData.modelScale||1);
