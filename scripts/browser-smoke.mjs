@@ -36,8 +36,13 @@ try {
   }
   const ids=await evaluate(`['start-btn','load-btn','export-save-menu','import-save-menu','save-file-input','export-save-pause','import-save-pause','fps-display'].every(id=>!!document.getElementById(id))`);
   assert.equal(ids,true,'Interface de backup ou carregamento ausente');
-  assert.equal(await evaluate('document.documentElement.dataset.build'),'2.47.0-multi-floor');
-  assert.ok((await evaluate('document.title')).includes('2.47.0'));
+  const {version}=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
+  assert.ok((await evaluate('document.documentElement.dataset.build')).startsWith(version+'-'));
+  assert.ok((await evaluate('document.title')).includes(version));
+  if(!offline){
+    const labels=await evaluate(`[...document.querySelectorAll('[data-build-label]')].map(e=>e.textContent)`);
+    assert.ok(labels.length>=2&&labels.every(t=>t==='v'+version),'Labels desatualizados: '+labels);
+  }
   // Novo painel de áudio existe no menu e na pausa, mesmo se WebGL estiver indisponível.
   const audio=await evaluate("document.querySelectorAll('[data-audio-setting]').length===6 && document.querySelectorAll('[data-audio-toggle]').length===2");
   assert.equal(audio,true,'Controles de áudio ausentes');
