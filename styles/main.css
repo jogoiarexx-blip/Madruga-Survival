@@ -800,3 +800,7 @@ body.adventure-loading #asset-loading-status,body.adventure-loading #gpu-warmup-
 .wb-actions button{flex:1 1 110px;margin:0;padding:10px 12px;border-radius:9px;background:#81b76d;color:#08190f;border:0;font-weight:800;cursor:pointer}
 .wb-actions button:disabled{background:#2b3b33;color:#8fa497;cursor:not-allowed}
 @media(max-width:700px){.wb-layout{grid-template-columns:1fr}.wb-detail{position:static;order:-1}}
+
+/* Linhas de missão dos NPCs sem criar sobreposições no HUD compacto. */
+#npc-questlines{border-top:1px solid rgba(231,225,188,.20);margin-top:7px;padding-top:6px;display:grid;gap:4px;font-size:clamp(11px,1.2vw,12px);color:#f3dfb8;line-height:1.35}
+#npc-chiquinha,#npc-bruxa{overflow-wrap:anywhere}
