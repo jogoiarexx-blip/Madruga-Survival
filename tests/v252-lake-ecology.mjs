@@ -87,8 +87,8 @@ check('pescaria sinaliza perigo ao cardume sem alterar save e recompensas',()=>{
 });
 check('versão nova, HTML e scripts de testes estão sincronizados',()=>{
  const pkg=JSON.parse(text('package.json'));
- assert.equal(pkg.version,'2.52.0');
- assert.match(text('index.html'),/2\.52\.0-lake-ecology/);
+ assert.equal(pkg.version,'2.54.0');
+ assert.match(text('index.html'),/2\.52\.0-lake-ecology|2\.54\.0-sky-menu-bench/);
  assert.match(text('src/main.js'),/v2\.52\.0/);
  assert.match(pkg.scripts.test,/v252-lake-ecology/);
 });

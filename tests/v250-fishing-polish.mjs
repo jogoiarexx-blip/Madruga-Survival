@@ -75,7 +75,7 @@ test('pesca existente não é alterada; versão e invalidadores de cache são co
  const f=createFishingSession(()=>.1);
  assert.equal(f.state.phase,'idle');
  assert.match(source('src/main.js'),/fishingSession\.tick/);
- assert.equal(JSON.parse(source('package.json')).version,'2.52.0');
- assert.match(source('index.html'),/2\.51\.0-lake-shore-lod|2\.52\.0-lake-ecology/);
+ assert.equal(JSON.parse(source('package.json')).version,'2.54.0');
+ assert.match(source('index.html'),/2\.51\.0-lake-shore-lod|2\.52\.0-lake-ecology|2\.54\.0-sky-menu-bench/);
 });
 console.log('v2.51.0: '+n+' testes aprovados');

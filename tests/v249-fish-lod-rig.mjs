@@ -50,6 +50,6 @@ test('respingos são ligados à fisgada e ao recolhimento, sem assets externos',
 test('v2.49 preserva pesca por Y, cooldown e formato dos saves',()=>{
  const main=read('src/main.js');assert.match(main,/if \(e\.code === 'KeyY'\) fishNearby\(\)/);
  assert.match(read('src/gameplay/fishing-session.js'),/export const BITE_WINDOW=1\.55/);
- assert.equal(JSON.parse(read('package.json')).version,'2.52.0');
+ assert.equal(JSON.parse(read('package.json')).version,'2.54.0');
 });
 console.log('v2.49.0: '+checks+' testes de pesca visual aprovados');
