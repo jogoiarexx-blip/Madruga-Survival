@@ -21,7 +21,7 @@ import { createTerrain } from './world/terrain.js?v=2.41.0-ecosystem';
 import { createMinimap } from './ui/minimap.js?v=2.41.0-ecosystem';
 import {LAKE,insideLake,nearLakeShore,keepOutsideLake,lakeTerrainDrop,lakeEdgeDistance,createFishingLake} from './world/fishing-lake.js';
 import {segmentBlockedByCircles} from './world/line-of-sight.js';
-import {selectGuardWork} from './gameplay/guard-work.js';
+import {selectGuardWork} from './gameplay/guard-work.js?v=2.58.0';
 import {createGuardWorkUI} from './ui/guard-work-ui.js';
 import { weaponTypes } from './gameplay/equipment.js';
 import { applyGraphicsSettings } from './render/quality.js';
@@ -58,7 +58,7 @@ import {createResourceWorld} from './world/resources.js?v=2.41.0-ecosystem';
 import {createExplorationWorld} from './world/exploration.js?v=2.41.0-ecosystem';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
-import {createBuildingWorld} from './world/buildings.js?v=2.41.0-ecosystem';
+import {createBuildingWorld} from './world/buildings.js?v=2.58.0-ground-farm';
 import {createSurvivalUI} from './ui/survival-ui.js?v=2.41.0-ecosystem';
 import {createConsumableHotbarUI} from './ui/consumable-hotbar-ui.js?v=2.16.0';
 import {defaultHotbar,assignHotbarSlot,hotbarIndexFromCode} from './gameplay/consumable-hotbar.js?v=2.15.0';
@@ -70,7 +70,7 @@ import {createStorageUI} from './ui/storage-ui.js';
 import {transferItem,sleepInBed,totalStored} from './gameplay/storage.js';
 import {planStoreBagStack,planTakeFromChest} from './gameplay/bag-storage.js';
 import {isGearEquipped,setGearEquipped,equipNewCraft} from './gameplay/gear-loadout.js';
-import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js?v=2.41.0-ecosystem';
+import {collidesWithStructure,MAX_STRUCTURES} from './world/building-rules.js?v=2.58.0-farm-walk';
 import {isStructureRecipe,beginPlacement,nudgePlacement,rotatePlacement,toggleSnap,placementStatus,commitPlacement} from './gameplay/placement.js?v=2.41.0-ecosystem';
 import {makeTool,useTool,canUseTool,restoreTool,TOOL_MAX} from './gameplay/tools.js';
 import {craftAvailability,craftItem,reserveCraftMaterials} from './gameplay/crafting.js?v=2.41.0-ecosystem';
@@ -86,9 +86,9 @@ import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
 import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createCampfireUI} from './ui/campfire-ui.js';
-import {createVillagerGuard} from './characters/villager-guard.js?v=2.41.0-ecosystem';
-import {createForestNpcs} from './characters/forest-npcs.js?v=2.57.0-npc-quests';
-import {createNpcQuestProgress,restoreNpcQuestProgress,nearestChiquinhaFarm,advanceChiquinhaWork,interactNpcQuest,npcQuestStatus} from './gameplay/npc-questlines.js?v=2.57.0';
+import {createVillagerGuard} from './characters/villager-guard.js?v=2.58.0-chaves';
+import {createForestNpcs} from './characters/forest-npcs.js?v=2.58.0-chiquinha';
+import {createNpcQuestProgress,restoreNpcQuestProgress,nearestChiquinhaFarm,chooseChiquinhaFarm,advanceChiquinhaWork,interactNpcQuest,npcQuestStatus} from './gameplay/npc-questlines.js?v=2.58.0';
 import {createWitchCabin} from './world/witch-cabin.js?v=2.57.0';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
@@ -666,7 +666,9 @@ const guard=createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveC
     onShot:position=>sfx.chavesShot(Math.hypot(position.x-player.position.x,position.z-player.position.z)),
     getWorkTarget:position=>selectGuardWork(position,
       buildings.structures[0]||{x:4,z:2},resources.nodes,buildings.structures,survival.inventory,
-      {cargo:guard.cargo,player:player.position,preferences:guard.workPreferences}),
+      {cargo:guard.cargo,player:player.position,preferences:guard.workPreferences,
+        chiquinhaFarm:npcQuests.chiquinha.stage>=1?
+          chooseChiquinhaFarm(buildings.structures,survival.inventory)?.plot:null}),
     onWork:job=>{
       if(!gameActive||!guard.recruited||guard.hp<=0||!job)return false;
       if(job.kind==='deposit'){
@@ -2102,7 +2104,17 @@ function animate() {
             }
         }
         buildings.update(elapsed,dt);
-        const farmWork=advanceChiquinhaWork(npcQuests,buildings.structures,survival.inventory,dt);
+        const chiquinhaJob=npcQuests.chiquinha.stage>=1?
+          chooseChiquinhaFarm(buildings.structures,survival.inventory):null;
+        forestNpcs.update(dt,player.position,{insideCave:arachnidCave.inside,
+            chiquinhaTarget:chiquinhaJob?.plot||null});
+        const chiquinhaAgent=forestNpcs.agents.find(a=>a.spec.id==='chiquinha');
+        const simulateChiquinha=chiquinhaAgent&&!arachnidCave.inside&&
+          Math.hypot(chiquinhaAgent.model.position.x-player.position.x,
+            chiquinhaAgent.model.position.z-player.position.z)<55;
+        const farmWork=advanceChiquinhaWork(npcQuests,buildings.structures,survival.inventory,dt,{
+          workerPosition:simulateChiquinha?chiquinhaAgent.model.position:null
+        });
         if(farmWork){
             buildings.updateCropVisual(farmWork.plot);
             if(farmWork.action==='harvest'){
@@ -2113,9 +2125,6 @@ function animate() {
         }
         wildlife.update(dt,player.position,graphicsQuality);
         guard.update(dt,elapsed,player.position);
-        forestNpcs.update(dt,player.position,{insideCave:arachnidCave.inside,
-            chiquinhaTarget:npcQuests.chiquinha.stage>=1?
-              nearestChiquinhaFarm(buildings.structures):null});
         enemyAI.update(dt,elapsed);
         zombieModels.updateCorpses(dt,removeMesh);
         spiderModels.updateCorpses(dt,removeMesh);

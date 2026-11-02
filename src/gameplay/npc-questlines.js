@@ -27,6 +27,30 @@ export function nearestChiquinhaFarm(plots){
     .sort((a,b)=>Math.hypot(a.x-NPC_HOME.x,a.z-NPC_HOME.z)-
       Math.hypot(b.x-NPC_HOME.x,b.z-NPC_HOME.z))[0]||null;
 }
+// Seleciona trabalho útil em todos os canteiros próximos: colheitas prontas
+// antes das novas sementes, rega apenas quando necessário e monitora as demais.
+export function chooseChiquinhaFarm(plots,inventory={}){
+  if(!Array.isArray(plots))return null;
+  const candidates=plots.filter(p=>p?.type==='farmPlot'&&validCrop(p.crop)&&
+    Math.hypot(p.x-NPC_HOME.x,p.z-NPC_HOME.z)<=FARM_REACH);
+  if(!candidates.length)return null;
+  const scored=candidates.map(plot=>{
+    const crop=plot.crop;
+    let action='watch',priority=0;
+    if(crop.planted&&crop.growth>=CROP_MATURITY){
+      if(Number.isInteger(inventory.vegetables)&&inventory.vegetables<=996){
+        action='harvest';priority=4;
+      }else{action='full';priority=1;}
+    }else if(crop.planted&&crop.water<12){
+      action='water';priority=3;
+    }else if(!crop.planted){
+      action='plant';priority=2;
+    }
+    return {plot,action,priority,distance:Math.hypot(plot.x-NPC_HOME.x,plot.z-NPC_HOME.z)};
+  });
+  scored.sort((a,b)=>b.priority-a.priority||a.distance-b.distance||a.plot.x-b.plot.x||a.plot.z-b.plot.z);
+  return scored[0];
+}
 function hasResources(inventory,cost){
   return Object.entries(cost).every(([key,count])=>whole(inventory[key],0,999)&&inventory[key]>=count);
 }
@@ -39,26 +63,32 @@ function transfer(inventory,cost={},gift={}){
   for(const [key,count] of Object.entries(gift))inventory[key]=(inventory[key]||0)+count;
   return true;
 }
-export function advanceChiquinhaWork(state,plots,inventory,dt){
+export function advanceChiquinhaWork(state,plots,inventory,dt,{workerPosition=null}={}){
   if(!state||state.chiquinha.stage<1||!inventory||!Number.isFinite(dt)||dt<=0)return null;
-  const plot=nearestChiquinhaFarm(plots);
-  if(!plot)return null;
-  state.chiquinha.workTimer+=Math.min(.1,dt);
+  const job=chooseChiquinhaFarm(plots,inventory);
+  if(!job)return null;
+  const {plot,action}=job;
+  // Quando Chiquinha está sendo simulada na tela, trabalho requer estar ao
+  // alcance real da lavoura. Fora do alcance, o cronômetro aguarda a chegada.
+  if(workerPosition&&Math.hypot(workerPosition.x-plot.x,workerPosition.z-plot.z)>2.7)return null;
+  state.chiquinha.workTimer=Math.min(CHIQUINHA_INTERVAL,state.chiquinha.workTimer+Math.min(.1,dt));
   if(state.chiquinha.workTimer<CHIQUINHA_INTERVAL)return null;
   state.chiquinha.workTimer=0;
   const crop=plot.crop;
-  if(!crop.planted){
+  if(action==='full')return {action:'full',plot};
+  if(action==='plant'){
     Object.assign(crop,makeCrop(),{planted:true,water:CROP_WATER_SECONDS});
     return {action:'plant',plot};
   }
-  if(crop.growth>=CROP_MATURITY){
+  if(action==='harvest'){
     if((inventory.vegetables||0)>996)return {action:'full',plot};
     inventory.vegetables=(inventory.vegetables||0)+3;
     state.chiquinha.harvests=Math.min(100000,state.chiquinha.harvests+1);
     Object.assign(crop,makeCrop());
     return {action:'harvest',plot,amount:3};
   }
-  if(crop.water<12){crop.water=CROP_WATER_SECONDS;return {action:'water',plot};}
+  if(action==='water'){crop.water=CROP_WATER_SECONDS;return {action:'water',plot};}
+  // A espera de amadurecimento nao consome recursos nem modifica o cultivo.
   return null;
 }
 export function npcQuestStatus(state,{farms=[],day=1}={}){

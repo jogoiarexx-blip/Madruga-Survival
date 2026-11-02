@@ -31,7 +31,7 @@ export function interactGuard(state,inventory){
 }
 export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,resolveCollision,isPositionFree=null,getStructures,getEnemies,canSee,attackEnemy,getWorkTarget=()=>null,onWork=()=>false,onShot=()=>{},onStatus=()=>{},onBeforeMount=async()=>{}}){
  let state=createGuardState(),step=0,patrolIndex=0,patrolPause=0,shotFxTime=0;
- let workCooldown=0;
+ let workCooldown=0,workScan=0,selectedWork=null;
  let activity='idle',firingSpot=null,repositionEnemy=null,repositionCooldown=0,blockedDuration=0,lastSeenEnemy=null,lastSeenAge=Infinity;
  const model=new THREE.Group();
  const tunic=new THREE.MeshStandardMaterial({color:0x4b79a6,roughness:.9});
@@ -126,7 +126,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
  function getState(){return {...state,...(cargoCount(guardCargo)>0?{cargo:{...guardCargo}}:{}),
    workPreferences:{...guardWorkPreferences}};}
  function setState(data){const parsed=restoreGuard(data);if(!parsed)return false;state=parsed;guardCargo={...(parsed.cargo||{})};guardWorkPreferences=normalizeGuardWorkPreferences(parsed.workPreferences);
-  delete state.cargo;delete state.workPreferences;shotController.cancel();navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;activity='idle';patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
+  delete state.cargo;delete state.workPreferences;workScan=0;selectedWork=null;workCooldown=0;shotController.cancel();navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;activity='idle';patrolIndex=0;patrolPause=0;shotFxTime=0;if(tracer)tracer.visible=false;if(muzzleFlash)muzzleFlash.visible=false;
   model.position.set(state.x,getGroundHeight(state.x,state.z),state.z);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function nearby(pos,radius=2.9){return Math.hypot(model.position.x-pos.x,model.position.z-pos.z)<radius;}
  function interact(inventory){const message=interactGuard(state,inventory);model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return message;}
@@ -134,7 +134,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    state.hp=Math.max(0,state.hp-Math.max(0,Math.round(amount)));if(state.hp===0)shotController.cancel();model.visible=true;model.rotation.z=state.hp>0?0:Math.PI*.48;return true;}
  function cycleOrder(){
    if(!state.recruited||state.hp<=0)return null;
-   state.mode=nextGuardOrder(state.mode);navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;patrolIndex=0;patrolPause=0;shotController.cancel();
+   state.mode=nextGuardOrder(state.mode);selectedWork=null;workScan=0;navigator.reset();firingSpot=null;repositionEnemy=null;repositionCooldown=0;blockedDuration=0;lastSeenEnemy=null;lastSeenAge=Infinity;patrolIndex=0;patrolPause=0;shotController.cancel();
    return GUARD_ORDER_NAMES[state.mode];
  }
  function update(dt,elapsed,playerPosition){
@@ -145,6 +145,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    shotController.update(dt,model.position,{canSee:canSee||(()=>true),
      onHit:target=>{showShot(target);onShot(model.position,target?.mesh?.position);attackEnemy(target,2);},range:CHAVES_SHOT_RANGE});
    workCooldown=Math.max(0,workCooldown-dt);
+   workScan=Math.max(0,workScan-dt);
    const structures=state.recruited?getStructures():[];
    const order=normalizeGuardOrder(state.mode);
    let patrol=state.recruited?guardWaypoint(order,playerPosition,structures,patrolIndex):{x:4,z:2};
@@ -183,12 +184,20 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
      }
    }
    const repositioning=!!(firingSpot&&repositionEnemy?.hp>0&&!target);
-   const work=order==='gather'&&state.recruited&&!target&&!repositioning&&workCooldown<=0?
-     getWorkTarget(model.position):null;
+   // Escolha estável por pequenas janelas: evita recalcular o serviço a cada
+   // frame e trocar de objetivo sem completar a rota; combate tem prioridade.
+   if(target||repositioning||order!=='gather'){selectedWork=null;workScan=0;}
+   const canWork=order==='gather'&&state.recruited&&!target&&!repositioning&&workCooldown<=0;
+   if(canWork&&(!selectedWork||workScan<=0)){
+     selectedWork=getWorkTarget(model.position);
+     workScan=.65;
+   }
+   const work=canWork?selectedWork:null;
    const destination=target?.mesh.position||(repositioning?firingSpot:work||patrol);
    if(work&&distanceXZ(model.position,work)<2.4&&!shotController.isShooting){
      if(onWork(work)){workCooldown=4.5;activity='gathering';}
      else workCooldown=1.5;
+     selectedWork=null;workScan=0;
    }
    const dx=destination.x-state.x,dz=destination.z-state.z,dist=Math.hypot(dx,dz);
    const moving=dist>(target?7.8:repositioning?1:order==='follow'?1.8:order==='patrol'?1.1:2.5) &&
@@ -237,7 +246,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    carryResource:(key,n)=>collectCargo(guardCargo,key,n),
    depositTo:(chest)=>depositCargo(guardCargo,chest?.items),
    handoffTo:(inventory)=>handoffCargo(guardCargo,inventory),
-   setWorkPreferences:(preferences)=>{if(!validGuardWorkPreferences(preferences))return false;guardWorkPreferences=normalizeGuardWorkPreferences(preferences);workCooldown=0;return true;},
+   setWorkPreferences:(preferences)=>{if(!validGuardWorkPreferences(preferences))return false;guardWorkPreferences=normalizeGuardWorkPreferences(preferences);workCooldown=0;selectedWork=null;workScan=0;return true;},
    get workPreferences(){return {...guardWorkPreferences}},
    get cargo(){return guardCargo},get mode(){return normalizeGuardOrder(state.mode)},get activity(){return activity},get visualLoaded(){return !!chavesVisual},get recruited(){return state.recruited},get hp(){return state.hp},get alive(){return state.hp>0},get position(){return model.position}};
 }

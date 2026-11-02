@@ -2,17 +2,19 @@ import {batchStaticMeshes} from '../render/static-batching.js';
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
 import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
-  resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js?v=2.41.0-ecosystem';
+  resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js?v=2.58.0-farm-walk';
 import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding,repairBuildingWithKit} from '../gameplay/base-defense.js?v=2.41.0-ecosystem';
 import {validChestItems} from '../gameplay/storage.js';
 import {walkSurfaceHeight,PLATFORM_HEIGHT} from './build-walk-surface.js';
 import {makeCrop,advanceCrop,validCrop} from '../gameplay/farming.js';
+import {createGroundedFarmPlot,farmLocalHeight} from './farm-plot-terrain.js?v=2.58.0';
 export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,getQuality=()=> 'medium',mergeGeometries=null}) {
  const structures=[];
  const stone=new THREE.MeshStandardMaterial({color:0x92918a,roughness:.95});
  const wood=new THREE.MeshStandardMaterial({color:0x68432c,roughness:1});
  const warmWood=new THREE.MeshStandardMaterial({color:0x9d7043,roughness:1});
  const darkWood=new THREE.MeshStandardMaterial({color:0x4e3322,roughness:1});
+ const soil=new THREE.MeshStandardMaterial({color:0x604830,roughness:1,side:THREE.DoubleSide});
  const roof=new THREE.MeshStandardMaterial({color:0x4c7e4c,roughness:1,side:THREE.DoubleSide});
  const straw=new THREE.MeshStandardMaterial({color:0xceb37d,roughness:1});
  const cloth=new THREE.MeshStandardMaterial({color:0x657fab,roughness:1});
@@ -32,7 +34,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  }
  function createVisual(type,group){
    const detail=geometryDetail(getQuality());
-   let flame=null,glow=null,doorPivot=null,lid=null;
+   let flame=null,glow=null,doorPivot=null,lid=null,farmSurface=null;
    const detailEnabled=getQuality()!=='low';
    if(type==='campfire'){
      for(let i=0;i<7;i++){const a=i*Math.PI*2/7;
@@ -159,11 +161,11 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
        for(const z of [-.92,-.31,.31,.92])block(group,2.89,.05,.08,darkWood,0,PLATFORM_HEIGHT+.018,z);
      }
    } else if(type==='farmPlot'){
-     block(group,2.75,.20,2.75,darkWood,0,.16);
-     block(group,2.48,.10,2.48,stone,0,.29);
-     for(const x of [-1.32,1.32])block(group,.13,.26,2.75,wood,x,.21);
-     for(const z of [-1.32,1.32])block(group,2.75,.26,.13,wood,0,.21,z);
-     if(detailEnabled)for(const x of [-.7,0,.7])block(group,.07,.055,2.20,darkWood,x,.35,0);
+     // O canteiro é um decal de solo: sem caixa elevada e sem colisor.
+     if(THREE.PlaneGeometry&&THREE.Mesh){
+       farmSurface=createGroundedFarmPlot({THREE,group,getGroundHeight,
+         soilMaterial:soil,edgeMaterial:darkWood,detail:detailEnabled});
+     }else block(group,2.72,.018,2.72,soil,0,.009); // mock/renderer antigo
    } else if(type==='workbench'){
      for(const x of [-.96,.96])for(const z of [-.43,.43])block(group,.18,1.02,.18,darkWood,x,.54,z);
      block(group,2.5,.22,1.32,warmWood,0,1.10);
@@ -193,14 +195,14 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
        keyhole.position.set(0,.1,.995);lid.add(keyhole);
      }
    }
-   return {flame,glow,doorPivot,lid};
+   return {flame,glow,doorPivot,lid,farmSurface};
  }
  // Holograma usa o mesmo construtor geométrico dos prédios reais.
  // Nunca entra na lista structures nem nas colisões/salvamento.
  function createPreview(type){
    if(!STRUCTURE_TYPES.includes(type))return null;
    const group=new THREE.Group();
-   createVisual(type,group);
+   const visual=createVisual(type,group);
    const hologram=new THREE.MeshBasicMaterial({color:0x51f09d,transparent:true,opacity:.49,
      depthWrite:false,side:THREE.DoubleSide});
    const geometries=new Set();
@@ -209,7 +211,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
      if(!node.isMesh)return;
      geometries.add(node.geometry);
      if(node.material!==stone&&node.material!==wood&&node.material!==warmWood&&
-       node.material!==darkWood&&node.material!==roof&&node.material!==straw&&
+       node.material!==darkWood&&node.material!==soil&&node.material!==roof&&node.material!==straw&&
        node.material!==cloth&&node.material!==metal&&node.material!==flameMat){
        // Ex.: chama clonada da fogueira.
        node.material?.dispose?.();
@@ -220,6 +222,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    return {group,setPosition(x,z,rotation){
        group.position.set(x,getGroundHeight(x,z)+.03,z);
        group.rotation.y=orientation(rotation||0)*Math.PI/2;
+       visual.farmSurface?.conform(group.position.x,group.position.z,group.rotation.y);
      },setValid(valid){hologram.color.setHex(valid?0x51f09d:0xff6670);},
      dispose(){scene.remove(group);for(const g of geometries)g.dispose();hologram.dispose();}};
  }
@@ -228,15 +231,19 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
    const loc=preparePlacement(type,x,z,rotation,options),group=new THREE.Group();
    const visual=createVisual(type,group);
    // Reduz draw calls dos elementos rígidos sem fundir peças animadas.
-   batchStaticMeshes({THREE,group,mergeGeometries,exclude:[visual.flame]});
+   // O canteiro mantém geometria própria, ajustada ao relevo depois do posicionamento.
+   if(type!=='farmPlot')batchStaticMeshes({THREE,group,mergeGeometries,exclude:[visual.flame]});
    group.position.set(loc.x,getGroundHeight(loc.x,loc.z),loc.z);
    group.rotation.y=orientation(loc.rotation||0)*Math.PI/2;
+   visual.farmSurface?.conform(group.position.x,group.position.z,group.rotation.y);
    const item={type,x:loc.x,z:loc.z,rotation:loc.rotation||0,group,
      ...visual,open:!!options.open,items:type==='chest'?{...(options.items||{})}:null,
      hp:buildingHP(type,options.hp),crop:type==='farmPlot'?(validCrop(options.crop)?{...options.crop}:makeCrop()):null};
    if(type==='farmPlot'){item.plantMeshes=[];for(let i=0;i<5;i++){
      const plant=new THREE.Mesh(new THREE.ConeGeometry(.22,.65,geometryDetail(getQuality()).foliage),new THREE.MeshStandardMaterial({color:0x5da449,roughness:1}));
-     plant.position.set((i%3-1)*.67,.42,Math.floor(i/3)*.85-.45);group.add(plant);item.plantMeshes.push(plant);
+     const localX=(i%3-1)*.67,localZ=Math.floor(i/3)*.85-.45;
+     plant.position.set(localX,farmLocalHeight(getGroundHeight,loc.x,loc.z,group.rotation.y,localX,localZ,.055),localZ);
+     group.add(plant);item.plantMeshes.push(plant);
    }updateCropVisual(item);}
    if(item.doorPivot)item.doorPivot.rotation.y=item.open?-Math.PI*.55:0;
    scene.add(group);structures.push(item);if(item.hp<maxBuildingHP(item.type))updateCondition(item);return item;
