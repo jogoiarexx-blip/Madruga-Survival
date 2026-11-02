@@ -15,7 +15,7 @@ export const FOREST_NPC_SPECS=Object.freeze([
   }),
   Object.freeze({
     id:'bruxa71',name:'Bruxa do 71',url:'./assets/models/bruxa%20do%2071.glb',
-    x:-43,z:-37,height:1.72,walkRadius:2.7,speed:.52,loadRadius:44,
+    x:-43,z:-37,height:2.48,walkRadius:2.7,speed:.52,loadRadius:44,
     clothes:0x534374,skin:0xdabca2,
     dialogue:Object.freeze([
       'Bruxa do 71: A floresta guarda segredos, principalmente depois do anoitecer.',
