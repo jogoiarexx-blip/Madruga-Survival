@@ -81,6 +81,7 @@ export function takeLoot(inventory,items){
 // Geometria low poly sem imagens/CDN; locais abertos e realmente acessíveis a pé.
 export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFree,addCollider=()=>{}}){
   const sites=[];
+  const cameraBlockers=[];
   let seed=0;
   const mats={
     wood:new THREE.MeshStandardMaterial({color:0x785339,roughness:1}),
@@ -143,6 +144,10 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
       if(spec.kind==='warehouse')mesh(g,-1.6,.37,.78,.75,.72,.78,mats.crate);
       if(spec.kind==='clinic')mesh(g,-.1,1.05,-2.3,.9,1.25,.33,mats.clinic);
       if(spec.kind==='cabin')mesh(g,1.65,1.3,-2.4,1.2,1.3,.23,mats.wood);
+      // O grupo cobre uma fachada de 5,7 m; a câmera deve testar paredes,
+      // porta, janela e telhado mesmo quando o pivô não toca o raio central.
+      g.userData={...(g.userData||{}),cameraRadius:4.1};
+      cameraBlockers.push(g);
       scene.add(g);
       // Colisão real apenas das paredes: interior e entrada permanecem transitáveis.
       for(const side of [-1,1])for(let z=-2;z<=2;z+=1){
@@ -270,5 +275,5 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
     }
     return true;
   }
-  return {sites,generate,nearest,nearestFixture,toggleFixture,blocksDoor,blocksDoorAtSight,resolveDoor,search,update,objective,serialize,restore};
+  return {sites,cameraBlockers,generate,nearest,nearestFixture,toggleFixture,blocksDoor,blocksDoorAtSight,resolveDoor,search,update,objective,serialize,restore};
 }
