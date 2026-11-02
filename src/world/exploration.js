@@ -154,14 +154,16 @@ export function createExplorationWorld({THREE,scene,getGroundHeight,isPositionFr
     }
     return sites;
   }
-  function nearest(position,maxDistance=2.5){
+  function nearest(position,maxDistance=3.1){
     let found=null,closest=maxDistance;
     for(const site of sites)for(const item of site.containers){
-      // Não permitir pegar objetos através das paredes externas da ruína.
-      if(Math.abs(position.x-site.x)>2.50||position.z-site.z< -2.27||position.z-site.z>3.15)continue;
       if(item.opened)continue;
       const d=Math.hypot(item.x-position.x,item.z-position.z);
-      if(d<closest){closest=d;found={site,container:item,distance:d};}
+      if(d>=closest)continue;
+      // A seleção agora considera a distância real de cada caixa e o caminho
+      // até ela; evita saquear através de paredes e permite o vão da porta aberta.
+      if(blocksWalls(position,item))continue;
+      closest=d;found={site,container:item,distance:d};
     }
     return found;
   }

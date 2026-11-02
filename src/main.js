@@ -87,8 +87,9 @@ import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createCampfireUI} from './ui/campfire-ui.js';
 import {createVillagerGuard} from './characters/villager-guard.js?v=2.60.0-stand';
-import {createForestNpcs} from './characters/forest-npcs.js?v=2.60.0-stand';
+import {createForestNpcs} from './characters/forest-npcs.js?v=2.61.0-bruxa-scale';
 import {createNpcQuestProgress,restoreNpcQuestProgress,nearestChiquinhaFarm,chooseChiquinhaFarm,advanceChiquinhaWork,interactNpcQuest,npcQuestStatus} from './gameplay/npc-questlines.js?v=2.58.0';
+import {chooseInteractionFocus} from './gameplay/interaction-focus.js?v=2.61.0';
 import {createWitchCabin} from './world/witch-cabin.js?v=2.57.0';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
 import {createSkillsUI} from './ui/skills-ui.js';
@@ -427,23 +428,19 @@ function updateHUD() {
     consumableHotbarUI.update();
     skillsUI.update();
     hudText('skill-hud',`⭐ 🎣 ${skillLevel(survival,'fishing')} · 🌾 ${skillLevel(survival,'farming')} · 🏹 ${skillLevel(survival,'hunting')} · 🏠 ${skillLevel(survival,'building')}`);
-    const closestBuilding=buildings.nearest(player.position,2.85);
-    const closest=resources.findNearby(player.position);
-    const closestLoot=exploration.nearest(player.position);
-    const closestFixture=exploration.nearestFixture(player.position);
-    const nearNest=spiderNests.nearest(player.position);
-    const nearForestNpc=forestNpcs.nearest(player.position,{insideCave:arachnidCave.inside});
+    const {focus,closestBuilding,closest,closestLoot,closestFixture,nearNest,nearForestNpc}=
+      nearbyWorldInteraction(player.position);
     const prompt=document.getElementById('interact-hint');
     if(placement){
         prompt.classList.add('hidden');
-    }else if(closestBuilding&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='building'&&closestBuilding&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         const action=buildingInteractionLabel(closestBuilding,CROP_MATURITY);
         prompt.textContent=`[F] ${action} · [X] desmontar`;
         prompt.classList.remove('hidden');
-    }else if(guard.nearby(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='guard'&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=guard.hp===0?'[F] Reanimar Chaves com 2 frutas e 1 água':guard.recruited?'[F/O] Mudar ordem do Chaves':'[F] Contratar Chaves para defender sua base';
         prompt.classList.remove('hidden');
-    }else if(nearForestNpc&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='npc'&&nearForestNpc&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent='[F] Missão / conversar com '+nearForestNpc.spec.name;
         prompt.classList.remove('hidden');
     }else if(arachnidCave.nearPortal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
@@ -452,16 +449,16 @@ function updateHUD() {
         prompt.textContent='[F] Sair da Caverna';prompt.classList.remove('hidden');
     }else if(arachnidCave.nearestCrystal(player.position)&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent='[F] Recolher cristal subterrâneo';prompt.classList.remove('hidden');
-    }else if(nearNest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='nest'&&nearNest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] Recolher ovo · ${nearNest.label} (${nearNest.eggs} restantes)`;
         prompt.classList.remove('hidden');
-    }else if(closestFixture&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='fixture'&&closestFixture&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] ${closestFixture.kind==='door'?'Abrir/fechar porta':'Abrir/fechar janela'} · ${closestFixture.site.label}`;
         prompt.classList.remove('hidden');
-    }else if(closestLoot&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='loot'&&closestLoot&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         prompt.textContent=`[F] Vasculhar ${closestLoot.container.label} · ${closestLoot.site.label}`;
         prompt.classList.remove('hidden');
-    }else if(closest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
+    }else if(focus?.kind==='resource'&&closest&&gameActive&&!survivalUI.isOpen&&!storageUI.isOpen){
         const names={wood:'madeira',stone:'pedras',fiber:'fibras',berries:'frutas',water:'água',iron:'ferro (requer picareta)'};
         prompt.textContent=`[F] Coletar ${names[closest.type]}${closest.type==='water'?' · [Y] pescar':''}`;
         prompt.classList.remove('hidden');
@@ -1625,6 +1622,29 @@ function deconstructNear(){
     updateHUD();saveProgress();return true;
 }
 
+// HUD e ação F compartilham exatamente o mesmo foco, sem porta/baú
+// ganhar prioridade só por sua categoria.
+function nearbyWorldInteraction(pos){
+    const closestBuilding=buildings.nearest(pos,2.85);
+    const closest=resources.findNearby(pos);
+    const closestLoot=exploration.nearest(pos);
+    const closestFixture=exploration.nearestFixture(pos);
+    const nearNest=spiderNests.nearest(pos);
+    const nearForestNpc=forestNpcs.nearest(pos,{insideCave:arachnidCave.inside});
+    const guardIsNear=guard.nearby(pos);
+    const distance=point=>Math.hypot(point.x-pos.x,point.z-pos.z);
+    const focus=chooseInteractionFocus([
+        closestBuilding&&{kind:'building',target:closestBuilding,distance:distance(closestBuilding)},
+        guardIsNear&&{kind:'guard',target:guard,distance:distance(guard.position)},
+        nearForestNpc&&{kind:'npc',target:nearForestNpc,distance:distance(nearForestNpc.model.position)},
+        nearNest&&{kind:'nest',target:nearNest,distance:distance(nearNest)},
+        closestLoot&&{kind:'loot',target:closestLoot,distance:closestLoot.distance},
+        closestFixture&&{kind:'fixture',target:closestFixture,distance:distance(closestFixture)},
+        closest&&{kind:'resource',target:closest,distance:distance(closest)}
+    ]);
+    return {focus,closestBuilding,closest,closestLoot,closestFixture,nearNest,nearForestNpc};
+}
+
 function harvestNear(){
     if(arachnidCave.nearPortal(player.position)){
         const where=arachnidCave.enter();if(!where)return false;
@@ -1648,12 +1668,13 @@ function harvestNear(){
         showToast(`💎 +${found.amount} cristal subterrâneo`);earnSkill('mining',35);sfx.collect();saveProgress();updateHUD();return true;
     }
     if(arachnidCave.inside){showToast('Explore os cristais ou volte ao portal de saída [F].');return false;}
-    if(interactWithBuilding())return true;
-    if(guard.nearby(player.position)){
+    const {focus}=nearbyWorldInteraction(player.position);
+    if(focus?.kind==='building'&&interactWithBuilding())return true;
+    if(focus?.kind==='guard'){
         if(guard.recruited&&guard.alive)return changeChavesOrder();
         showToast(guard.interact(survival.inventory));saveProgress();updateHUD();return true;
     }
-    const nearNpc=forestNpcs.nearest(player.position,{insideCave:arachnidCave.inside});
+    const nearNpc=focus?.kind==='npc'?focus.target:null;
     if(nearNpc){
         forestNpcs.interact(player.position,{insideCave:false});
         const result=interactNpcQuest(npcQuests,nearNpc.spec.id,{
@@ -1665,20 +1686,20 @@ function harvestNear(){
         }
         showToast(result.message,5000);return true;
     }
-    if(spiderNests.nearest(player.position)){
+    if(focus?.kind==='nest'){
         const result=spiderNests.harvest(player.position,survival.inventory);
         if(!result.ok){showToast('🎒 '+result.reason);return false;}
         playerNoise(17,'nest');earnSkill('gathering',20);sfx.collect();
         showToast(`🕸 Ovo recolhido: +${result.items.spiderSilk} seda · +${result.items.chitin} quitina`);
         saveProgress();updateHUD();return true;
     }
-    const fixture=exploration.nearestFixture(player.position);
+    const fixture=focus?.kind==='fixture'?focus.target:null;
     if(fixture){
       const status=exploration.toggleFixture(player.position);
       showToast(`${status.kind==='door'?'🚪 Porta':'🪟 Janela'} da ${status.site} ${status.open?'aberta':'fechada'}`);
       saveProgress();updateHUD();return true;
     }
-    if(exploration.nearest(player.position)){
+    if(focus?.kind==='loot'){
         const loot=exploration.search(player.position,survival.inventory);
         if(!loot.ok){showToast(`🎒 ${loot.reason}`);return false;}
         const items=Object.entries(loot.items).map(([key,count])=>
@@ -1687,9 +1708,8 @@ function harvestNear(){
         earnSkill('gathering',16);sfx.collect();
         showToast(`📦 ${loot.label}: ${items}`);updateHUD();saveProgress();return true;
     }
-    const result=resources.harvest(player.position,canUseTool(survival,'pickaxe'));
+    const result=focus?.kind==='resource'?resources.harvest(player.position,canUseTool(survival,'pickaxe')):null;
     if(!result){
-        if(guard.nearby(player.position)){return changeChavesOrder();}
         showToast('Procure madeira, pedras, minério, planta ou água (F)');return false;
     }
     if(result.requires){showToast('⛏ Faça uma picareta na bancada e repare se estiver quebrada!');return false;}
