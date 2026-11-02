@@ -99,10 +99,14 @@ test('main repassa spread, usa espécies no spawn e mantém save',()=>{
  assert.match(main,/chooseSpiderVariant\(/);assert.match(main,/spiderVariant:enemy\.spiderVariant/);
  assert.match(main,/spawnEnemy\(savedEnemy\.type,savedEnemy\.spiderVariant\)/);
 });
-test('cada modelo compartilha esqueleto mas clona materiais tintos',()=>{
+test('cada modelo compartilha esqueleto mas preserva texturas e clona materiais próprios',()=>{
  const model=source('../src/characters/spider-model.js');
- assert.match(model,/material\.clone\(\)/);assert.match(model,/new THREE\.Color\(profile\.tint\)/);
- assert.match(model,/tintedMaterials/);assert.match(model,/for\(const m of tintedMaterials\)m\.dispose\(\)/);
+ const appearance=source('../src/characters/spider-appearance.js');
+ assert.match(model,/appearance\.material\(material,enemy\.spiderVariant\)/);
+ assert.match(appearance,/original\.clone\(\)/);
+ assert.match(appearance,/copy\.map=texture\(variant,copy\.map\)/);
+ assert.match(model,/tintedMaterials/);
+ assert.match(model,/for\(const m of tintedMaterials\)m\.dispose\(\)/);
 });
 test('nome da revisão, execução dos novos testes e sem download extra de GLB',()=>{
  const p=JSON.parse(source('../package.json'));
