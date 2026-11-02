@@ -1,3 +1,4 @@
+import {createMovementCameraFollow} from './camera-follow.js?v=2.63.0';
 // Câmera orbital em terceira pessoa com checagem de obstáculos locais.
 // Apenas malhas próximas ao segmento alvo-câmera entram no raycast.
 export function distanceToSegmentSquared(point, start, end) {
@@ -43,6 +44,7 @@ export function createCameraRig({THREE,camera,player,raycaster,getGroundHeight,c
     const nearbyBlockers=[];
     const hits=[];
     const nearby=[];
+    const movementFollow=createMovementCameraFollow();
     let blockers=[];
     let ground=null;
     let cameraDistance=7.6,zoomDistance=7.6,arena=null,snapOnNext=false,dynamicBlockers=[];
@@ -89,15 +91,16 @@ export function createCameraRig({THREE,camera,player,raycaster,getGroundHeight,c
         target.copy(cameraTarget).addScaledVector(direction,clear);
         return true;
     }
-    function update(dt,yaw,pitch) {
+    function update(dt,yaw,pitch,movement) {
         const step=Math.max(0,Math.min(.1,Number.isFinite(dt)?dt:0));
+        const orbitYaw=movementFollow.update(step,yaw,movement);
         if(snapOnNext)zoomDistance=cameraDistance;
         else zoomDistance+=(cameraDistance-zoomDistance)*(1-Math.exp(-10*step));
         cameraTarget.copy(player.position).add(cameraOffset);
         desired.set(
-            player.position.x+Math.sin(yaw)*zoomDistance*(arena?.zoom??1)*Math.cos(pitch),
+            player.position.x+Math.sin(orbitYaw)*zoomDistance*(arena?.zoom??1)*Math.cos(pitch),
             player.position.y+3.25+Math.sin(pitch)*5.4,
-            player.position.z+Math.cos(yaw)*zoomDistance*(arena?.zoom??1)*Math.cos(pitch)
+            player.position.z+Math.cos(orbitYaw)*zoomDistance*(arena?.zoom??1)*Math.cos(pitch)
         );
         desired.y=Math.max(getGroundHeight(desired.x,desired.z)+1.1,desired.y);
         if(arena){
@@ -129,10 +132,11 @@ export function createCameraRig({THREE,camera,player,raycaster,getGroundHeight,c
         }
         camera.lookAt(cameraTarget);
     }
-    return {update,refreshObstacles,setDistance(value){if(Number.isFinite(value))cameraDistance=Math.max(3,Math.min(12,value))},
+    return {update,refreshObstacles,onManualLook:()=>movementFollow.noteManualLook(),setDistance(value){if(Number.isFinite(value))cameraDistance=Math.max(3,Math.min(12,value))},
         setArena(next,obstacles=[]){
             arena=next&&{x:next.x,z:next.z,radius:next.radius,zoom:next.zoom??.87};
             dynamicBlockers=obstacles.map(mesh=>({mesh,x:mesh.position.x,z:mesh.position.z,radius:mesh.userData?.cameraRadius||0}));
+            movementFollow.reset();
             snapOnNext=true;
         }};
 }

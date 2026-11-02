@@ -1,6 +1,6 @@
 // Madruga Survival v2.57.0 (base v2.54.0) — Chiquinha, horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
-import { createCameraRig } from './render/camera-rig.js?v=2.62.0-occlusion';
+import { createCameraRig } from './render/camera-rig.js?v=2.63.0-movement-follow';
 import { createForest } from './world/forest.js?v=2.60.0-light';
 import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
@@ -1251,6 +1251,7 @@ document.addEventListener('wheel', e => {
 document.addEventListener('mousemove', e => {
     if (!controls.isLocked || !gameActive) return;
     const look=lookDelta(gameOptions,e.movementX,e.movementY);
+    if(Math.abs(e.movementX)+Math.abs(e.movementY)>0)cameraRig.onManualLook();
     playerYaw += look.yaw;
     mousePitch = THREE.MathUtils.clamp(mousePitch + look.pitch, -0.30, 0.76);
 });
@@ -1869,6 +1870,7 @@ document.getElementById('skills-toggle').onclick=toggleSkills;
 document.getElementById('open-skills-inventory').onclick=openSkills;
 const touchControls=createTouchControls({canvas:gameCanvas,enabled:touchEnabled,
     onLook:(dx,dy)=>{if(!gameActive||!touchPlaying)return;
+      if(Math.abs(dx)+Math.abs(dy)>0)cameraRig.onManualLook();
       playerYaw-=dx*.006;mousePitch=THREE.MathUtils.clamp(mousePitch+dy*.005,-.30,.76);},
     onKey:(code,down)=>{document.dispatchEvent(new KeyboardEvent(down?'keydown':'keyup',{
         code,bubbles:true,cancelable:true}));},
@@ -2062,7 +2064,11 @@ function animate() {
         // Árvore distante fica invisível, mas mantém seu collider físico.
         forest.updateVisibility(player.position,graphicsQuality,dt,false,camera.position);
         cameraImpact=Math.max(0,cameraImpact-dt*.25);
-        cameraRig.update(dt,playerYaw,mousePitch+cameraImpact);
+        cameraRig.update(dt,playerYaw,mousePitch+cameraImpact,{
+            dx:player.position.x-beforeMoveX,
+            dz:player.position.z-beforeMoveZ,
+            enabled:!placement&&!combat.isAttacking&&!isFishing&&dashTimer<=0
+        });
 
         // Recursos são colhidos com F; jamais coletados por proximidade.
         // O loop não cria peças de missão nem força uma vitória linear.

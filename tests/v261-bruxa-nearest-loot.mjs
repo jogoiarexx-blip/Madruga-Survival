@@ -86,5 +86,5 @@ assert.match(main,/const \{focus,closestBuilding,closest,closestLoot,closestFixt
 assert.match(main,/if\(focus\?\.kind==='loot'\)/);
 assert.match(main,/const fixture=focus\?\.kind==='fixture'\?focus.target:null/);
 assert.match(main,/exploration\.search\(player.position,survival\.inventory\)/);
-assert.match(html,/forest-webp-r1-s2-f6/);
+assert.match(html,/forest-webp-r1-s2-f7/);
 console.log('OK v2.61: Bruxa com escala do Madruga, alvo F/HUD único e loot com visibilidade nas ruínas');
