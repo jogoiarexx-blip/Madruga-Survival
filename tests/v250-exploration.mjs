@@ -97,7 +97,8 @@ test('Vasculhar recompensa inventário e não permite repetir saque',()=>{
  assert.equal(c.opened,true);
 });
 test('Mochila cheia mantém caixa não vasculhada',()=>{
- const s=world.sites[0],c=s.containers[1],inv=createSurvival().inventory;
+ // Use outra ruína para não depender de quantas caixas próximas o teste anterior alcançou.
+ const s=world.sites[1],c=s.containers[0],inv=createSurvival().inventory;
  for(const key of Object.keys(inv))inv[key]=999;
  assert.equal(world.search({x:c.x,z:c.z},inv).ok,false);
  assert.equal(c.opened,false);
