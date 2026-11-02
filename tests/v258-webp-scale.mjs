@@ -83,9 +83,12 @@ try{
  approx(tree.sprite.scale.y*(41-8+1)/48,height);
  approx(shrub.sprite.scale.y*(41-8+1)/48,shrubHeight);
  approx(tree.sprite.center.y,(48-41-1)/48);
- const oldWidth=tree.sprite.scale.x;
+ const oldVisibleWidth=tree.sprite.scale.x*(23-6+1)/32;
+ const oldCenterX=tree.sprite.center.x;
  systems.update({x:15,z:16},{quality:'medium'});
- assert.notEqual(tree.sprite.scale.x,oldWidth,'Vista lateral respeita a largura da nova silhueta');
+ const diagonalVisibleWidth=tree.sprite.scale.x*(25-3+1)/32;
+ assert.notEqual(diagonalVisibleWidth,oldVisibleWidth,'Vista diagonal ajusta a silhueta real');
+ assert.notEqual(tree.sprite.center.x,oldCenterX,'Centro acompanha a largura alfa, sem deslocar a árvore');
  approx(tree.sprite.scale.y*(41-8+1)/48,height);
  systems.update({x:15,z:16},{quality:'medium',glbTrees:new Set([tree])});
  assert.equal(tree.sprite.visible,false,'GLB substitui a imagem sem duplicação');
