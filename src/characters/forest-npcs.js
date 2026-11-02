@@ -1,4 +1,5 @@
 import {createGuardNavigator} from '../gameplay/guard-navigation.js';
+import {createStandingClip} from './standing-pose.js?v=2.60.0';
 // NPCs ambientais: a simulacao e o render permanecem independentes dos saves v2.
 // GLBs grandes sao buscados apenas quando o jogador se aproxima; sem RAF/timer extra.
 export const FOREST_NPC_SPECS=Object.freeze([
@@ -110,6 +111,11 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
       const clips=gltf.animations||[];
       agent.mixer=new THREE.AnimationMixer(root);
       agent.actions=Object.fromEntries(clips.map(clip=>[clip.name,agent.mixer.clipAction(clip)]));
+      if(!clips.some(c=>/idle|stand|parad|wait/i.test(c.name))){
+        const walking=clips.find(c=>/walking|walk|andar|camin/i.test(c.name));
+        const stand=createStandingClip(THREE,walking,'Stand');
+        if(stand)agent.actions.Stand=agent.mixer.clipAction(stand);
+      }
       agent.animationCount=clips.length;
       agent.loaded=true;
       onStatus(agent.spec.id,'ready',clips.length);
@@ -142,7 +148,7 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
       const frozen=!moving&&!greeting&&/walk|andar|locomot|camin/i.test(name)&&
         !names.some(n=>/idle|stand|parad|wait|respir|breath/i.test(n));
       if(frozen&&!agent.idleFrozen){
-        if(action.time<.03)action.time=Math.min(action.getClip().duration*.30,.45);
+        if(action.time<.03)action.time=0;
         action.setEffectiveWeight(1);
       }
       action.paused=Boolean(frozen);
