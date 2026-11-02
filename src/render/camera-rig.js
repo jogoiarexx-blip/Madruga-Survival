@@ -8,7 +8,6 @@ export function distanceToSegmentSquared(point, start, end) {
     return dx*dx+dz*dz;
 }
 export function selectNearBlockers(entries,start,end,radius=3.0,result=[]) {
-    const maxSq=radius*radius;
     result.length=0;
     for (const entry of entries) {
         if (!entry?.mesh || entry.mesh.visible===false) continue;
@@ -106,13 +105,13 @@ export function createCameraRig({THREE,camera,player,raycaster,getGroundHeight,c
             desired.set(limit.x,limit.y,limit.z);
         }
         // Encurtar imediatamente quando a câmera se aproxima de uma parede.
-        clipToWorld(desired);
+        const obstructed=clipToWorld(desired);
         const previousRadius=camera.position.distanceTo(cameraTarget);
         const desiredRadius=desired.distanceTo(cameraTarget);
         if(snapOnNext){
             camera.position.copy(desired);
             snapOnNext=false;
-        }else if(previousRadius>desiredRadius+.03){
+        }else if(obstructed&&previousRadius>desiredRadius+.03){
             camera.position.copy(desired);
         }else{
             camera.position.lerp(desired,1-Math.exp(-9*step));
