@@ -9,6 +9,11 @@ import {chooseRabbitEscape} from './rabbit-navigation.js';
 export const MAX_ANIMALS=10;
 export const RABBIT_ALERT_RADIUS=16;
 export const BOAR_DEFENSE_RADIUS=8.5;
+export const RABBIT_TAIL_PUFF=0.13;
+export function rabbitTailPose(step,moving){
+  const strength=moving?.075:.025;
+  return {scaleY:1+Math.sin(step*.63)*strength,rotationX:Math.sin(step*.61)*strength*1.2};
+}
 export function validWildlife(data){return Array.isArray(data)&&data.length<=MAX_ANIMALS&&data.every(a=>
  a&&['rabbit','boar'].includes(a.type)&&Number.isFinite(a.x)&&Math.abs(a.x)<=109&&
  Number.isFinite(a.z)&&Math.abs(a.z)<=109&&Number.isInteger(a.hp)&&a.hp>=1&&a.hp<=(a.type==='boar'?5:2)&&
@@ -56,7 +61,12 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
    const leg=new THREE.Group();leg.position.set(side*.24,.24,z);g.add(leg);
    sphere(leg,z>.0?furLight:fur,0,-.10,-.055,.14,.135,.18);legs.push(leg);
   }
-  const tail=sphere(g,white,0,.43,.49,.16,.16,.16);
+  // Rabo de algodão preso ao quadril: o grupo recebe a animação e as
+  // esferas mantêm sua escala pequena (a versão antiga mudava .16 para 1).
+  const tail=new THREE.Group();tail.position.set(0,.43,.42);g.add(tail);
+  sphere(tail,furLight,0,.005,.055,RABBIT_TAIL_PUFF,RABBIT_TAIL_PUFF*.91,RABBIT_TAIL_PUFF);
+  for(const side of [-1,1])
+    sphere(tail,white,side*.055,.045,.11,.069,.065,.067);
   return {body,head,ears,legs,tail};
  }
  function boar(g){
@@ -207,7 +217,9 @@ export function createWildlifeWorld({THREE,scene,getGroundHeight,isPositionFree,
     a.rig.head.rotation.x=(a.alert?-.12:.03)+Math.sin(a.step*.48)*.035;
     a.rig.ears.forEach((ear,i)=>{ear.rotation.x=Math.sin(a.step*.76+i*.9)*.09*(a.alert?2:1);});
     a.rig.legs.forEach((leg,i)=>{leg.rotation.x=Math.sin(a.step+(i%2)*Math.PI)*.23*amplitude;});
-    a.rig.tail.scale.y=1+Math.sin(a.step)*.05;
+    const tailPose=rabbitTailPose(a.step,moved);
+    a.rig.tail.scale.y=tailPose.scaleY;
+    a.rig.tail.rotation.x=tailPose.rotationX;
    }else{
     const reaction=boarHitPose(a.staggerLeft);
     a.group.position.set(a.x,getGroundHeight(a.x,a.z)+reaction.lift,a.z);
