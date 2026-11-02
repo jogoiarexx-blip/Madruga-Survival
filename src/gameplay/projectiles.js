@@ -7,8 +7,10 @@ function throwProjectile(enemy, spread = 0) {
     const direction = player.position.clone().add(new THREE.Vector3(0,1,0)).sub(origin).normalize();
     direction.applyAxisAngle(new THREE.Vector3(0,1,0),spread);
     const isWeb=enemy.type==='spider',profile=isWeb?getSpiderVariant(enemy.spiderVariant):null;
-    const orb = new THREE.Mesh(isWeb?new THREE.IcosahedronGeometry(enemy.spiderVariant==='weaver'?.39:enemy.spiderVariant==='hunter'?.25:.32,1):new THREE.IcosahedronGeometry(0.23,0),
-        new THREE.MeshStandardMaterial({color:isWeb?(enemy.spiderVariant==='weaver'?0xbeeaff:enemy.spiderVariant==='hunter'?0xffc994:0xddd7ee):0x8b59e8,emissive:isWeb?(enemy.spiderVariant==='weaver'?0x5faddd:enemy.spiderVariant==='hunter'?0xb27742:0x8d6ca2):0x623ed9,emissiveIntensity:isWeb?.45:1.25}));
+    const orb = new THREE.Mesh(isWeb?new THREE.IcosahedronGeometry(enemy.spiderVariant==='weaver'?.27:enemy.spiderVariant==='hunter'?.18:.23,1):new THREE.IcosahedronGeometry(0.23,0),
+        new THREE.MeshStandardMaterial({color:isWeb?(enemy.spiderVariant==='weaver'?0x7899a7:enemy.spiderVariant==='hunter'?0xbca18a:0x9890a8):0x8b59e8,
+          emissive:isWeb?0x14202b:0x623ed9,emissiveIntensity:isWeb?.09:1.25,
+          transparent:isWeb,opacity:isWeb?.73:1,roughness:isWeb?1:.65}));
     orb.position.copy(origin);scene.add(orb);
     projectiles.push({mesh:orb, velocity: direction.multiplyScalar(isWeb?profile.webSpeed:enemy.type==='boss'?11:12),
         age:0,isWeb,webSlow:isWeb?profile.webSlow:0,damage:isWeb?profile.webDamage:enemy.type==='boss' ? (enemy.enraged?15:12) : enemy.damage});
