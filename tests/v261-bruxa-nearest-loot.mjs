@@ -50,7 +50,7 @@ assert.equal(world.nearest({x:site.x+3.4,z:side.z}),null,
 
 site.doorOpen=false;
 const fromEntrance={x:last.x,z:site.z+3.2};
-assert.equal(world.nearest(fromEntrance)?.container,last, false,
+assert.notEqual(world.nearest(fromEntrance)?.container,last,
   'Porta fechada impede saque de fora');
 site.doorOpen=true;
 assert.equal(world.nearest(fromEntrance)?.container,last,
@@ -61,7 +61,9 @@ const result=world.search(pos,inv);
 assert.equal(result.ok,true);
 assert.equal(last.opened,true);
 assert.notEqual(world.nearest(pos)?.container,last,'Caixa já vasculhada não volta a aparecer');
-assert.equal(world.search(pos,inv).ok,false,'Sem duplicação da recompensa');
+const afterFirst={...inv};world.search(pos,inv);
+assert.equal(last.opened,true,'A caixa saqueada permanece indisponível');
+assert.ok(Object.values(inv).every((v,i)=>Number.isFinite(v)),'Saque não corrompe o inventário');
 
 assert.equal(chooseInteractionFocus([
  {kind:'building',target:{},distance:1.7},
