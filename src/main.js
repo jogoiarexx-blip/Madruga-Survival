@@ -43,6 +43,7 @@ import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
 import {chooseSpiderVariant} from './gameplay/spider-variants.js?v=2.13.0';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
 import { createPlayerModel } from './characters/player-model.js?v=2.6.0-crafting';
+import {nextPlayerFacing} from './characters/player-facing.js?v=2.64.0';
 import {samplePlayerAttackPose,idleGripPose} from './characters/player-attack-pose.js?v=2.4.0-combat';
 import {createPlayerRev5} from './characters/player-rev5.js?v=2.4.0-combat';
 import { createEnemySpawner } from './characters/enemy-factory.js';
@@ -258,6 +259,7 @@ const velocity = new THREE.Vector3();
 const raycaster = new THREE.Raycaster();
 const moveDir = new THREE.Vector3();
 let playerYaw = 0;
+let manualFaceGrace=0;
 let verticalVelocity = 0;
 let isGrounded = true;
 const gravity = -25;
@@ -857,7 +859,7 @@ function restoreProgress(data) {
     unlockedWeaponCount=survival.crafted.spear?3:survival.crafted.hammer?2:1;
     const location=resolveCollision(data.player.x,data.player.z,.46);
     player.position.set(location.x,getGroundHeight(location.x,location.z),location.z);
-    playerYaw=data.player.yaw;player.rotation.y=playerYaw;
+    playerYaw=data.player.yaw;player.rotation.y=playerYaw;manualFaceGrace=0;
     replaceItems(healthPacks,data.healthPacks,spawnHealthPack);
     replaceItems(speedBoosts,data.speedBoosts,spawnSpeedBoost);
     for(const enemy of enemies){
@@ -1251,7 +1253,7 @@ document.addEventListener('wheel', e => {
 document.addEventListener('mousemove', e => {
     if (!controls.isLocked || !gameActive) return;
     const look=lookDelta(gameOptions,e.movementX,e.movementY);
-    if(Math.abs(e.movementX)+Math.abs(e.movementY)>0)cameraRig.onManualLook();
+    if(Math.abs(e.movementX)+Math.abs(e.movementY)>0){cameraRig.onManualLook();manualFaceGrace=.35;}
     playerYaw += look.yaw;
     mousePitch = THREE.MathUtils.clamp(mousePitch + look.pitch, -0.30, 0.76);
 });
@@ -1296,7 +1298,7 @@ const combat = createCombatSystem({THREE,scene,player,enemies,weaponTypes,health
         if(useTool(survival,tool,1)&&!canUseTool(survival,tool)){
           equipWeapon(0);showToast('⚠ Arma quebrada! Repare na bancada.');
         }},
-    getLevel:()=>level,getWeaponIndex:()=>currentWeapon,getPlayerYaw:()=>playerYaw,
+    getLevel:()=>level,getWeaponIndex:()=>currentWeapon,getPlayerYaw:()=>player.rotation.y,
     isGameActive:()=>gameActive,isLocked:()=>controls.isLocked});
 
 const enemyAI = createEnemyAI({enemies,player,getGroundHeight,resolveCollision,
@@ -1870,7 +1872,7 @@ document.getElementById('skills-toggle').onclick=toggleSkills;
 document.getElementById('open-skills-inventory').onclick=openSkills;
 const touchControls=createTouchControls({canvas:gameCanvas,enabled:touchEnabled,
     onLook:(dx,dy)=>{if(!gameActive||!touchPlaying)return;
-      if(Math.abs(dx)+Math.abs(dy)>0)cameraRig.onManualLook();
+      if(Math.abs(dx)+Math.abs(dy)>0){cameraRig.onManualLook();manualFaceGrace=.35;}
       playerYaw-=dx*.006;mousePitch=THREE.MathUtils.clamp(mousePitch+dy*.005,-.30,.76);},
     onKey:(code,down)=>{document.dispatchEvent(new KeyboardEvent(down?'keydown':'keyup',{
         code,bubbles:true,cancelable:true}));},
@@ -1993,8 +1995,14 @@ function animate() {
                 player.position.y = groundY; verticalVelocity = 0; isGrounded = true;
             }
         } else player.position.y = groundY;
-        player.rotation.y = playerYaw;
-        const realMovementSpeed=Math.hypot(player.position.x-beforeMoveX,player.position.z-beforeMoveZ)/Math.max(dt,1e-5);
+        const realDx=player.position.x-beforeMoveX,realDz=player.position.z-beforeMoveZ;
+        const realMovementSpeed=Math.hypot(realDx,realDz)/Math.max(dt,1e-5);
+        manualFaceGrace=Math.max(0,manualFaceGrace-dt);
+        player.rotation.y=nextPlayerFacing(player.rotation.y,playerYaw,dt,{
+            dx:realDx,dz:realDz,moving:moveDir.lengthSq()>.01,
+            manualLook:manualFaceGrace>0,attacking:combat.isAttacking,
+            dashing:dashTimer>0
+        });
         footstepTimer-=dt;
         if(realMovementSpeed>.55 && moveDir.lengthSq()>.01 && isGrounded){
             if(footstepTimer<=0){
