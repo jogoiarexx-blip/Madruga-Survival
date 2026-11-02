@@ -80,5 +80,5 @@ assert.match(main,/dz:player\.position\.z-beforeMoveZ/);
 assert.match(main,/cameraRig\.onManualLook\(\)/);
 assert.match(main,/enabled:!placement&&!combat\.isAttacking&&!isFishing&&dashTimer<=0/);
 assert.match(renderer,/orbitYaw=movementFollow\.update\(step,yaw,movement\)/);
-assert.match(html,/forest-webp-r1-s2-f7/);
+assert.match(html,/forest-webp-r1-s2-f8/);
 console.log('OK v2.63: câmera segue curvas do movimento, manual priorizado, sem espiral, colisões intactas');
