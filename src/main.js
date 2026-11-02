@@ -1,7 +1,7 @@
 // Madruga Survival v2.57.0 (base v2.54.0) — Chiquinha, horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
-import { createForest } from './world/forest.js?v=2.57.0-webp-lod';
+import { createForest } from './world/forest.js?v=2.57.1-webp-scale';
 import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
 import {mountMenuDialogs} from './ui/menu-dialogs.js';
