@@ -97,5 +97,5 @@ assert.match(main,/workerPosition:simulateChiquinha/);
 assert.match(buildings,/farmSurface\?\.conform/);
 assert.match(buildings,/if\(type!=='farmPlot'\)batchStaticMeshes/);
 assert.match(guard,/selectedWork=getWorkTarget/);
-assert.match(readFileSync(new URL('../index.html',import.meta.url),'utf8'),/forest-webp-r1-s2-f5/);
+assert.match(readFileSync(new URL('../index.html',import.meta.url),'utf8'),/forest-webp-r1-s2-f6/);
 console.log('OK v2.59: horta no solo, atravessável, 3 ângulos, IA coordenada Chiquinha/Chaves');
