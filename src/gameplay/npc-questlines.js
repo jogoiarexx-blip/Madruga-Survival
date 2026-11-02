@@ -40,7 +40,7 @@ export function chooseChiquinhaFarm(plots,inventory={}){
     if(crop.planted&&crop.growth>=CROP_MATURITY){
       if(Number.isInteger(inventory.vegetables)&&inventory.vegetables<=996){
         action='harvest';priority=4;
-      }
+      }else{action='full';priority=1;}
     }else if(crop.planted&&crop.water<12){
       action='water';priority=3;
     }else if(!crop.planted){
@@ -75,6 +75,7 @@ export function advanceChiquinhaWork(state,plots,inventory,dt,{workerPosition=nu
   if(state.chiquinha.workTimer<CHIQUINHA_INTERVAL)return null;
   state.chiquinha.workTimer=0;
   const crop=plot.crop;
+  if(action==='full')return {action:'full',plot};
   if(action==='plant'){
     Object.assign(crop,makeCrop(),{planted:true,water:CROP_WATER_SECONDS});
     return {action:'plant',plot};
