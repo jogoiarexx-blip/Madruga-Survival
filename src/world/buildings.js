@@ -2,7 +2,7 @@ import {batchStaticMeshes} from '../render/static-batching.js';
 import {geometryDetail,roundedBoxGeometry} from '../render/geometry-detail.js';
 // Estruturas 3D sem assets externos: paredes, portas, pisos e móveis visitáveis.
 import {preparePlacement,MODULAR_TYPES,STRUCTURE_TYPES,MAX_STRUCTURES,orientation,canPlaceAmong,
-  resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js?v=2.41.0-ecosystem';
+  resolveStructureCollision,positionBlocked,nearestInteractive,structureBlocksLine} from './building-rules.js?v=2.58.0-farm-walk';
 import {buildingHP,maxBuildingHP,damageBuilding,repairBuilding,repairBuildingWithKit} from '../gameplay/base-defense.js?v=2.41.0-ecosystem';
 import {validChestItems} from '../gameplay/storage.js';
 import {walkSurfaceHeight,PLATFORM_HEIGHT} from './build-walk-surface.js';
