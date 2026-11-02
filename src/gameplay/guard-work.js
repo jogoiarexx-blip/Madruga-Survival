@@ -18,10 +18,13 @@ export function selectGuardWork(position,base,nodes=[],structures=[],inventory={
  }
  const candidates=[];
  for(const plot of structures){
-   if(!preferences.farm||plot.type!=='farmPlot'||!plot.crop)continue;
+   // Chiquinha assume a horta designada; Chaves coleta outras fontes.
+   if(!preferences.farm||plot.type!=='farmPlot'||!plot.crop||
+     plot===options.chiquinhaFarm)continue;
    const crop=plot.crop;
-   const action=!crop.planted?(inventory.seeds>0?'plant':null):
-     crop.growth>=125?'harvest':crop.water<=8&&inventory.water>0?'water':null;
+   const action=!crop.planted?((inventory.seeds||0)>0?'plant':null):
+     crop.growth>=125?((inventory.vegetables||0)<=996&&(inventory.seeds||0)<=997?'harvest':null):
+     crop.water<=8&&(inventory.water||0)>0?'water':null;
    if(action&&Math.hypot(plot.x-base.x,plot.z-base.z)<GUARD_WORK_RADIUS)
      candidates.push({kind:'farm',target:plot,action,x:plot.x,z:plot.z,priority:action==='harvest'?3:2});
  }
