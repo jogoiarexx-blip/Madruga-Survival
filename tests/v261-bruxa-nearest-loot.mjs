@@ -84,7 +84,7 @@ assert.match(main,/function nearbyWorldInteraction\(pos\)/);
 assert.match(main,/const \{focus\}=nearbyWorldInteraction\(player.position\)/);
 assert.match(main,/const \{focus,closestBuilding,closest,closestLoot,closestFixture,nearNest,nearForestNpc\}/);
 assert.match(main,/if\(focus\?\.kind==='loot'\)/);
-assert.match(main,/if\(focus\?\.kind==='fixture'\)/);
+assert.match(main,/const fixture=focus\?\.kind==='fixture'\?focus.target:null/);
 assert.match(main,/exploration\.search\(player.position,survival\.inventory\)/);
 assert.match(html,/forest-webp-r1-s2-f5/);
 console.log('OK v2.61: Bruxa com escala do Madruga, alvo F/HUD único e loot com visibilidade nas ruínas');
