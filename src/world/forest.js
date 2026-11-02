@@ -5,7 +5,7 @@ import {CAVE_CENTER,CAVE_RADIUS} from './arachnid-cave.js';
 import {createSeededRandom} from './random.js';
 import {createDistanceVisibility} from '../render/visibility.js?v=2.41.0-ecosystem';
 import {insideLake} from './fishing-lake.js';
-import {createForestObjectModels,forestTreeVariant} from './forest-object-models.js';
+import {createForestObjectModels,forestTreeVariant} from './forest-object-models.js?v=2.57.1-webp-scale';
 
 export function createForest({THREE,GLTFLoader=null,scene,natureAssets,getGroundHeight,shrinePosition,
     collisionWorld,rockColliders,treeColliders,cameraObstacles,trees}) {

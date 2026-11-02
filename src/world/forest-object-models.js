@@ -1,4 +1,4 @@
-import {createForestBillboards} from './forest-billboards.js';
+import {createForestBillboards} from './forest-billboards.js?v=2.57.1-webp-scale';
 // Vegetacao GLB importada: cada malha do modelo vira um InstancedMesh para
 // todas as copias da mesma especie. O LOD geometrico original continua disponivel
 // para longe, falha de rede e maquinas fracas. Nao altera obstaculos/saves.
@@ -18,6 +18,11 @@ export function forestObjectRange(quality,type){
   return quality==='low'?17:quality==='high'?26:22;
 }
 // Limites por especie evitam extrapolar o orcamento de triangulos em aparelhos fracos.
+export function forestGlbInRange(distanceSq,range,wasGlb=false){
+  if(!Number.isFinite(distanceSq)||distanceSq<0)return false;
+  const limit=Math.max(0,range+(wasGlb?1.5:-1.5));
+  return distanceSq<=limit*limit;
+}
 export function forestObjectCap(quality,id){
   const cap={
     low:{tree1:1,tree2:3,tree3:1,bush:1},
@@ -33,6 +38,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
   let pending=null;
   let billboardsRequested=false;
   let syncElapsed=Infinity;
+  let lastGlbTrees=new Set(),lastGlbBushes=new Set();
   const dummy=new THREE.Object3D();
   function hideProceduralTree(tree,hide){
     const lod=tree.userData?.lod;
@@ -135,13 +141,14 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
     for(const source of sources.values()){
       if(!source.loaded||!source.batches.length)continue;
       const nearRange=forestObjectRange(quality,source.spec.id);
-      const rangeSq=nearRange*nearRange;
+      // Histerese de 1,5 m evita trocar WebP/GLB repetidamente na borda do LOD.
       const cap=forestObjectCap(quality,source.spec.id);
       let count=0;
       if(source.spec.id==='bush'){
         const nearest=bushPositions.map(shrub=>({
           shrub,d2:(shrub.x-position.x)**2+(shrub.z-position.z)**2
-        })).filter(record=>record.d2<=rangeSq).sort((a,b)=>a.d2-b.d2).slice(0,cap);
+        })).filter(record=>forestGlbInRange(record.d2,nearRange,lastGlbBushes.has(record.shrub)))
+          .sort((a,b)=>a.d2-b.d2).slice(0,cap);
         for(const {shrub} of nearest){
           chosenBushes.add(shrub);
           dummy.position.set(shrub.x,shrub.y,shrub.z);
@@ -155,7 +162,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
         const nearest=trees.filter(tree=>{
           if(tree.userData.modelVariant!==source.spec.id||!tree.visible)return false;
           const d2=(tree.position.x-position.x)**2+(tree.position.z-position.z)**2;
-          return d2<=rangeSq;
+          return forestGlbInRange(d2,nearRange,lastGlbTrees.has(tree));
         }).sort((a,b)=>
           ((a.position.x-position.x)**2+(a.position.z-position.z)**2)-
           ((b.position.x-position.x)**2+(b.position.z-position.z)**2)).slice(0,cap);
@@ -175,6 +182,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
         batch.castShadow=quality==='high'&&source.spec.id!=='bush';
       }
     }
+    lastGlbTrees=chosenTrees;lastGlbBushes=chosenBushes;
     const images=billboards.update(viewer,{glbTrees:chosenTrees,glbBushes:chosenBushes,quality});
     for(const tree of trees)hideProceduralTree(tree,
       chosenTrees.has(tree)||images.trees.has(tree));
