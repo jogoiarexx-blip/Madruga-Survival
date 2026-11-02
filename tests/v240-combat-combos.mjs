@@ -112,7 +112,7 @@ test('HUD, rigs e assets do original continuam integrados no jogo',()=>{
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  const rig=readFileSync(new URL('../src/characters/player-rev5.js',import.meta.url),'utf8');
  assert.match(main,/playerRev5\.setComboStep\(combat\.comboStep\)/);
- assert.match(main,/onHitFeedback:/);assert.match(main,/cameraRig\.update\(dt,playerYaw,mousePitch\+cameraImpact\)/);
+ assert.match(main,/onHitFeedback:/);assert.match(main,/cameraRig\.update\(dt,playerYaw,mousePitch\+cameraImpact,\{/);
  assert.match(rig,/setComboStep/);assert.match(html,/id="combat-combo-status"/);
  assert.match(main,/getPlayerPerception:/);assert.match(main,/craftItem\(/);
 });
