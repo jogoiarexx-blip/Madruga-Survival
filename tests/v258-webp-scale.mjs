@@ -84,10 +84,10 @@ try{
  approx(shrub.sprite.scale.y*(41-8+1)/48,shrubHeight);
  approx(tree.sprite.center.y,(48-41-1)/48);
  const oldWidth=tree.sprite.scale.x;
- systems.update({x:15,z:3},{quality:'medium'});
+ systems.update({x:15,z:16},{quality:'medium'});
  assert.notEqual(tree.sprite.scale.x,oldWidth,'Vista lateral respeita a largura da nova silhueta');
  approx(tree.sprite.scale.y*(41-8+1)/48,height);
- systems.update({x:15,z:3},{quality:'medium',glbTrees:new Set([tree])});
+ systems.update({x:15,z:16},{quality:'medium',glbTrees:new Set([tree])});
  assert.equal(tree.sprite.visible,false,'GLB substitui a imagem sem duplicação');
 }finally{
  if(oldDocument===undefined)delete globalThis.document;
