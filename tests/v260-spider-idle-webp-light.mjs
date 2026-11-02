@@ -28,7 +28,7 @@ class Color {constructor(value){this.value=value}}
 const appearance=createSpiderAppearance({THREE:{CanvasTexture,Color,SRGBColorSpace:'srgb'},documentRef:doc});
 function original(){
  return {map:{uuid:'diffuse-1',image:{width:96,height:64},flipY:false,wrapS:1,wrapT:2},
-   roughness:.38,color:{multiply(v){this.tint=v.value;}},emissive:{setHex(v){this.hex=v;}},
+   roughness:.38,color:{multiply(v){this.tint=v.value;},setHex(v){this.hex=v;}},emissive:{setHex(v){this.hex=v;}},
    emissiveIntensity:.9,clone(){return {...this,color:{...this.color},emissive:{...this.emissive},
      clone:this.clone}}};
 }
