@@ -1,3 +1,4 @@
+import {createGuardNavigator} from '../gameplay/guard-navigation.js';
 // NPCs ambientais: a simulacao e o render permanecem independentes dos saves v2.
 // GLBs grandes sao buscados apenas quando o jogador se aproxima; sem RAF/timer extra.
 export const FOREST_NPC_SPECS=Object.freeze([
@@ -29,6 +30,16 @@ export function npcPatrolGoal(spec,t){
   const angle=t*(spec.id==='chiquinha'?.32:.19)+(spec.id==='chiquinha'?.4:2.2);
   const radius=spec.walkRadius*(.55+.20*Math.sin(t*.21));
   return {x:spec.x+Math.cos(angle)*radius,z:spec.z+Math.sin(angle)*radius};
+}
+// Escolhe uma lateral alcançável do canteiro, evitando fixar um deslocamento
+// diagonal que poderia jogar o NPC contra árvores, muros ou outra estrutura.
+export function npcFarmApproach(plot,origin,isFree=()=>true){
+  if(!plot||!Number.isFinite(plot.x)||!Number.isFinite(plot.z))return null;
+  const offsets=[[1.72,0],[-1.72,0],[0,1.72],[0,-1.72]];
+  const candidates=offsets.map(([dx,dz])=>({x:plot.x+dx,z:plot.z+dz}));
+  const safe=candidates.filter(p=>isFree(p.x,p.z,.35));
+  const choices=safe.length?safe:candidates;
+  return choices.sort((a,b)=>npcDistance(a,origin)-npcDistance(b,origin))[0];
 }
 export function chooseNpcClip(names,moving){
   if(!Array.isArray(names)||!names.length)return null;
@@ -63,8 +74,13 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
     }
     fallback.traverse(object=>{if(object.isMesh)object.castShadow=false;});
     scene.add(model);
+    const navigator=spec.id==='chiquinha'?createGuardNavigator({
+      resolveCollision,getGroundHeight,radius:.35,
+      isFree:(x,z,r)=>npcDistance({x,z},resolveCollision(x,z,r))<.025
+    }):null;
     return {spec,model,fallback,loaded:false,loading:false,failed:false,
-      mixer:null,actions:{},current:null,clock:0,dialogueIndex:0,animationCount:0,idleFrozen:false,greetTimer:0};
+      mixer:null,actions:{},current:null,clock:0,dialogueIndex:0,animationCount:0,
+      idleFrozen:false,greetTimer:0,navigator,farmTarget:null,farmSpot:null,activity:'idle'};
   });
   async function load(agent){
     if(agent.loaded||agent.loading||agent.failed||!GLTFLoader)return false;
@@ -147,21 +163,35 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
       const closeToPlayer=dist<3.2;
       const nearFarm=agent.spec.id==='chiquinha'&&chiquinhaTarget&&
         Number.isFinite(chiquinhaTarget.x)&&Number.isFinite(chiquinhaTarget.z);
-      // A Chiquinha se aproxima da lateral do canteiro, sem pisar sobre a lavoura.
-      const goal=nearFarm?{x:chiquinhaTarget.x+1.8,z:chiquinhaTarget.z+1.8}:
+      // Um trabalho ativo mantém a lateral escolhida até o canteiro mudar.
+      if(agent.navigator){
+        if(nearFarm&&agent.farmTarget!==chiquinhaTarget){
+          agent.farmTarget=chiquinhaTarget;
+          agent.farmSpot=npcFarmApproach(chiquinhaTarget,agent.model.position,
+            (x,z,r)=>npcDistance({x,z},resolveCollision(x,z,r))<.025);
+          agent.navigator.reset();
+        }else if(!nearFarm&&agent.farmTarget){
+          agent.farmTarget=null;agent.farmSpot=null;agent.navigator.reset();
+        }
+      }
+      const goal=nearFarm?(agent.farmSpot||npcFarmApproach(chiquinhaTarget,agent.model.position)):
         npcPatrolGoal(agent.spec,agent.clock);
       const dx=goal.x-agent.model.position.x,dz=goal.z-agent.model.position.z;
       const length=Math.hypot(dx,dz);
-      const moving=!closeToPlayer&&length>.36;
-      if(moving&&step){
-        const stepLength=Math.min(length,agent.spec.speed*step);
-        const candidate=resolveCollision(agent.model.position.x+dx/length*stepLength,
-          agent.model.position.z+dz/length*stepLength,.48);
-        // Evita um salto de colisao que transportaria o NPC para dentro de paredes.
+      const oldX=agent.model.position.x,oldZ=agent.model.position.z;
+      if(!closeToPlayer&&length>.36&&step){
+        const candidate=agent.navigator&&nearFarm?
+          agent.navigator.navigate(agent.model.position,goal,step,agent.spec.speed,{stopAt:.32}):
+          resolveCollision(oldX+dx/length*Math.min(length,agent.spec.speed*step),
+            oldZ+dz/length*Math.min(length,agent.spec.speed*step),.48);
+        // Nunca aceitar um empurrão que teletransporte o NPC.
         if(npcDistance(candidate,agent.model.position)<1){
           agent.model.position.x=candidate.x;agent.model.position.z=candidate.z;
         }
       }
+      const moving=Math.hypot(agent.model.position.x-oldX,agent.model.position.z-oldZ)>.0008;
+      agent.activity=nearFarm?(moving?'indo_para_horta':'cuidando_horta'):
+        closeToPlayer?'conversando':moving?'patrulhando':'parada';
       const face=closeToPlayer?Math.atan2(playerPosition.x-agent.model.position.x,
         playerPosition.z-agent.model.position.z):Math.atan2(dx,dz);
       if(Number.isFinite(face)){
@@ -192,6 +222,7 @@ export function createForestNpcs({THREE,GLTFLoader,scene,getGroundHeight,resolve
   function reset(){
     for(const agent of agents){
       agent.clock=0;agent.dialogueIndex=0;agent.greetTimer=0;agent.idleFrozen=false;
+      agent.navigator?.reset();agent.farmTarget=null;agent.farmSpot=null;agent.activity='idle';
       const p=resolveCollision(agent.spec.x,agent.spec.z,.50);
       agent.model.position.set(p.x,getGroundHeight(p.x,p.z),p.z);
     }
