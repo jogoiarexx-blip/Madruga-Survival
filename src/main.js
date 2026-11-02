@@ -1,7 +1,7 @@
 // Madruga Survival v2.57.0 (base v2.54.0) — Chiquinha, horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
 import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
-import { createForest } from './world/forest.js?v=2.57.1-webp-scale';
+import { createForest } from './world/forest.js?v=2.60.0-light';
 import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
 import {mountMenuDialogs} from './ui/menu-dialogs.js';
@@ -38,7 +38,7 @@ import {createGpuWarmup} from './render/gpu-warmup.js';
 import {createMenuPreview} from './ui/menu-preview.js';
 import {buildingInteractionLabel} from './ui/building-interaction-label.js?v=2.41.0-ecosystem';
 import {createZombieModelManager} from './characters/zombie-models.js?v=2.1.5-foot-plant';
-import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0';
+import {createSpiderModelManager} from './characters/spider-model.js?v=2.14.0-skin-v260';
 import {createSpiderAI} from './gameplay/spider-ai.js?v=2.14.0';
 import {chooseSpiderVariant} from './gameplay/spider-variants.js?v=2.13.0';
 import {createZombieSenses,alertZombie,ambientSpawnPlan} from './gameplay/zombie-perception.js?v=2.3.0';
@@ -50,7 +50,7 @@ import {createGoblinModelManager} from './characters/goblin-model.js';
 import {findGoblinEncounterSpot,nearestGoblinEncounter} from './gameplay/goblin-encounter.js';
 import { createEnemyAI } from './gameplay/enemy-ai.js?v=2.3.0-perception';
 import { createCombatSystem } from './gameplay/combat.js?v=2.13.0';
-import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave';
+import { createProjectileSystem } from './gameplay/projectiles.js?v=2.13.0-cave-v260';
 import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES,DAY_SECONDS,cycleClock} from './gameplay/survival.js?v=2.41.0-ecosystem';
@@ -86,8 +86,8 @@ import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
 import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
 import {createCampfireUI} from './ui/campfire-ui.js';
-import {createVillagerGuard} from './characters/villager-guard.js?v=2.58.0-chaves';
-import {createForestNpcs} from './characters/forest-npcs.js?v=2.58.0-chiquinha';
+import {createVillagerGuard} from './characters/villager-guard.js?v=2.60.0-stand';
+import {createForestNpcs} from './characters/forest-npcs.js?v=2.60.0-stand';
 import {createNpcQuestProgress,restoreNpcQuestProgress,nearestChiquinhaFarm,chooseChiquinhaFarm,advanceChiquinhaWork,interactNpcQuest,npcQuestStatus} from './gameplay/npc-questlines.js?v=2.58.0';
 import {createWitchCabin} from './world/witch-cabin.js?v=2.57.0';
 import {chooseZombieType} from './gameplay/zombie-variants.js';
@@ -286,7 +286,8 @@ const particles = [];
 const treeColliders = [];
 
 const forest = createForest({THREE,GLTFLoader,scene,natureAssets,getGroundHeight,shrinePosition,
-    collisionWorld,rockColliders,treeColliders,cameraObstacles,trees});
+    collisionWorld,rockColliders,treeColliders,cameraObstacles,trees,
+    getLighting:()=>({ambient:ambient.intensity,sun:sun.intensity})});
 const cameraRig=createCameraRig({THREE,camera,player,raycaster,getGroundHeight,cameraObstacles,scene});
 const fishingLake=createFishingLake({THREE,scene,getGroundHeight});
 const fishingSession=createFishingSession();

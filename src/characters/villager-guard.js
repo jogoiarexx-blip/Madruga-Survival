@@ -6,6 +6,7 @@ import {findGuardFiringPosition} from '../gameplay/guard-firing-position.js';
 import {guardTarget,createGuardShotController,CHAVES_SHOT_RANGE} from '../gameplay/guard-combat.js';
 import {selectGuardWork} from '../gameplay/guard-work.js';
 import {roundedBoxGeometry} from '../render/geometry-detail.js';
+import {createStandingClip} from './standing-pose.js?v=2.60.0';
 import {DEFAULT_GUARD_ORDER,normalizeGuardOrder,nextGuardOrder,GUARD_ORDER_NAMES,guardWaypoint,canEngageInOrder,distanceXZ} from '../gameplay/guard-orders.js?v=2.41.0-ecosystem';
 // NPC aliado: recruta com F, patrulha as construções, defende e pode ser reanimado.
 export const GUARD_MAX_HP=80;
@@ -69,6 +70,8 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
      wrapper.add(root);model.add(wrapper);
      mixer=new THREE.AnimationMixer(root);
      actions=Object.fromEntries((gltf.animations||[]).map(clip=>[clip.name,mixer.clipAction(clip)]));
+     const still=createStandingClip(THREE,(gltf.animations||[]).find(c=>/walk/i.test(c.name)),'Stand');
+     if(still)actions.Stand=mixer.clipAction(still);
      chavesVisual=wrapper;
      muzzleNode=root.getObjectByName('Muzzle')||null;
      for(const child of fallbackVisuals)child.visible=false;
@@ -232,7 +235,7 @@ export function createVillagerGuard({THREE,GLTFLoader,scene,getGroundHeight,reso
    if(target && dist<=CHAVES_SHOT_RANGE && shotController.ready){
       if(shotController.begin(target))playAnimation('Shoot');
    }else if(!shotController.isShooting){
-      playAnimation(actuallyMoving&&target?'Running':actuallyMoving?'Walking':'Aim_Idle');
+      playAnimation(actuallyMoving&&target?'Running':actuallyMoving?'Walking':target?'Aim_Idle':'Stand');
    }
    if(mixer)mixer.update(dt);
    step+=dt*(actuallyMoving?8:2.4);

@@ -1,6 +1,7 @@
 import {createSpiderLegPlant} from './spider-leg-plant.js?v=2.11.0-spider';
 import {getSpiderVariant} from '../gameplay/spider-variants.js?v=2.13.0';
 import {isGlb,readModelCache,writeModelCache} from '../render/model-binary-cache.js';
+import {createSpiderAppearance} from './spider-appearance.js?v=2.60.0';
 
 // Aranha Sombria: modelo original do usuário, com 72 ossos e cinco clipes.
 // O mesmo GLB é reutilizado por todos os inimigos; cada aranha recebe seu próprio rig e mixer.
@@ -64,6 +65,7 @@ export async function loadSpiderParts({GLTFLoader,fetcher=fetch,atobFn=atob,mani
 
 export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGroundHeight,url=SPIDER_GLB,deferPreload=false,onBeforeMount=async()=>{}}){
  let asset=null,loading=null,failed=false;
+ const appearance=createSpiderAppearance({THREE});
  const active=new Set(),corpses=new Map();
  function preload(){
    if(asset)return Promise.resolve(true);
@@ -92,10 +94,12 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
      node.castShadow=true;node.receiveShadow=false;node.frustumCulled=false;node.userData.sharedZombieGeometry=true;
      // O clone do esqueleto compartilha materiais: cada espécie recebe seu próprio,
      // sem tingir também todas as outras aranhas que usam o mesmo GLB.
-     const tint=material=>{if(!material)return material;const copy=material.clone();
-       if(copy.color)copy.color.multiply(new THREE.Color(profile.tint));
-       if(profile.glow&&copy.emissive){copy.emissive.setHex(profile.glow);copy.emissiveIntensity=Math.max(.12,copy.emissiveIntensity||0);}
-       tintedMaterials.push(copy);return copy;};
+     const tint=material=>{
+       if(!material)return material;
+       const copy=appearance.material(material,enemy.spiderVariant);
+       if(copy!==material)tintedMaterials.push(copy);
+       return copy;
+     };
      node.material=Array.isArray(node.material)?node.material.map(tint):tint(node.material);
    }});
    for(const child of enemy.mesh.children)child.visible=false;
@@ -135,9 +139,10 @@ export function createSpiderModelManager({THREE,GLTFLoader,cloneSkeleton,getGrou
        if(!Number.isFinite(dt)||dt<=0||!this.model)return;
        const step=Math.min(.1,dt);
        this.ragePulse=Math.max(0,this.ragePulse-step);
-       if(this.rage){const glow=.23+this.ragePulse*.65+.14*(1+Math.sin(this.actionTime*6));
+       if(this.rage){const glow=.11+this.ragePulse*.2+.06*(1+Math.sin(this.actionTime*6));
          for(const material of tintedMaterials)if(material.emissive){
-           material.emissive.setHex(0x8e266e);material.emissiveIntensity=Math.min(1.35,glow);
+           material.emissive.setHex(profile.glow||0x56385c);
+           material.emissiveIntensity=Math.min(.48,glow);
          }
        }
        this.lock=Math.max(0,this.lock-step);this.actionTime+=step;

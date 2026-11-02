@@ -7,6 +7,13 @@ export const FOREST_WEBP_IDS=Object.freeze(['tree1','tree2','tree3','bush']);
 const SOURCE_WIDTH=256, SOURCE_HEIGHT=384;
 const MIN_ALPHA=24;
 const MAX_CANVAS_PIXELS=2048*2048;
+// SpriteMaterial é não iluminado: imita a luz ambiente para não exibir WebP
+// lavadas de dia nem luminosas demais à noite ao lado dos modelos PBR.
+export function forestWebpBrightness(ambient=.45,sun=1.3){
+  const a=Number.isFinite(ambient)?Math.max(0,ambient):.45;
+  const d=Number.isFinite(sun)?Math.max(0,sun):1.3;
+  return Math.max(.30,Math.min(.73,.33+a*.28+d*.09));
+}
 
 export function forestWebpUrl(id,view){
   if(!FOREST_WEBP_IDS.includes(id)||!Number.isInteger(view)||view<0||view>=FOREST_WEBP_VIEWS)
@@ -66,10 +73,10 @@ export function measureForestAlpha(image,canvas){
   }catch(_){return null;}
 }
 
-export function createForestBillboards({THREE,scene,trees,bushPositions}){
+export function createForestBillboards({THREE,scene,trees,bushPositions,getLighting=()=>({ambient:.45,sun:1.3})}){
   const supported=Boolean(THREE.Sprite&&THREE.SpriteMaterial&&THREE.TextureLoader);
   const images=new Map(FOREST_WEBP_IDS.map(id=>[id,{materials:[],metrics:[],ready:false,loaded:0}]));
-  let loading=null;
+  let loading=null,lastShade=-1;
   function prepareSprite(id,element,tree){
     const image=images.get(id);
     if(!image.ready)return null;
@@ -143,6 +150,13 @@ export function createForestBillboards({THREE,scene,trees,bushPositions}){
     return loading;
   }
   function update(viewer,{glbTrees=new Set(),glbBushes=new Set(),quality='medium'}={}){
+    const lighting=getLighting()||{};
+    const shade=forestWebpBrightness(lighting.ambient,lighting.sun);
+    if(Math.abs(shade-lastShade)>.015){
+      lastShade=shade;
+      for(const entry of images.values())if(entry.ready)
+        for(const material of entry.materials)material.color?.setRGB?.(shade,shade,shade);
+    }
     const displayedTrees=new Set(),displayedBushes=new Set();
     const farRange=quality==='low'?70:quality==='high'?108:90;
     const farSq=farRange*farRange;

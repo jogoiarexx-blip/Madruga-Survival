@@ -1,4 +1,4 @@
-import {createForestBillboards} from './forest-billboards.js?v=2.57.1-webp-scale';
+import {createForestBillboards} from './forest-billboards.js?v=2.60.0-light';
 // Vegetacao GLB importada: cada malha do modelo vira um InstancedMesh para
 // todas as copias da mesma especie. O LOD geometrico original continua disponivel
 // para longe, falha de rede e maquinas fracas. Nao altera obstaculos/saves.
@@ -32,9 +32,9 @@ export function forestObjectCap(quality,id){
   return (cap[quality]||cap.medium)[id]||0;
 }
 export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPositions,bushFallback,
-  onStatus=()=>{}}){
+  onStatus=()=>{},getLighting=()=>({ambient:.45,sun:1.3})}){
   const sources=new Map(FOREST_OBJECT_MODELS.map(s=>[s.id,{spec:s,batches:[],loaded:false,error:null,loading:false,failed:false}]));
-  const billboards=createForestBillboards({THREE,scene,trees,bushPositions});
+  const billboards=createForestBillboards({THREE,scene,trees,bushPositions,getLighting});
   let pending=null;
   let billboardsRequested=false;
   let syncElapsed=Infinity;
