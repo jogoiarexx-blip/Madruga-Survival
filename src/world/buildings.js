@@ -202,7 +202,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
  function createPreview(type){
    if(!STRUCTURE_TYPES.includes(type))return null;
    const group=new THREE.Group();
-   createVisual(type,group);
+   const visual=createVisual(type,group);
    const hologram=new THREE.MeshBasicMaterial({color:0x51f09d,transparent:true,opacity:.49,
      depthWrite:false,side:THREE.DoubleSide});
    const geometries=new Set();
