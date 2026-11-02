@@ -118,7 +118,7 @@ assert.equal(wildlife.serialize().length,10,'Save de animais permanece compatív
 const main=src('src/main.js');
 assert.match(main,/cameraObstacles\.push\(\.\.\.exploration\.cameraBlockers\)/);
 assert.match(main,/wildlife\.generate\(worldSeed,graphicsQuality\)/);
-assert.match(main,/cameraRig\.update\(dt,playerYaw,mousePitch\+cameraImpact\)/);
+assert.match(main,/cameraRig\.update\(dt,playerYaw,mousePitch\+cameraImpact,\{/);
 const html=src('index.html');
-assert.match(html,/forest-webp-r1-s2-f6/);
+assert.match(html,/forest-webp-r1-s2-f7/);
 console.log('OK câmera v2.62: ruínas grandes, colisão após suavizar, zoom e rabo compacto do coelho');
