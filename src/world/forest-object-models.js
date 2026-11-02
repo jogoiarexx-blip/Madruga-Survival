@@ -18,6 +18,11 @@ export function forestObjectRange(quality,type){
   return quality==='low'?17:quality==='high'?26:22;
 }
 // Limites por especie evitam extrapolar o orcamento de triangulos em aparelhos fracos.
+export function forestGlbInRange(distanceSq,range,wasGlb=false){
+  if(!Number.isFinite(distanceSq)||distanceSq<0)return false;
+  const limit=Math.max(0,range+(wasGlb?1.5:-1.5));
+  return distanceSq<=limit*limit;
+}
 export function forestObjectCap(quality,id){
   const cap={
     low:{tree1:1,tree2:3,tree3:1,bush:1},
@@ -137,13 +142,12 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
       if(!source.loaded||!source.batches.length)continue;
       const nearRange=forestObjectRange(quality,source.spec.id);
       // Histerese de 1,5 m evita trocar WebP/GLB repetidamente na borda do LOD.
-      const entrySq=(nearRange-1.5)**2,exitSq=(nearRange+1.5)**2;
       const cap=forestObjectCap(quality,source.spec.id);
       let count=0;
       if(source.spec.id==='bush'){
         const nearest=bushPositions.map(shrub=>({
           shrub,d2:(shrub.x-position.x)**2+(shrub.z-position.z)**2
-        })).filter(record=>record.d2<=(lastGlbBushes.has(record.shrub)?exitSq:entrySq))
+        })).filter(record=>forestGlbInRange(record.d2,nearRange,lastGlbBushes.has(record.shrub)))
           .sort((a,b)=>a.d2-b.d2).slice(0,cap);
         for(const {shrub} of nearest){
           chosenBushes.add(shrub);
@@ -158,7 +162,7 @@ export function createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPosit
         const nearest=trees.filter(tree=>{
           if(tree.userData.modelVariant!==source.spec.id||!tree.visible)return false;
           const d2=(tree.position.x-position.x)**2+(tree.position.z-position.z)**2;
-          return d2<=(lastGlbTrees.has(tree)?exitSq:entrySq);
+          return forestGlbInRange(d2,nearRange,lastGlbTrees.has(tree));
         }).sort((a,b)=>
           ((a.position.x-position.x)**2+(a.position.z-position.z)**2)-
           ((b.position.x-position.x)**2+(b.position.z-position.z)**2)).slice(0,cap);
