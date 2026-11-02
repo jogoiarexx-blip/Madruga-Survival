@@ -211,7 +211,7 @@ export function createBuildingWorld({THREE,scene,getGroundHeight,isPositionFree,
      if(!node.isMesh)return;
      geometries.add(node.geometry);
      if(node.material!==stone&&node.material!==wood&&node.material!==warmWood&&
-       node.material!==darkWood&&node.material!==roof&&node.material!==straw&&
+       node.material!==darkWood&&node.material!==soil&&node.material!==roof&&node.material!==straw&&
        node.material!==cloth&&node.material!==metal&&node.material!==flameMat){
        // Ex.: chama clonada da fogueira.
        node.material?.dispose?.();
