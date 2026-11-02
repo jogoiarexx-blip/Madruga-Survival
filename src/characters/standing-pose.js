@@ -13,7 +13,7 @@ export function createStandingClip(THREE,walking,name='Stand'){
       if(a.length!==b.length||!a.length||a.some(v=>!Number.isFinite(v))||
         b.some(v=>!Number.isFinite(v)))continue;
       let frame;
-      if(/\\.quaternion$/i.test(track.name)&&a.length===4&&THREE.Quaternion){
+      if(/\.quaternion$/i.test(track.name)&&a.length===4&&THREE.Quaternion){
         const qa=new THREE.Quaternion().fromArray(a);
         const qb=new THREE.Quaternion().fromArray(b);
         frame=qa.slerp(qb,.5).normalize().toArray();
