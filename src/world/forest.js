@@ -5,16 +5,16 @@ import {CAVE_CENTER,CAVE_RADIUS} from './arachnid-cave.js';
 import {createSeededRandom} from './random.js';
 import {createDistanceVisibility} from '../render/visibility.js?v=2.41.0-ecosystem';
 import {insideLake} from './fishing-lake.js';
-import {createForestObjectModels,forestTreeVariant} from './forest-object-models.js?v=2.57.1-webp-scale';
+import {createForestObjectModels,forestTreeVariant} from './forest-object-models.js?v=2.60.0-light';
 
 export function createForest({THREE,GLTFLoader=null,scene,natureAssets,getGroundHeight,shrinePosition,
-    collisionWorld,rockColliders,treeColliders,cameraObstacles,trees}) {
+    collisionWorld,rockColliders,treeColliders,cameraObstacles,trees,getLighting}) {
     let random = Math.random;
     const rockMeshes=[];
     const bushPositions=[];
     const bushFallback=[];
     const visibility=createDistanceVisibility({trees,rocks:rockMeshes});
-    const objectModels=createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPositions,bushFallback});
+    const objectModels=createForestObjectModels({THREE,GLTFLoader,scene,trees,bushPositions,bushFallback,getLighting});
     const distantLeafGeometry=new THREE.ConeGeometry(1,1,6);
 function createRock(x, z, scale = 1) {
     if(Math.hypot(x-CAVE_CENTER.x,z-CAVE_CENTER.z)<CAVE_RADIUS+3||insideLake(x,z,2))return;
