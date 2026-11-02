@@ -1,6 +1,6 @@
 // Madruga Survival v2.57.0 (base v2.54.0) — Chiquinha, horta e cabana da Bruxa do 71.
 import { createNatureAssets } from './world/nature-assets.js';
-import { createCameraRig } from './render/camera-rig.js?v=2.14.0';
+import { createCameraRig } from './render/camera-rig.js?v=2.62.0-occlusion';
 import { createForest } from './world/forest.js?v=2.60.0-light';
 import { readSave, writeSave, lastSaveError } from './gameplay/save-system.js?v=2.54.0-sky-menu-bench';
 import {applyExperience,clampProgress,xpRequiredFor,MAX_KILLS} from './gameplay/progression.js';
@@ -55,7 +55,7 @@ import { createShrineSystem } from './world/shrine.js';
 import { createCollisionWorld } from './world/collisions.js';
 import {createSurvival,advanceSurvival,isNight,addResource,useConsumable,spendRecipe,canAfford,RECIPES,RESOURCES,DAY_SECONDS,cycleClock} from './gameplay/survival.js?v=2.41.0-ecosystem';
 import {createResourceWorld} from './world/resources.js?v=2.41.0-ecosystem';
-import {createExplorationWorld} from './world/exploration.js?v=2.41.0-ecosystem';
+import {createExplorationWorld} from './world/exploration.js?v=2.62.0-camera-walls';
 import {createSpiderNestWorld} from './world/spider-nests.js?v=2.12.0';
 import {createArachnidCave,CAVE_CENTER,CAVE_RADIUS} from './world/arachnid-cave.js?v=2.14.0';
 import {createBuildingWorld} from './world/buildings.js?v=2.58.0-ground-farm';
@@ -81,7 +81,7 @@ import {tryFish} from './gameplay/fishing.js';
 import {createFishingSession} from './gameplay/fishing-session.js';
 import {createFishingVisual} from './world/fishing-visual.js';
 import {createFishingHud} from './ui/fishing-hud.js';
-import {createWildlifeWorld} from './world/wildlife.js?v=2.41.0-ecosystem';
+import {createWildlifeWorld} from './world/wildlife.js?v=2.62.0-rabbit-tail';
 import {createCemetery,CEMETERY_POS,withinCemetery} from './world/cemetery.js';
 import {CRAFT_STATIONS} from './gameplay/crafting.js?v=2.41.0-ecosystem';
 import {createWorkbenchUI} from './ui/workbench-ui.js';
@@ -758,6 +758,8 @@ function initWorld() {
             cameraRig.refreshObstacles();
             forest.updateVisibility(player.position,graphicsQuality,0,true);
             exploration.generate(worldSeed);
+            cameraObstacles.push(...exploration.cameraBlockers);
+            cameraRig.refreshObstacles();
             spiderNests.generate(worldSeed);
             arachnidCave.generate(spiderNests.nests);
             cameraRig.setArena(null);
