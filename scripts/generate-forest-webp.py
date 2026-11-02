@@ -73,7 +73,14 @@ def render_in_blender(folder):
         scene.camera = camera
         camera.data.type = "ORTHO"
         # O enquadramento eh constante para todas as oito direcoes de cada GLB.
-        camera.data.ortho_scale = max(height*1.19, max_width*1.78)
+        # Ortho scale controla a ALTURA do enquadramento. A largura util e
+        # ortho_scale * (resolution_x / resolution_y): usar largura diretamente
+        # cortava as copas de especies mais abertas (principalmente nas diagonais).
+        diagonal_width = math.hypot(maxs[0]-mins[0], maxs[1]-mins[1])
+        camera.data.ortho_scale = max(
+            height * 1.23,
+            diagonal_width * (scene.render.resolution_y / scene.render.resolution_x) * 1.14,
+        )
         scene.render.image_settings.color_depth = "8"
         lamp_data = bpy.data.lights.new("foliage-key", "AREA")
         lamp = bpy.data.objects.new("foliage-key", lamp_data)
