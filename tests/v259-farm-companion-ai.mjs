@@ -53,7 +53,7 @@ for(const angle of [0,Math.PI/2,Math.PI]){
  }
 }
 near(result.patches[0].mesh.geometry.attributes.position.getZ(0),
- ground(10-FARM_SIDE/2,-8+FARM_SIDE/2)-ground(10,-8)+.018);
+ ground(10+FARM_SIDE/2,-8+FARM_SIDE/2)-ground(10,-8)+.018);
 const plotShape={type:'farmPlot',x:10,z:-8,rotation:0};
 assert.equal(collidesWithStructure(plotShape,10,-8,.46),false);
 assert.equal(positionBlocked([plotShape],10,-8,.46),false);
@@ -88,7 +88,7 @@ const both=[empty,two];
 assert.equal(selectGuardWork(base,base,[],both,{...inv},{chiquinhaFarm:empty})?.target,two);
 assert.equal(selectGuardWork(base,base,[],[empty],{...inv},{chiquinhaFarm:empty}),null);
 two.crop={planted:true,growth:CROP_MATURITY,water:0};
-assert.equal(selectGuardWork(base,base,[],[two],{vegetables:999,seeds:998,water:1})?.kind,null);
+assert.equal(selectGuardWork(base,base,[],[two],{vegetables:999,seeds:998,water:1}),null);
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const buildings=readFileSync(new URL('../src/world/buildings.js',import.meta.url),'utf8');
 const guard=readFileSync(new URL('../src/characters/villager-guard.js',import.meta.url),'utf8');
