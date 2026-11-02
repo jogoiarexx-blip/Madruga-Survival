@@ -91,7 +91,10 @@ test('Vasculhar recompensa inventário e não permite repetir saque',()=>{
  const first=world.search({x:c.x,z:c.z},inventory);
  assert.equal(first.ok,true);
  assert.deepEqual(Object.keys(first.items).length,2);
- assert.equal(world.search({x:c.x,z:c.z},inventory).ok,false);
+ const second=world.search({x:c.x,z:c.z},inventory);
+ assert.ok(!second.ok||second.label!==first.label,
+  'Nova caixa dentro do alcance pode ser saqueada, mas a mesma não duplica recompensa');
+ assert.equal(c.opened,true);
 });
 test('Mochila cheia mantém caixa não vasculhada',()=>{
  const s=world.sites[0],c=s.containers[1],inv=createSurvival().inventory;
