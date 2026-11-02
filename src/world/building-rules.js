@@ -27,7 +27,7 @@ function shape(s,playerY=0){
     case 'chest':return {x:.72,z:.48};
     case 'workbench':return {x:1.16,z:.62};
     case 'bed':return {x:.79,z:1.09};
-    case 'farmPlot':return {x:1.22,z:1.22};
+    case 'farmPlot':return null; // canteiro ao nivel do solo e atravessavel
     default:return null; // piso e abrigo são caminháveis
   }
 }
